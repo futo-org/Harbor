@@ -48,7 +48,7 @@ function buildLightColors() {
     muted: palette.neutral_600,
 
     outline: withOpacity(palette.neutral_400, 0.3),
-    outline_strong: palette.neutral_400,
+    outline_strong: withOpacity(palette.neutral_550, 0.7),
 
     box: {
       primary: buildBox(
@@ -82,7 +82,7 @@ function buildDarkColors(): ReturnType<typeof buildLightColors> {
     muted: palette.neutral_650,
 
     outline: withOpacity(palette.neutral_600, 0.3),
-    outline_strong: palette.neutral_600,
+    outline_strong: withOpacity(palette.neutral_550, 0.9),
 
     box: {
       primary: buildBox(

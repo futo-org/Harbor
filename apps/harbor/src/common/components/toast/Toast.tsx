@@ -101,7 +101,8 @@ export function Toast({ toast }: { toast: ToastData }) {
           theme.atoms.box.primary.bg,
           theme.atoms.box.primary.border,
           theme.atoms.shadow.neutral,
-          { borderRadius: BorderRadius.full, borderWidth: 1 },
+          Atoms.border,
+          { borderRadius: BorderRadius.full },
         ]}
       >
         {toast.onPress ? (

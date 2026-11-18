@@ -64,7 +64,7 @@ export function Fab({
           variant="primary"
           size="md"
           icon={icon}
-          style={theme.scheme === 'light' && { borderWidth: 0 }}
+          style={theme.scheme === 'light' && Atoms.border_0}
         />
       )}
     </View>

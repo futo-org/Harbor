@@ -76,7 +76,7 @@ export function Tooltip({
           Atoms.rounded_md,
           theme.atoms.box.secondary.bg,
           theme.atoms.box.secondary.border,
-          { borderWidth: 1 },
+          Atoms.border,
         ]}
       >
         <Text variant="small" color="secondary" fontWeight="semibold">

@@ -113,6 +113,7 @@ export function Button({
       hitSlop={8}
       style={(state) => [
         styles.base,
+        Atoms.border,
         fullWidth && Atoms.w_full,
         !fullWidth && styles.fitContent,
         {
@@ -156,13 +157,10 @@ export function Button({
   return <Animated.View style={animatedStyle}>{pressable}</Animated.View>;
 }
 
-const BORDER_WIDTH = 1;
-
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: BORDER_WIDTH,
     borderColor: 'transparent',
   },
   fitContent: {
