@@ -281,6 +281,8 @@ class FakeCore(
     fun decodeUpload(pair: Pair<String, ByteArray>): Pair<String, UploadBlobRequest> =
         pair.first to UploadBlobRequest.ADAPTER.decode(pair.second)
 
+    override fun setTraceparent(traceparent: String?) {}
+
     override fun copyEvents(signedEvents: List<ByteArray>) {
         options.copyEventsError?.let { throw it }
         copyEventsCalls.add(signedEvents)

@@ -1,7 +1,7 @@
-// Shown on docs/content/developer/examples.md, which pulls in the regions
+// Shown on docs/content/developer/examples.md and
+// declaring-your-application.md, which pull in the regions
 // below. This lives in the test source set so CI compiles it with the SDK; it
 // sits in its own package so its imports are the ones an app needs.
-
 
 // We include region-definition comments in our imports, so we need to disable this check
 @file:Suppress("ktlint:standard:import-ordering")
@@ -31,6 +31,9 @@ import org.futo.polycentric.core.getIdentityFeed
 // #region read-event
 import org.futo.polycentric.core.getEvent
 // #endregion read-event
+// #region application
+import polycentric.v2.Application
+// #endregion application
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
 
@@ -44,6 +47,26 @@ suspend fun createClient(context: Context): PolycentricClient {
             seedServers = listOf("http://localhost:3000"),
         )
     // #endregion client
+    return client
+}
+
+suspend fun createClientWithApplication(context: Context): PolycentricClient {
+    // #region application
+    val client =
+        PolycentricClient(
+            core = PolycentricCore(),
+            storageDriver = SqliteStorageDriver(context),
+            filestore = AndroidFileStoreDriver(File(context.filesDir, "blobs")),
+            application =
+                Application(
+                    name = "My App",
+                    id = "com.example.myapp",
+                    version = "1.2.0",
+                    url = "https://myapp.example.com",
+                ),
+        )
+    client.initialize()
+    // #endregion application
     return client
 }
 
