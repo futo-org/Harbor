@@ -203,6 +203,10 @@ export function useComposer({
       // null yields no card).
       const link = await resolveLinkForPost();
 
+      if (client.activeIdentityKey !== currentIdentityKey) {
+        throw new Error('Unexpected identity switch');
+      }
+
       const post: v2.Post = {
         // Trimmed after splicing: ranges are offsets into the untrimmed text.
         text: spliceMentions(
