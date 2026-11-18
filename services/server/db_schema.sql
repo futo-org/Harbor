@@ -319,8 +319,10 @@ CREATE TABLE public.content_identity (
 
 CREATE TABLE public.content_image (
     content_id bigint NOT NULL,
-    blob_digest_type smallint NOT NULL,
-    blob_digest_bytes bytea NOT NULL,
+    digest_type integer NOT NULL,
+    digest_bytes bytea NOT NULL,
+    size bigint NOT NULL,
+    mime_type text NOT NULL,
     width integer NOT NULL,
     height integer NOT NULL
 );

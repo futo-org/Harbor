@@ -18,8 +18,10 @@ pub struct Model {
 
     // From `Blob`.
     // Blob digest (no FK — resolved via query)
-    pub blob_digest_type: i16,
-    pub blob_digest_bytes: Vec<u8>,
+    pub digest_type: i16,
+    pub digest_bytes: Vec<u8>,
+    pub size: i64,
+    pub mime_type: String,
 
     // From `Image`.
     pub width: i32,

@@ -97,11 +97,9 @@ impl Query {
         let mut select_content_image_id = SelectStatement::new();
         select_content_image_id
             .expr(Expr::col(content_image::Column::ContentId.as_column_ref()))
+            .expr(Expr::col(content_image::Column::DigestType.as_column_ref()))
             .expr(Expr::col(
-                content_image::Column::BlobDigestType.as_column_ref(),
-            ))
-            .expr(Expr::col(
-                content_image::Column::BlobDigestBytes.as_column_ref(),
+                content_image::Column::DigestBytes.as_column_ref(),
             ))
             .from(content_image::Entity);
 
