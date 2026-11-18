@@ -52,32 +52,30 @@ pub(super) fn add_query(
             Status::internal("internal server error")
         })?;
 
-    if let Some(avatar) = avatar {
-        if let Some(query) =
-            Mutation::store_image_sets(vec![avatar], content_id.clone())
-            .map_err(|err| {
-                tracing::error!(error = %err, "failed to create query to store profile update avatar");
-                Status::internal("internal server error")
-            })?
-        {
+    if let Some(avatar) = avatar
+    && let Some(query) =
+        Mutation::store_image_sets(vec![avatar], content_id.clone())
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to create query to store profile update avatar");
+            Status::internal("internal server error")
+        })?
+    {
             let mut cte = CommonTableExpression::new();
             cte.table_name("profile_update_avatar").query(query);
             with.cte(cte);
-        }
     }
 
-    if let Some(banner) = banner {
-        if let Some(query) =
-            Mutation::store_image_sets(vec![banner], content_id.clone())
-            .map_err(|err| {
-                tracing::error!(error = %err, "failed to create query to store profile update banner");
-                Status::internal("internal server error")
-            })?
-        {
+    if let Some(banner) = banner
+    && let Some(query) =
+        Mutation::store_image_sets(vec![banner], content_id.clone())
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to create query to store profile update banner");
+            Status::internal("internal server error")
+        })?
+    {
             let mut cte = CommonTableExpression::new();
             cte.table_name("profile_update_banner").query(query);
             with.cte(cte);
-        }
     }
 
     Ok(query)
