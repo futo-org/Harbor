@@ -154,6 +154,11 @@ export const useIdentitySwitcherStore = create<IdentitySwitcherState>(
           // identity.
           if (router.canDismiss()) router.dismissAll();
           router.replace(Routes.tabs.feed.index);
+
+          // Sync in the background
+          client.sync().catch((e) => {
+            console.warn('Sync after identity switch failed:', e);
+          });
         } catch (e) {
           console.warn('IdentitySwitcher: failed to switch identity:', e);
           toast.error('Failed to switch identity');
