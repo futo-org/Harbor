@@ -115,13 +115,6 @@ docker compose exec -T server /app/migration up
 # strictly one at a time: each spawns its own moderation service, which would
 # otherwise contend for the same Kafka consumer group and database rows.
 echo "==> Running the moderation integration tests…"
-if [[ "${CI:-}" == "true" ]]; then
-  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
-  cargo nextest run -P ci -p moderation-service \
-    --test csam_pipeline --test report_label_pipeline \
-    --run-ignored ignored-only --no-capture --test-threads 1
-else
-  cargo test -p moderation-service \
-    --test csam_pipeline --test report_label_pipeline \
-    -- --ignored --nocapture
-fi
+cargo test -p moderation-service \
+  --test csam_pipeline --test report_label_pipeline \
+  -- --ignored --nocapture

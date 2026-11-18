@@ -392,7 +392,7 @@ jobs:
         with:
           cache: packages-tests
       - name: Tests
-        run: cargo nextest run -P ci -p polycentric-core -p polycentric-common
+        run: cargo test -p polycentric-core -p polycentric-common
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -400,12 +400,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-packages
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
 
   rust-services:
     name: Test Rust services
@@ -425,7 +419,7 @@ jobs:
         with:
           cache: services-tests
       - name: Tests
-        run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
+        run: cargo test -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -433,12 +427,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-services
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
 
   js-packages:
     name: Test JS packages
@@ -930,21 +918,9 @@ jobs:
       - name: Server integration tests
         if: fromJSON(needs.changes.outputs.plan).flags.server_integration && needs.service-images.result == 'success'
         run: .forgejo/scripts/integration-server.sh --ci
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.server_integration
-        with:
-          name: junit-server-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
       - name: Moderation integration tests
         if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
         run: .forgejo/scripts/integration-moderation.sh
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration
-        with:
-          name: junit-moderation-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
