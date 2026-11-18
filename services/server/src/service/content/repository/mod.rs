@@ -64,7 +64,7 @@ impl Mutation {
             })?.into(),
             ContentBody::Reaction(reaction) => reaction::add_query(reaction, content_id)?.into(),
             ContentBody::AttributedToReaction(reaction) => attributed_to_reaction::add_query(reaction, content_id)?.into(),
-            ContentBody::ProfileUpdate(update) => profile_update::add_query(update, content_id)?.into(),
+            ContentBody::ProfileUpdate(update) => profile_update::add_query(with, update, content_id)?.into(),
             ContentBody::Identity(identity) => identity::add_query(identity, content_id, event_identity)?.into(),
             ContentBody::Repost(repost) => return repost::add_query(repost, content_id).map(|q| q.map(Into::into)),
             ContentBody::Report(report) => report::add_query(report, content_id)?.into(),
