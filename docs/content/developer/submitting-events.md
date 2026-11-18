@@ -11,13 +11,7 @@ Events are submitted as a bundle of the `SignedEvent` and `SerializedContent`.
 We use `SerializedContent` so that the checksum of the content can be verified.
 `EventBundle` is defined as:
 
-```protobuf
-message EventBundle {
-  SignedEvent signed_event = 1;
-  optional SerializedContent serialized_content = 2;
-  repeated EventProof event_proofs = 3;
-  optional EventMetadata meta = 4;
-}
+```protobuf file=protos/polycentric/v2/events.proto#EventBundle
 ```
 
 On submission the `EventMetadata` in `meta` and `EventProof` in `event_proofs`
@@ -34,33 +28,18 @@ contained in this event, that is a part of `SerializedContent` in the
 First, let's start with the type definition of `Event` and we'll go over each
 field after:
 
-```protobuf
-message Event {
-  EventKey key = 1;
-  uint64 identity_sequence = 2;
-  VectorClock vector_clock = 3;
-  bytes previous_signature = 4;
-  ContentDigest content_digest = 6;
-  uint64 created_at = 7;
-  bytes previous_root = 8;
-  optional Application application = 9;
-}
+```protobuf file=protos/polycentric/v2/events.proto#Event
 ```
 
 The `EventKey` is an unique identifier of an `Event`, in other words a way to
 reference a specific event.
 
-```protobuf
-message EventKey {
-  int32 collection = 1;
-  string identity = 2;
-  PublicKey signed_by = 3;
-  uint64 sequence = 4;
-}
+```protobuf file=protos/polycentric/v2/event_key.proto#EventKey
 ```
 
 The `collection` is a number for the stream the event is connected with.
 Polycentric currently reserver a number of these:
+
 - `1`: identity
 - `2`: feed
 - `3`: profile
@@ -111,11 +90,7 @@ Now that we have all the fields of `Event` we can assemble it into a
 Those bytes are then signed (`signature`). The two are then combined into a
 `SignedEvent`:
 
-```protobuf
-message SignedEvent {
-  bytes signature = 1;
-  bytes event_bytes = 2;
-}
+```protobuf file=protos/polycentric/v2/events.proto#SignedEvent
 ```
 
 Now we've created the event, let's make it useful with some content.
@@ -126,10 +101,7 @@ The
 [`SerializedContent`](../protocol/data-model.md#content-1)
 type is defined as the following:
 
-```protobuf
-message SerializedContent {
-  bytes content_bytes = 1;
-}
+```protobuf file=protos/polycentric/v2/content.proto#SerializedContent
 ```
 
 The content of an event is defined by the
@@ -146,20 +118,7 @@ Now that we got an `EventBundle` we can put one or more into a
 `PutEventsRequest` and submit it to `EventSyncService.PutEvents`. Assuming no
 error is returned the event is now succesfully submitted!
 
-```protobuf
-service EventSyncService {
-  rpc PutEvents(PutEventsRequest) returns (PutEventsResponse);
-}
-
-message PutEventsRequest {
-  repeated EventBundle event_bundles = 1;
-}
-
-message PutEventsResponse {
-  repeated PutEventError errors = 1;
-  repeated Blob requested_blobs = 2;
-  repeated PutEventError warnings = 3;
-}
+```protobuf file=protos/polycentric/v2/events.proto#EventSyncService,PutEventsRequest,PutEventsResponse
 ```
 
 See the next section on validation to ensure that the events are submitted
@@ -214,11 +173,7 @@ Both the errors and warnings use the `PutEventError` type. The
 which the error applies. The `message` field holds a human readable error
 message on why the event wasn't accepted.
 
-```protobuf
-message PutEventError {
-  uint32 event_bundle_index = 1;
-  string message = 2;
-}
+```protobuf file=protos/polycentric/v2/events.proto#PutEventError
 ```
 
 If an error is returned for an event it means that the event is **not** stored.
@@ -237,25 +192,7 @@ ignored, no error is returned for them.
 The content of an event is described by the `Content` type, which is basically
 an enum for all currently supported events.
 
-```protobuf
-message Content {
-  oneof content_body {
-    Post post = 2;
-    Delete delete = 3;
-    Follow follow = 4;
-    Block block = 5;
-    Reaction reaction = 6;
-    AttributedToReaction attributed_to_reaction = 15;
-    ProfileUpdate profile_update = 7;
-    Identity identity = 8;
-    Repost repost = 9;
-    Report report = 10;
-    Labels labels = 11;
-    VerificationClaim verification_claim = 12;
-    VerificationVerify verification_verify = 13;
-    VerificationTarget verification_target = 14;
-  }
-}
+```protobuf file=protos/polycentric/v2/content.proto#Content
 ```
 
 The following sections describe each of the available content types.

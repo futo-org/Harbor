@@ -1,0 +1,12 @@
+{
+  // An app resolves @polycentric/react-native through the "react-native"
+  // export condition, as Metro does, rather than the Node build.
+  "extends": "../../tools/tsconfig/base.jsonc",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "customConditions": ["react-native"]
+  },
+  "include": ["src/react-native"]
+}

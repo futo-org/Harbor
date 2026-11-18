@@ -622,6 +622,34 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
+  docs/examples:
+    dependencies:
+      '@polycentric/js-browser':
+        specifier: workspace:*
+        version: link:../../packages/js-browser
+      '@polycentric/js-core':
+        specifier: workspace:*
+        version: link:../../packages/js-core
+      '@polycentric/js-node':
+        specifier: workspace:*
+        version: link:../../packages/js-node
+      '@polycentric/react-native':
+        specifier: workspace:*
+        version: link:../../packages/react-native
+      '@polycentric/rs-core-wasm':
+        specifier: workspace:*
+        version: link:../../packages/rs-core-wasm
+      expo-application:
+        specifier: ~58.1.2
+        version: 58.1.2(expo@58.0.22)
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.6
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   e2e:
     devDependencies:
       '@polycentric/js-core':
