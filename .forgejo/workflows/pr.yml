@@ -445,12 +445,6 @@ jobs:
           install-args: --filter @polycentric/js-core...
       - name: js-core
         run: pnpm --filter @polycentric/js-core test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-js-core
-          path: packages/js-core/junit.xml
-          retention-days: 7
 
   scraper:
     name: Test scraper
@@ -470,12 +464,6 @@ jobs:
         run: pnpm --filter @polycentric/scraper build
       - name: Tests
         run: pnpm --filter @polycentric/scraper test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   app:
     name: Test app
@@ -491,12 +479,6 @@ jobs:
           install-args: --filter polycentric-app...
       - name: Tests
         run: pnpm --filter polycentric-app test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-app
-          path: apps/harbor/junit.xml
-          retention-days: 7
 
   app-typecheck:
     name: Typecheck app code
@@ -949,12 +931,6 @@ jobs:
           install-args: --filter @polycentric/scraper...
       - name: Integration tests
         run: pnpm --filter @polycentric/scraper test:integration
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper-integration
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   # VERIFIER_BOT_ENV_VARS is the base64 .env content (GitLab: a file variable).
   verifier-bot:
@@ -985,12 +961,6 @@ jobs:
         run: if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env; fi
       - name: Tests
         run: pnpm --filter @polycentric/verifier-bot test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-verifier-bot-tests
-          path: services/verifier-bot/junit.xml
-          retention-days: 7
 
   # Drives the web image this run built, started as a job service, against
   # this run's server image, which e2e-web.sh starts with Compose.
