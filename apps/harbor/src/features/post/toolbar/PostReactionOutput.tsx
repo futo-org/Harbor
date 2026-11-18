@@ -1,16 +1,26 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
+import HoverCard, { type TriggerRef } from '@/src/common/components/HoverCard';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
+import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
+import { hasPointerHover } from '@/src/common/util/platform';
 import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';
+import { ReactionSummaryCard } from '@/src/features/reaction/ReactionSummaryCard';
+import usePostReactions from '@/src/features/reaction/usePostReactions';
 import { previewOtherReactions } from '@/src/features/reaction/util';
-import { useMemo, useState } from 'react';
+import { FetchMode } from '@polycentric/react-native';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import useReactions from '../../reaction/useReactions';
 
-/** Max number of stacked emojis shown in the expanded output. */
-const MAX_STACKED = 3;
+/** Max number of stacked emojis, and of emoji lines in the summary card. */
+const MAX_STACKED = 4;
 
 const EMOJI_SIZE = 18;
+
+// Opening the summary fetches the reactions, so a cursor passing over the
+// feed shouldn't open it.
+const SUMMARY_OPEN_DELAY_MS = 200;
 
 type PostReactionOutputProps = {
   post: PostData;
@@ -26,8 +36,19 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
     [post, myEmoji],
   );
 
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
+
   // Reaction details sheet state
   const [open, setOpen] = useState(false);
+  const summaryTriggerRef = useRef<TriggerRef>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  // Cached reactions are enough for the summary, so a repeat hover sends no
+  // request. Opening the sheet refreshes them. Closed, the query stops but
+  // still returns the cached reactions, which the card shows while fading out.
+  const summaryReactions = usePostReactions(post, {
+    fetchMode: FetchMode.OfflineFirst,
+    enabled: summaryOpen,
+  });
 
   const hasReactions = others.length > 0 || myEmoji !== undefined;
 
@@ -37,7 +58,11 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="View reactions"
-      onPress={() => setOpen(true)}
+      onPress={() => {
+        summaryTriggerRef.current?.close();
+        dismissHint('openReactionDetails');
+        setOpen(true);
+      }}
       style={({ pressed, hovered }) => [
         Atoms.flex_row,
         Atoms.align_center,
@@ -84,7 +109,29 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
 
   return (
     <>
-      {previewButton}
+      {previewButton && hasPointerHover ? (
+        <HoverCard
+          openDelay={SUMMARY_OPEN_DELAY_MS}
+          onOpenChange={setSummaryOpen}
+        >
+          <HoverCard.Trigger asChild ref={summaryTriggerRef}>
+            {previewButton}
+          </HoverCard.Trigger>
+          <HoverCard.Content
+            side="top"
+            align="end"
+            ready={!summaryReactions.isLoading && !summaryReactions.isError}
+          >
+            <ReactionSummaryCard
+              post={post}
+              groups={summaryReactions.groups}
+              maxLines={MAX_STACKED}
+            />
+          </HoverCard.Content>
+        </HoverCard>
+      ) : (
+        previewButton
+      )}
       {/* Render this sheet even if there are no reactions in case the user was
           viewing it when the last remaining reaction was deleted. */}
       <ReactionDetailsSheet

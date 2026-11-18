@@ -17,7 +17,7 @@ type FlattenedStyle = ViewStyle & TextStyle & ImageStyle;
 declare const definedStyleSheetBrand: unique symbol;
 
 // Only `defineStyleSheet` produces this, so the builder can't skip it
-type DefinedStyleSheet<K extends string> = Record<K, ThemedStyleInput> & {
+type DefinedStyleSheet<T> = { [P in keyof T]: ThemedStyleInput } & {
   readonly [definedStyleSheetBrand]: true;
 };
 
@@ -30,20 +30,20 @@ type DefinedStyleSheet<K extends string> = Record<K, ThemedStyleInput> & {
  * style keys only in a literal passed as an argument, not in one a callback
  * returns.
  */
-export function createThemedStyles<K extends string>(
+export function createThemedStyles<T>(
   buildStyles: (
     theme: Theme,
     define: typeof defineStyleSheet,
-  ) => DefinedStyleSheet<K>,
+  ) => DefinedStyleSheet<T>,
 ) {
-  const stylesByTheme = new Map<Theme, Record<K, FlattenedStyle>>();
+  const stylesByTheme = new Map<Theme, { [P in keyof T]: FlattenedStyle }>();
 
   // biome-ignore lint/correctness/noComponentHookFactories: called once at module level
   return function useThemedStyles() {
     const { theme } = useTheme();
     let styles = stylesByTheme.get(theme);
     if (!styles) {
-      styles = createFlattenedStyleSheet<K>(
+      styles = createFlattenedStyleSheet<T>(
         buildStyles(theme, defineStyleSheet),
       );
       stylesByTheme.set(theme, styles);
@@ -52,16 +52,16 @@ export function createThemedStyles<K extends string>(
   };
 }
 
-function defineStyleSheet<K extends string>(
-  styleInputs: Record<K, ThemedStyleInput>,
+function defineStyleSheet<T>(
+  styleInputs: { [P in keyof T]: ThemedStyleInput },
 ) {
-  return styleInputs as DefinedStyleSheet<K>;
+  return styleInputs as DefinedStyleSheet<T>;
 }
 
-function createFlattenedStyleSheet<K extends string>(
-  styleInputs: Record<K, ThemedStyleInput>,
+function createFlattenedStyleSheet<T>(
+  styleInputs: { [P in keyof T]: ThemedStyleInput },
 ) {
-  const flattenedStyles = {} as Record<K, FlattenedStyle>;
+  const flattenedStyles = {} as { [P in keyof T]: FlattenedStyle };
   for (const name in styleInputs) {
     flattenedStyles[name] = StyleSheet.flatten(
       styleInputs[name],

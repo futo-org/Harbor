@@ -24,10 +24,15 @@ function RevealView({ children }: { children: ReactNode }) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(1, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
+    // Start on the next frame: when mounting takes long (a slow render, or
+    // loading data), starting right away skips the first part of the reveal.
+    const frame = requestAnimationFrame(() => {
+      progress.value = withTiming(1, {
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+      });
     });
+    return () => cancelAnimationFrame(frame);
   }, [progress]);
 
   const style = useAnimatedStyle(() => ({
@@ -47,15 +52,24 @@ function RevealView({ children }: { children: ReactNode }) {
 export function HoverCardContent({
   children,
   animated = true,
+  ready = true,
   ...props
 }: HoverCardPrimitive.ContentProps & {
   /** Animate the reveal. Set false for an instant, static card. */
   animated?: boolean;
+  /**
+   * Hold the card back while it is open but its content isn't ready (e.g.
+   * still loading); it shows, and the reveal starts, once this turns true.
+   */
+  ready?: boolean;
 }) {
+  let body: ReactNode = null;
+  if (ready) {
+    body = animated ? <RevealView>{children}</RevealView> : children;
+  }
+
   const content = (
-    <HoverCardPrimitive.Content {...props}>
-      {animated ? <RevealView>{children}</RevealView> : children}
-    </HoverCardPrimitive.Content>
+    <HoverCardPrimitive.Content {...props}>{body}</HoverCardPrimitive.Content>
   );
 
   return (
