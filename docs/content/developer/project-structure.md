@@ -59,18 +59,18 @@ flowchart TD
 
 Arrows point from a dependency to its dependants.
 
-| Package                        | Description                                                                                                                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/rs-common`           | Shared Rust code: protocol models, the generated protobuf types, validation, Merkle trees, signing, and JWTs. Used by `rs-core` and the services.                                 |
-| `packages/rs-core`             | The Rust protocol engine: event assembly and validation, vector clocks, the query engine, sync, gRPC transport, and in-memory stores. Everything else is a binding over this.     |
-| `packages/rs-core-wasm`        | Typescript bindings for `rs-core` using a WASM build of `rs-core` and `uniffi-bindgen-react-native`.                                                                              |
-| `packages/js-core`             | Consumer-facing TypeScript client that wraps around `rs-core-wasm`, which accepts a storage and file-store implementation.                                                        |
-| `packages/js-storage-sqlite`   | SQLite storage implementation which can be passed into `js-core`'s client.                                                                                                        |
-| `packages/js-storage-postgres` | PostgreSQL storage implementation which can be passed into `js-core`'s client.                                                                                                    |
-| `packages/js-browser`          | IndexedDB (for events and logins) and OPFS (for blobs) storage implementations which can be passed into `js-core`s client.                                                        |
-| `packages/js-node`             | Complete Node.js SDK which builds a client using `js-core`, Node's file system access, and either storage implementation from `js-storage-sqlite` or `js-storage-postgres`        |
-| `packages/react-native`        | React Native SDK. On iOS and Android, a JSI TurboModule wraps `rs-core` natively, with expo-sqlite and expo-file-system storage. On web, it uses `rs-core-wasm` and `js-browser`. |
-| `packages/kt-core`             | Kotlin/Android SDK: a port of `js-core` over UniFFI's Kotlin bindings for `rs-core`, with its own SQLite storage.                                                                 |
+| Package                        | Description                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |
+| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
+| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
+| `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
+| `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |
+| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                          |
+| `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                              |
+| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                      |
+| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                 |
+| `packages/kt-core`             | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
 
 ## Services
 
