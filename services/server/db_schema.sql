@@ -319,8 +319,10 @@ CREATE TABLE public.content_identity (
 
 CREATE TABLE public.content_image (
     content_id bigint NOT NULL,
-    blob_digest_type smallint NOT NULL,
-    blob_digest_bytes bytea NOT NULL,
+    digest_type integer NOT NULL,
+    digest_bytes bytea NOT NULL,
+    size bigint NOT NULL,
+    mime_type text NOT NULL,
     width integer NOT NULL,
     height integer NOT NULL
 );
@@ -852,14 +854,6 @@ ALTER TABLE ONLY public.content_follow
 
 ALTER TABLE ONLY public.content_identity
     ADD CONSTRAINT content_identity_pkey PRIMARY KEY (content_id);
-
-
---
--- Name: content_image content_image_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.content_image
-    ADD CONSTRAINT content_image_pkey PRIMARY KEY (content_id);
 
 
 --

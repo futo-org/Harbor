@@ -72,10 +72,7 @@ async fn verification_claim_images_are_requested_as_blobs() {
     let mut client = TestClient::new().await;
     let body = format!("claim-image-{}", random_string()).into_bytes();
     let blob = Blob {
-        digest: Some(ContentDigest {
-            r#type: ContentDigestType::Sha256 as i32,
-            value: sha256(&body),
-        }),
+        digest: Some(content_digest(&body)),
         mime_type: "image/jpeg".to_owned(),
         size: body.len() as i64,
     };
@@ -85,10 +82,7 @@ async fn verification_claim_images_are_requested_as_blobs() {
     });
     let claim = VerificationClaim {
         schema: Some(SerializedVerificationSchema {
-            digest: Some(ContentDigest {
-                r#type: ContentDigestType::Sha256 as i32,
-                value: sha256(&schema_bytes),
-            }),
+            digest: Some(content_digest(&schema_bytes)),
             schema_bytes,
         }),
         fields: HashMap::new(),

@@ -339,7 +339,11 @@ impl Mutation {
 
         match db.query_one(&query).await {
             Ok(res) => Ok(res.is_some()),
-            Err(ref err) if is_unique_violation(err) => Ok(false),
+            Err(ref err)
+                if is_unique_violation(err, "idx-events-event_key") =>
+            {
+                Ok(false)
+            }
             Err(err) => {
                 tracing::error!(error = %err, "failed to store event");
                 Err(Status::internal("internal server error"))
@@ -1473,17 +1477,20 @@ impl Mutation {
     }
 }
 
-fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
+fn is_unique_violation(err: &sea_orm::DbErr, constraint_name: &str) -> bool {
     let runtime_err = match err {
         sea_orm::DbErr::Query(e) | sea_orm::DbErr::Exec(e) => Some(e),
         _ => None,
     };
     if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err
         && let Some(db_err) = arc_err.as_database_error()
+        && let Some(name) = db_err.constraint()
+        && name == constraint_name
     {
-        return db_err.is_unique_violation();
+        true
+    } else {
+        false
     }
-    false
 }
 
 /// Helper that returns a delete statement that deletes rows present in

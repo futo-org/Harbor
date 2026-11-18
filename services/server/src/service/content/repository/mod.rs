@@ -7,12 +7,14 @@ use std::time::Duration;
 use entity::{
     blob_index, content, content_blob, content_delete, content_image, event,
 };
-use polycentric_common::models::protos_v2::ContentDigest;
+use polycentric_common::models::protos_v2::{
+    Blob, ContentDigest, Image, ImageSet,
+};
 use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    DeleteStatement, DynIden, Expr, ExprTrait, SelectStatement,
-    SubQueryStatement, UnionType, WithClause,
+    DeleteStatement, DynIden, Expr, ExprTrait, InsertStatement,
+    SelectStatement, SubQueryStatement, UnionType, WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
@@ -64,7 +66,7 @@ impl Mutation {
             })?.into(),
             ContentBody::Reaction(reaction) => reaction::add_query(reaction, content_id)?.into(),
             ContentBody::AttributedToReaction(reaction) => attributed_to_reaction::add_query(reaction, content_id)?.into(),
-            ContentBody::ProfileUpdate(update) => profile_update::add_query(update, content_id)?.into(),
+            ContentBody::ProfileUpdate(update) => profile_update::add_query(with, update, content_id)?.into(),
             ContentBody::Identity(identity) => identity::add_query(identity, content_id, event_identity)?.into(),
             ContentBody::Repost(repost) => return repost::add_query(repost, content_id).map(|q| q.map(Into::into)),
             ContentBody::Report(report) => report::add_query(report, content_id)?.into(),
@@ -87,6 +89,77 @@ impl Mutation {
         db.execute(&query).await?;
         Ok(())
     }
+
+    /// Subquery to store image sets into the `content_image` table.
+    fn store_image_sets(
+        images: Vec<ImageSet>,
+        content_id: (DynIden, DynIden),
+    ) -> Result<Option<InsertStatement>, DbErr> {
+        if images.is_empty() {
+            return Ok(None);
+        }
+
+        let mut digest_types = Vec::new();
+        let mut digest_bytes = Vec::new();
+        let mut sizes = Vec::new();
+        let mut mime_types = Vec::new();
+        let mut widths = Vec::new();
+        let mut heights = Vec::new();
+
+        for set in images {
+            let ImageSet { images } = set;
+            for image in images {
+                // NOTE: before this is called the post should be validated,
+                // which check if all these fields below are some. So the we can
+                // safely continue if any of them are none as that should not
+                // happen in practice.
+                #[rustfmt::skip]
+                let Image { blob, width, height } = image;
+                #[rustfmt::skip]
+                let Some(Blob { digest, mime_type, size }) = blob else { continue; };
+                #[rustfmt::skip]
+                let Some(ContentDigest { r#type, value }) = digest else { continue; };
+                digest_types.push(r#type);
+                digest_bytes.push(value);
+                sizes.push(size);
+                mime_types.push(mime_type);
+                widths.push(width);
+                heights.push(height);
+            }
+        }
+
+        let mut query = InsertStatement::new();
+        query
+            .into_table(content_image::Entity)
+            .columns([
+                content_image::Column::ContentId,
+                content_image::Column::DigestType,
+                content_image::Column::DigestBytes,
+                content_image::Column::Size,
+                content_image::Column::MimeType,
+                content_image::Column::Width,
+                content_image::Column::Height,
+            ])
+            .select_from({
+                let mut q = SelectStatement::new();
+                q.from(content_id.0.clone())
+                    .expr(Expr::col(content_id))
+                    // NOTE: this can be one UNNEST call, but SeaORM doesn't
+                    // like that.
+                    .expr(Expr::cust_with_expr("UNNEST($1)", digest_types))
+                    .expr(Expr::cust_with_expr("UNNEST($1)", digest_bytes))
+                    .expr(Expr::cust_with_expr("UNNEST($1)", sizes))
+                    .expr(Expr::cust_with_expr("UNNEST($1)", mime_types))
+                    .expr(Expr::cust_with_expr("UNNEST($1)", widths))
+                    .expr(Expr::cust_with_expr("UNNEST($1)", heights));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+
+        Ok(Some(query))
+    }
 }
 
 pub struct Query;
@@ -104,11 +177,9 @@ impl Query {
         let mut select_content_image_id = SelectStatement::new();
         select_content_image_id
             .expr(Expr::col(content_image::Column::ContentId.as_column_ref()))
+            .expr(Expr::col(content_image::Column::DigestType.as_column_ref()))
             .expr(Expr::col(
-                content_image::Column::BlobDigestType.as_column_ref(),
-            ))
-            .expr(Expr::col(
-                content_image::Column::BlobDigestBytes.as_column_ref(),
+                content_image::Column::DigestBytes.as_column_ref(),
             ))
             .from(content_image::Entity);
 

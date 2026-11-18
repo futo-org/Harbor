@@ -1,5 +1,11 @@
 use sea_orm::entity::prelude::*;
 
+/// Uploaded blobs
+///
+/// # Notes
+///
+/// If the blob is in this table, it only means it was uploaded at some point.
+/// At the time of writing this is not in any way connected to an event.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "content_blob")]
