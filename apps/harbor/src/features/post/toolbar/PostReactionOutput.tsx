@@ -60,7 +60,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
       accessibilityLabel="View reactions"
       onPress={() => {
         summaryTriggerRef.current?.close();
-        dismissHint('showAllReactions');
+        dismissHint('openReactionDetails');
         setOpen(true);
       }}
       style={({ pressed, hovered }) => [

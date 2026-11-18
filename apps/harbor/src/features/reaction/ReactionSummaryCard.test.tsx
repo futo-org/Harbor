@@ -17,7 +17,7 @@ describe('ReactionSummaryCard', () => {
   });
 
   beforeEach(() => {
-    dismissShowAllHint();
+    dismissOpenDetailsHint();
   });
 
   describe('emoji lines', () => {
@@ -72,7 +72,7 @@ describe('ReactionSummaryCard', () => {
 
   describe('last line', () => {
     it('counts hidden reactions and hints at the sheet', async () => {
-      showShowAllHint();
+      showOpenDetailsHint();
 
       const lines = await renderLines(
         [
@@ -99,7 +99,7 @@ describe('ReactionSummaryCard', () => {
     });
 
     it('shows only the hint when nothing is hidden', async () => {
-      showShowAllHint();
+      showOpenDetailsHint();
 
       const lines = await renderLines([['👍', 1, ['alice']]]);
 
@@ -114,13 +114,13 @@ describe('ReactionSummaryCard', () => {
   });
 });
 
-function showShowAllHint() {
+function showOpenDetailsHint() {
   useTutorialHintsStore.setState({ dismissedHints: {} });
 }
 
-function dismissShowAllHint() {
+function dismissOpenDetailsHint() {
   useTutorialHintsStore.setState({
-    dismissedHints: { showAllReactions: true },
+    dismissedHints: { openReactionDetails: true },
   });
 }
 

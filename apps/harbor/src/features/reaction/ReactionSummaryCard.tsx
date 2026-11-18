@@ -45,7 +45,7 @@ export function ReactionSummaryCard({
   );
 
   // Shown until the user first opens the reaction details from the footer.
-  const isHintShown = useIsTutorialHintShown('showAllReactions');
+  const isHintShown = useIsTutorialHintShown('openReactionDetails');
   const moreText =
     morePeopleCount > 0 &&
     `+${morePeopleCount} more ${morePeopleCount === 1 ? 'reaction' : 'reactions'}`;

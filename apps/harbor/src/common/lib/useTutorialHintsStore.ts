@@ -7,7 +7,7 @@ type TutorialHint =
   | 'kbSubmitPost'
   | 'kbMentionNavigate'
   | 'kbMentionInsert'
-  | 'showAllReactions';
+  | 'openReactionDetails';
 
 type TutorialHintsStore = {
   dismissedHints: Partial<Record<TutorialHint, true>>;
