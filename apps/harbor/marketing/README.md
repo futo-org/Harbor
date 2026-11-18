@@ -38,7 +38,7 @@ Not available through either API, kept in `listing.mjs` and set in the consoles:
 | Secret | Item |
 | --- | --- |
 | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (.p8), `ASC_REVIEW_*` | `APPLE_ASC`, one field per secret |
-| `PLAY_SERVICE_ACCOUNT_JSON` | `PLAY_SERVICE_ACCOUNT_JSON`, key of `play-console-service-account@futo-polycentric.iam.gserviceaccount.com` |
+| `GOOGLE_APIS_SERVICE_ACCOUNT_JSON` | `PLAY_SERVICE_ACCOUNT_JSON`, key of `play-console-service-account@futo-polycentric.iam.gserviceaccount.com` |
 
 ## Screenshots
 
