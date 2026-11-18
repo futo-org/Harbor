@@ -21,18 +21,18 @@ type BuildArg = {
   };
 };
 
-const IDENTITY = 'ab'.repeat(32);
-
 function makeClient() {
   const build = jest.fn((content: BuildArg) => content);
   const client = {
-    activeIdentityKey: IDENTITY,
     contentManager: { build },
     createEvent: jest.fn(
-      async (_args: { collection: number; content: BuildArg }) => ({}),
+      async (_args: {
+        collection: number;
+        content: BuildArg;
+        blobs?: unknown[];
+      }) => ({}),
     ),
     sync: jest.fn(async () => {}),
-    fileStore: { put: jest.fn(async () => {}) },
   };
   // The built ProfileUpdate passed to contentManager.build.
   const builtProfile = () => build.mock.calls[0][0].profileUpdate;
@@ -109,16 +109,13 @@ describe('updateProfile', () => {
     expect(builtProfile().avatar).toEqual({
       images: variants.map((v) => v.meta),
     });
-    expect(client.fileStore.put).toHaveBeenCalledTimes(2);
-    expect(client.fileStore.put).toHaveBeenCalledWith(
-      IDENTITY,
-      'd1',
-      variants[0].bytes,
-    );
-    expect(client.fileStore.put).toHaveBeenCalledWith(
-      IDENTITY,
-      'd2',
-      variants[1].bytes,
+    expect(client.createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blobs: [
+          expect.objectContaining({ digest: 'd1', bytes: variants[0].bytes }),
+          expect.objectContaining({ digest: 'd2', bytes: variants[1].bytes }),
+        ],
+      }),
     );
   });
 
@@ -130,7 +127,10 @@ describe('updateProfile', () => {
       alias: 'user@domain.com',
     });
     expect(client.createEvent).toHaveBeenCalledTimes(1);
-    expect(client.createEvent).toHaveBeenCalledWith({
+    // We expect the content to be returned and blobs to be empty or omitted
+    const { blobs, ...args } = client.createEvent.mock.calls[0][0];
+    expect(blobs ?? []).toEqual([]);
+    expect(args).toEqual({
       collection: 3,
       content: client.contentManager.build.mock.results[0].value,
     });
