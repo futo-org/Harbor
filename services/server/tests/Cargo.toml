@@ -16,7 +16,7 @@ path = "src/tests.rs"
 axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio"] }
 opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace"] }
 prost = { version = "0.14", default-features = false }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "process"] }
 
 [dev-dependencies]
 base64.workspace = true
