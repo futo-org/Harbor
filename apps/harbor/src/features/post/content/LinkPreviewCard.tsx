@@ -104,7 +104,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
         Atoms.overflow_hidden,
         compact && Atoms.flex_row,
         theme.atoms.outline,
-        { borderWidth: 1 },
+        Atoms.border,
         pressed && Atoms.faded_subtle,
       ]}
     >

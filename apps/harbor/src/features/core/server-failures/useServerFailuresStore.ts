@@ -12,7 +12,7 @@ interface ServerFailuresStore {
   // Both identity key and server URL maps to server failures
   failures: Record<string, Record<string, ServerFailure>>;
   record: (results: ServerPushResult[], now?: number) => void;
-  clearServer: (identity: string, server: string) => void;
+  clearServer: (identityKey: string, server: string) => void;
   clearAll: () => void;
 }
 
@@ -36,10 +36,11 @@ export const useServerFailuresStore = create<ServerFailuresStore>(
       }
       set({ failures: { ...get().failures, ...synced } });
     },
-    clearServer: (identity, server) =>
+    clearServer: (identityKey, server) =>
       set((s) => {
-        const { [server]: _, ...identityFailures } = s.failures[identity] ?? {};
-        return { failures: { ...s.failures, [identity]: identityFailures } };
+        const { [server]: _, ...identityFailures } =
+          s.failures[identityKey] ?? {};
+        return { failures: { ...s.failures, [identityKey]: identityFailures } };
       }),
     clearAll: () => set({ failures: {} }),
   }),
@@ -48,7 +49,9 @@ export const useServerFailuresStore = create<ServerFailuresStore>(
 const NO_FAILURES: Record<string, ServerFailure> = {};
 
 /** Get the set of server failures for a specific identity. */
-export const useIdentityServerFailures = (identity: string | null) =>
+export const useIdentityServerFailures = (identityKey: string | null) =>
   useServerFailuresStore((s) =>
-    identity === null ? NO_FAILURES : (s.failures[identity] ?? NO_FAILURES),
+    identityKey === null
+      ? NO_FAILURES
+      : (s.failures[identityKey] ?? NO_FAILURES),
   );

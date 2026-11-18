@@ -46,7 +46,7 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
         Atoms.px_lg,
         Atoms.py_md,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
         pressed && Atoms.faded_subtle,
       ]}
     >

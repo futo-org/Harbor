@@ -182,7 +182,8 @@ export function ComposerFields({
           style={[
             Atoms.p_md,
             theme.atoms.box.danger.border,
-            { borderBottomWidth: 1, marginBottom: 10 },
+            Atoms.border_b,
+            { marginBottom: 10 },
           ]}
         >
           <Text variant="secondary" color="danger">
@@ -385,7 +386,7 @@ function ComposerLinkPreview({
             Atoms.rounded_md,
             Atoms.mt_md,
             theme.atoms.outline,
-            { borderWidth: 1 },
+            Atoms.border,
           ]}
         >
           <ActivityIndicator size="small" color={theme.colors.muted} />

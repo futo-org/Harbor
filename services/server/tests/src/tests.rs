@@ -223,11 +223,15 @@ pub fn public_key_of(key: &SigningKey) -> PublicKey {
 
 fn content_with_digest(content: Content) -> (Vec<u8>, ContentDigest) {
     let bytes = prost::Message::encode_to_vec(&content);
-    let digest = ContentDigest {
-        r#type: ContentDigestType::Sha256.into(),
-        value: sha256(&bytes),
-    };
+    let digest = content_digest(&bytes);
     (bytes, digest)
+}
+
+fn content_digest(content: &[u8]) -> ContentDigest {
+    ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(content),
+    }
 }
 
 fn sign(signing_key: &SigningKey, event: Event) -> SignedEvent {
@@ -582,25 +586,7 @@ impl TestClient {
         login: &str,
         created_at: u64,
     ) -> Vec<u8> {
-        let schema = github_verification_schema();
-        let schema_bytes = prost::Message::encode_to_vec(&schema);
-        let schema_digest = ContentDigest {
-            r#type: ContentDigestType::Sha256.into(),
-            value: sha256(&schema_bytes),
-        };
-        let schema = SerializedVerificationSchema {
-            schema_bytes,
-            digest: Some(schema_digest),
-        };
-
-        let mut fields = HashMap::new();
-        fields.insert("login".to_owned(), login.as_bytes().to_vec());
-
-        let claim = VerificationClaim {
-            schema: Some(schema),
-            fields,
-            images: Vec::new(),
-        };
+        let claim = github_verification_claim(login);
         self.verification_claim(claim, created_at)
     }
 
@@ -797,6 +783,25 @@ impl TestClient {
             "Bearer {to_sign}.{}",
             URL_SAFE_NO_PAD.encode(signature.to_bytes().as_slice()),
         )
+    }
+}
+
+fn github_verification_claim(login: &str) -> VerificationClaim {
+    let schema = github_verification_schema();
+    let schema_bytes = prost::Message::encode_to_vec(&schema);
+    let schema_digest = content_digest(&schema_bytes);
+    let schema = SerializedVerificationSchema {
+        schema_bytes,
+        digest: Some(schema_digest),
+    };
+
+    let mut fields = HashMap::new();
+    fields.insert("login".to_owned(), login.as_bytes().to_vec());
+
+    VerificationClaim {
+        schema: Some(schema),
+        fields,
+        images: Vec::new(),
     }
 }
 
@@ -1251,10 +1256,7 @@ pub fn make_verification_claim_bundle(
         }],
     };
     let schema_bytes = prost::Message::encode_to_vec(&schema);
-    let schema_digest = ContentDigest {
-        r#type: ContentDigestType::Sha256.into(),
-        value: sha256(&schema_bytes),
-    };
+    let schema_digest = content_digest(&schema_bytes);
 
     let mut fields = HashMap::new();
     fields.insert("handle".to_string(), handle.as_bytes().to_vec());

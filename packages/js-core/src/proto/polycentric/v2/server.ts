@@ -71,7 +71,7 @@ export interface SignedMessage {
      */
     signature: Uint8Array;
     /**
-     * The serialized request message, e.g. a RegisterPushNotificationRequest.
+     * The serialized request message.
      *
      * @generated from protobuf field: bytes message_bytes = 2
      */

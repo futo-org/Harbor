@@ -101,11 +101,11 @@ export function SignupBar({
           bottom: 0,
           left: 0,
           right: 0,
-          borderTopWidth: 1,
           zIndex: ZIndex.raised,
         },
         theme.atoms.box.primary.bg,
         theme.atoms.box.primary.border,
+        Atoms.border_t,
       ]}
     >
       <View style={Atoms.flex_shrink_1}>

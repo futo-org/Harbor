@@ -1,11 +1,12 @@
-use super::deconstruct_event_key;
-use crate::service::proto::{Post, attributed_to::To};
 use entity::{content_post, content_post_attributed_url};
 use sea_orm::DbErr;
 use sea_orm::sea_query::{
     CommonTableExpression, DynIden, Expr, InsertStatement, OnConflict,
     SelectStatement, WithClause,
 };
+
+use crate::service::content::repository::{Mutation, deconstruct_event_key};
+use crate::service::proto::{Post, attributed_to::To};
 
 pub(super) fn add_query(
     with: &mut WithClause,
@@ -15,7 +16,7 @@ pub(super) fn add_query(
     let Post {
         text,
         reply,
-        images: _,
+        images,
         quote,
         links: _,
         labels: _,
@@ -78,66 +79,69 @@ pub(super) fn add_query(
             DbErr::Custom(format!("incorrect amount of values: {err}"))
         })?;
 
-    if attributed_to.is_empty() {
-        // SeaORM gets unhappy when we don't have any values to pass.
-        return Ok(query);
-    }
+    if !attributed_to.is_empty() {
+        const POST_ATTRIBUTED_TO_LINK: &str = "post_attributed_to_links";
+        let mut post_attributed_to_links = SelectStatement::new();
+        post_attributed_to_links
+            .expr_as(Expr::col(("values", "column1")), "url")
+            .from_values(
+                attributed_to.into_iter().filter_map(|attributed_to| {
+                    let Some(To::Link(link)) = attributed_to.to else {
+                        return None;
+                    };
+                    if link.url.is_empty() {
+                        return None;
+                    }
+                    Some(link.url)
+                }),
+                "values",
+            );
+        let mut cte = CommonTableExpression::new();
+        cte.table_name(POST_ATTRIBUTED_TO_LINK)
+            .query(post_attributed_to_links);
+        with.cte(cte);
 
-    const POST_ATTRIBUTED_TO_LINK: &str = "post_attributed_to_links";
-    let mut post_attributed_to_links = SelectStatement::new();
-    post_attributed_to_links
-        .expr_as(Expr::col(("values", "column1")), "url")
-        .from_values(
-            attributed_to.into_iter().filter_map(|attributed_to| {
-                let Some(To::Link(link)) = attributed_to.to else {
-                    return None;
-                };
-                if link.url.is_empty() {
-                    return None;
-                }
-                Some(link.url)
-            }),
-            "values",
-        );
-    let mut cte = CommonTableExpression::new();
-    cte.table_name(POST_ATTRIBUTED_TO_LINK)
-        .query(post_attributed_to_links);
-    with.cte(cte);
-
-    // Index each URL the post is attributed to so GetAttributionFeed can
-    // find it. The (content_id, url) primary key makes a given
-    // attribution unique per post, so a repeated URL just no-ops on
-    // conflict rather than failing the ingest. Empty URLs are skipped.
-    let mut post_attributed_to = InsertStatement::new();
-    post_attributed_to
-        .into_table(content_post_attributed_url::Entity)
-        .columns([
-            content_post_attributed_url::Column::ContentId,
-            content_post_attributed_url::Column::Url,
-        ])
-        .select_from({
-            let mut q = SelectStatement::new();
-            q.from(content_id.0.clone())
-                .from(POST_ATTRIBUTED_TO_LINK)
-                .expr(Expr::col(content_id))
-                .expr(Expr::col((POST_ATTRIBUTED_TO_LINK, "url")));
-            q
-        })
-        .map_err(|err| {
-            DbErr::Custom(format!("incorrect amount of values: {err}"))
-        })?
-        .on_conflict({
-            let mut c = OnConflict::columns([
+        // Index each URL the post is attributed to so GetAttributionFeed can
+        // find it. The (content_id, url) primary key makes a given
+        // attribution unique per post, so a repeated URL just no-ops on
+        // conflict rather than failing the ingest. Empty URLs are skipped.
+        let mut post_attributed_to = InsertStatement::new();
+        post_attributed_to
+            .into_table(content_post_attributed_url::Entity)
+            .columns([
                 content_post_attributed_url::Column::ContentId,
                 content_post_attributed_url::Column::Url,
-            ]);
-            c.do_nothing();
-            c
-        });
-    let mut cte = CommonTableExpression::new();
-    cte.table_name("post_attributed_to")
-        .query(post_attributed_to);
-    with.cte(cte);
+            ])
+            .select_from({
+                let mut q = SelectStatement::new();
+                q.from(content_id.0.clone())
+                    .from(POST_ATTRIBUTED_TO_LINK)
+                    .expr(Expr::col(content_id.clone()))
+                    .expr(Expr::col((POST_ATTRIBUTED_TO_LINK, "url")));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            .on_conflict({
+                let mut c = OnConflict::columns([
+                    content_post_attributed_url::Column::ContentId,
+                    content_post_attributed_url::Column::Url,
+                ]);
+                c.do_nothing();
+                c
+            });
+        let mut cte = CommonTableExpression::new();
+        cte.table_name("post_attributed_to")
+            .query(post_attributed_to);
+        with.cte(cte);
+    }
+
+    if let Some(query) = Mutation::store_image_sets(images, content_id)? {
+        let mut cte = CommonTableExpression::new();
+        cte.table_name("post_images").query(query);
+        with.cte(cte);
+    }
 
     Ok(query)
 }

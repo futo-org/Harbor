@@ -23,7 +23,7 @@ export function ClaimSkeleton() {
         Atoms.py_md,
         animatedStyle,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>

@@ -35,11 +35,32 @@ runs:
           exit 0
         fi
         args=("--$STORE-zip" dist/*-"$STORE".zip)
+        # Chrome publishes as the service account Google Play uses unless it
+        # is given its own.
+        if [ "$STORE" = chrome ] && [ -z "$CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL" ] && [ -n "$GOOGLE_APIS_SERVICE_ACCOUNT_JSON" ]; then
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL=$(node -p 'JSON.parse(process.env.GOOGLE_APIS_SERVICE_ACCOUNT_JSON).client_email')
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY=$(node -p 'JSON.parse(process.env.GOOGLE_APIS_SERVICE_ACCOUNT_JSON).private_key')
+          export CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
+        fi
         # Firefox reviewers build the extension from its sources, which are the
         # whole repository: the extension packages the Harbor app and its SDKs.
         # The steps are in apps/harbor-browser-extension/README.md.
         if [ "$STORE" = firefox ]; then
           git -C ../.. archive --format=zip -o "$PWD/dist/repository-sources.zip" HEAD
           args+=(--firefox-sources-zip dist/repository-sources.zip)
+          # A listed version needs a category on the add-on and must carry its
+          # license, and ours is not one of Mozilla's built-in choices.
+          if [ "$FIREFOX_CHANNEL" = listed ]; then
+            node -e '
+              const fs = require("fs");
+              const text = fs.readFileSync("../LICENSE.md", "utf8");
+              const name = text.match(/^# (.+)$/m)[1];
+              fs.writeFileSync("dist/amo-metadata.json", JSON.stringify({
+                categories: ["social-communication"],
+                version: { custom_license: { name: { "en-US": name }, text: { "en-US": text } } },
+              }));
+            '
+            export FIREFOX_AMO_METADATA_FILE=dist/amo-metadata.json
+          fi
         fi
         pnpm exec wxt submit "${args[@]}"

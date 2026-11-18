@@ -25,7 +25,7 @@ export function PostSkeleton() {
         Atoms.gap_md,
         animatedStyle,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
       ]}
     >
       <Block width={AVATAR_SIZE} height={AVATAR_SIZE} />

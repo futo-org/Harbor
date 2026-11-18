@@ -66,11 +66,11 @@ export function ExtensionUrlFeed({
           style={[
             Atoms.fixed,
             theme.atoms.box.primary.border,
+            Atoms.border_t,
             {
               bottom: 0,
               left: 0,
               right: 0,
-              borderTopWidth: 1,
               zIndex: ZIndex.raised,
             },
           ]}

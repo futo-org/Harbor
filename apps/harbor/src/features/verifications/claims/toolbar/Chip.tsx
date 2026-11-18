@@ -24,7 +24,7 @@ export function Chip({
         Atoms.pl_md,
         Atoms.pr_md,
         theme.atoms.box.primary.border,
-        { borderWidth: 1 },
+        Atoms.border,
         style,
       ]}
     >

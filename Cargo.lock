@@ -3410,6 +3410,7 @@ dependencies = [
 name = "push-notifications-service"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "common-dotenv",
  "common-kafka",
  "common-telemetry",

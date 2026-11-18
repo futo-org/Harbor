@@ -11,7 +11,9 @@ import {
 } from '@/src/common/query/hooks/useQuery';
 import {
   COLLECTION,
+  FetchMode,
   Query,
+  QueryStatus,
   v2,
   type EventKey,
 } from '@polycentric/react-native';
@@ -39,6 +41,7 @@ export type PostReactions = {
 /** Reaction data + query fields */
 export type PostReactionsResult = PostReactions & {
   isLoading: boolean;
+  isError: boolean;
   refresh: () => void;
 };
 
@@ -141,7 +144,12 @@ function view(
  */
 export function usePostReactions(
   post: PostData | undefined,
-  options?: { limit?: number },
+  options?: {
+    limit?: number;
+    fetchMode?: FetchMode;
+    // False skips the query but still returns what's cached for the post.
+    enabled?: boolean;
+  },
 ): PostReactionsResult {
   const client = usePolycentric();
 
@@ -164,8 +172,8 @@ export function usePostReactions(
   const query = useQuery(
     postReactionsQueryKey(post?.id ?? '', limit),
     new Query.GetReactions({ target: eventKey, limit }),
-    undefined,
-    !!post,
+    { fetchMode: options?.fetchMode ?? FetchMode.Default },
+    !!post && (options?.enabled ?? true),
   );
 
   const myReaction = useReactions((s) =>
@@ -190,6 +198,7 @@ export function usePostReactions(
 
   return {
     isLoading: query.isLoading,
+    isError: query.status === QueryStatus.Error,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
     ...reactionsView,
   };
