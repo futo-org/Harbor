@@ -79,9 +79,7 @@ export function summarizeReactions(
   maxLines: number,
 ): {
   lines: ReactionSummaryLine[];
-  /** Emojis of the lines past `maxLines`, in line order. */
-  moreEmojis: string[];
-  /** People who reacted with `moreEmojis`. */
+  /** People who reacted with the emojis of the lines past `maxLines`. */
   morePeopleCount: number;
 } {
   const countByEmoji = new Map(counts.map((c) => [c.emoji, c.count]));
@@ -115,7 +113,6 @@ export function summarizeReactions(
   const moreLines = allLines.slice(maxLines);
   return {
     lines: allLines.slice(0, maxLines),
-    moreEmojis: moreLines.map((line) => line.emoji),
     morePeopleCount: moreLines.reduce(
       (sum, line) =>
         sum +

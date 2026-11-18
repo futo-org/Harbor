@@ -5,15 +5,9 @@ import {
   usePolycentric,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  Atoms,
-  createThemedStyles,
-  Spacing,
-  useTheme,
-} from '@/src/common/theme';
-import { useId, useMemo } from 'react';
-import { type StyleProp, View, type ViewStyle } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { Atoms, createThemedStyles } from '@/src/common/theme';
+import { useMemo } from 'react';
+import { View } from 'react-native';
 import type { ReactionGroup } from './usePostReactions';
 import {
   countReactionsFrom,
@@ -22,8 +16,6 @@ import {
 } from './util';
 
 const MAX_LINES = 4;
-// Emojis of the lines past MAX_LINES shown in the last line.
-const MAX_MORE_EMOJIS = 4;
 const MAX_CARD_WIDTH = 280;
 const EMOJI_SIZE = 16;
 
@@ -37,10 +29,9 @@ export function ReactionSummaryCard({
 }) {
   const client = usePolycentric();
   const styles = useStyles();
-  const { theme } = useTheme();
   const myIdentity = client.activeIdentityKey ?? undefined;
 
-  const { lines, moreEmojis, morePeopleCount } = useMemo(
+  const { lines, morePeopleCount } = useMemo(
     () =>
       summarizeReactions(
         groups,
@@ -56,24 +47,11 @@ export function ReactionSummaryCard({
       {lines.map((line) => (
         <SummaryLine key={line.emoji} line={line} />
       ))}
-      {moreEmojis.length > 0 ? (
-        <View style={styles.line}>
-          <View style={styles.moreEmojis}>
-            {moreEmojis.slice(0, MAX_MORE_EMOJIS).map((emoji) => (
-              <EmojiImage key={emoji} sequence={emoji} size={EMOJI_SIZE} />
-            ))}
-            {/* Past the cap, the last two emojis fade out to hint at more. */}
-            {moreEmojis.length > MAX_MORE_EMOJIS ? (
-              <EmojiFade
-                color={theme.colors.box.secondary.bg}
-                style={styles.moreEmojisFade}
-              />
-            ) : null}
-          </View>
-          <Text variant="small" color="muted">
-            {morePeopleCount} more {morePeopleCount === 1 ? 'person' : 'people'}
-          </Text>
-        </View>
+      {morePeopleCount > 0 ? (
+        <Text variant="small" color="muted">
+          +{morePeopleCount} more{' '}
+          {morePeopleCount === 1 ? 'reaction' : 'reactions'}
+        </Text>
       ) : null}
     </View>
   );
@@ -124,32 +102,6 @@ function ReactorName({ identity }: { identity: string }) {
   return useUsername(identity);
 }
 
-/** Fades what's under it out into `color`, left to right. */
-function EmojiFade({
-  color,
-  style,
-}: {
-  color: string;
-  style: StyleProp<ViewStyle>;
-}) {
-  // SVG ids need to be document-global on web, so keep them unique per instance.
-  const gradientId = `emoji-fade-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
-
-  return (
-    <View style={style}>
-      <Svg width="100%" height="100%">
-        <Defs>
-          <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={color} stopOpacity={0} />
-            <Stop offset="1" stopColor={color} stopOpacity={1} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
-      </Svg>
-    </View>
-  );
-}
-
 const useStyles = createThemedStyles((theme, define) =>
   define({
     card: [
@@ -163,17 +115,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { maxWidth: MAX_CARD_WIDTH },
     ],
     line: [Atoms.flex_row, Atoms.items_center, Atoms.gap_sm],
-    moreEmojis: [Atoms.flex_row, Atoms.gap_2xs],
-    moreEmojisFade: [
-      Atoms.absolute,
-      {
-        top: 0,
-        bottom: 0,
-        right: 0,
-        // Covers the last two emojis and the gap between them.
-        width: 2 * EMOJI_SIZE + Spacing['2xs'],
-      },
-    ],
     names: [Atoms.flex_row, Atoms.flex_shrink_1],
     name: Atoms.flex_shrink_1,
     fixed: Atoms.flex_shrink_0,
