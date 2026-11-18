@@ -4,7 +4,7 @@ kubectl = "1.37.2"
 helm = "4.3.2"
 tilt = "0.37.9"
 # Node from .nvmrc; pnpm matches package.json.
-pnpm = "12.16.1"
+pnpm = "12.21.0"
 # For the rs-core wasm build; pinned as in the Dockerfiles, CI and Cargo.lock.
 rust = { version = "1.100.0", targets = "wasm32-unknown-unknown" }
 protoc = "36.2"
