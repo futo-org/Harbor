@@ -28,6 +28,7 @@ const useFollows = create<FollowsState>((set, get) => ({
    * Creates the Follow event and syncs
    */
   async addFollow(client, identity) {
+    const self = client.activeIdentityKey ?? '';
     const follows = get().follows;
 
     const content = v2.Content.create({
@@ -37,23 +38,21 @@ const useFollows = create<FollowsState>((set, get) => ({
       },
     });
 
+    // Create local event and immediately apply the new follow state
     try {
-      // Update local state
       await client.createEvent({ collection: COLLECTION.GRAPH, content });
       set({ follows: new Map(follows).set(identity, true) });
-
-      // Sync to remotes
-      await client.sync();
-
-      // `identity` is the followee; the feed belongs to the follower.
-      invalidateQuery(
-        client,
-        feedQueryKeys.following(client.activeIdentityKey ?? ''),
-      );
     } catch (err) {
       console.error(err);
-      // revert the change
-      set({ follows });
+      return;
+    }
+
+    // Sync to remotes and invalidate following feed
+    try {
+      await client.sync();
+      invalidateQuery(client, feedQueryKeys.following(self));
+    } catch (err) {
+      console.error(err);
     }
   },
   /**
@@ -62,8 +61,6 @@ const useFollows = create<FollowsState>((set, get) => ({
   async removeFollow(client, identity) {
     const self = client.activeIdentityKey;
     if (!self) return;
-
-    const follows = get().follows;
 
     const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
 
@@ -77,11 +74,7 @@ const useFollows = create<FollowsState>((set, get) => ({
           entry !== null && entry.content.identity === identity,
       );
 
-    // Optimistically upate the state
-    const next = new Map(follows);
-    next.delete(identity);
-    set({ follows: next });
-
+    // Create local delete events and then apply the new follow state
     try {
       for (const { event } of targets) {
         if (!event.key) continue;
@@ -96,18 +89,23 @@ const useFollows = create<FollowsState>((set, get) => ({
           content: deleteContent,
         });
       }
+
+      const follows = new Map(get().follows);
+      follows.delete(identity);
+      set({ follows });
     } catch (err) {
       console.error(err);
-      // Revert the state change
-      set({ follows });
+      return;
     }
 
-    if (targets.length > 0) {
+    if (targets.length === 0) return;
+
+    // Sync to remotes and invalidate following feed
+    try {
       await client.sync();
-      invalidateQuery(
-        client,
-        feedQueryKeys.following(client.activeIdentityKey ?? ''),
-      );
+      invalidateQuery(client, feedQueryKeys.following(self));
+    } catch (err) {
+      console.error(err);
     }
   },
   /**
