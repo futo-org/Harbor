@@ -11,6 +11,13 @@ Harbor Anywhere is the Harbor browser extension for Chrome, Brave, Edge,
 Firefox and Safari. Click its toolbar icon to open Harbor beside the page you
 are on. In Safari it opens as a popup.
 
+## Installing
+
+- **Chrome, Brave and Edge**: add
+  [Harbor Anywhere from the Chrome Web Store](https://chromewebstore.google.com/detail/harbor-anywhere/cpjdenlifojmmddcigneiahgbkkbojlm).
+- **Firefox**: add
+  [Harbor Anywhere from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/harbor-anywhere/).
+
 ## Signing in
 
 The extension signs in as the identity you use on
