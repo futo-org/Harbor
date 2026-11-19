@@ -1,5 +1,10 @@
 //! Tests for banned identities.
 
+use std::sync::Once;
+use std::time::Duration;
+
+use tokio::time::sleep;
+
 use crate::blobs::{get_blob, random_image, test_blob_upload};
 use crate::search_users::expect_searched_users;
 use crate::*;
@@ -159,10 +164,7 @@ async fn banning_removes_posts_with_images() {
     let banned_identity = banned_client.identity().to_owned();
 
     set_ban_status(&banned_identity, true).await;
-    prune_blob().await;
-
-    // Blob should be removed.
-    assert!(get_blob(&banned_post_image_blob).await.is_none());
+    prune_blob(&[banned_post_image_blob]).await;
 }
 
 #[tokio::test]
@@ -187,10 +189,7 @@ async fn banning_removes_verification_claims_with_images() {
     let banned_identity = banned_client.identity().to_owned();
 
     set_ban_status(&banned_identity, true).await;
-    prune_blob().await;
-
-    // Blob should be removed.
-    assert!(get_blob(&banned_verification_image_blob).await.is_none());
+    prune_blob(&[banned_verification_image_blob]).await;
 }
 
 #[tokio::test]
@@ -220,7 +219,7 @@ async fn banning_removes_profile_updates_with_avatars_and_banners() {
     let banned_identity = banned_client.identity().to_owned();
 
     set_ban_status(&banned_identity, true).await;
-    prune_blob().await;
+    prune_blob(&[banned_avatar_blob, banned_banner_blob]).await;
 
     expect_searched_users(
         SearchUsersRequest {
@@ -231,10 +230,6 @@ async fn banning_removes_profile_updates_with_avatars_and_banners() {
         Vec::new(),
     )
     .await;
-
-    // Blob should be removed.
-    assert!(get_blob(&banned_avatar_blob).await.is_none());
-    assert!(get_blob(&banned_banner_blob).await.is_none());
 }
 
 #[tokio::test]
@@ -344,25 +339,63 @@ async fn set_ban_status(identity: &str, banned: bool) {
     }
 }
 
-async fn prune_blob() {
-    let output = tokio::process::Command::new("cargo")
-        .args([
-            "run",
-            "--quiet",
-            "--bin",
-            "server",
-            "--",
-            "prune-blobs",
-            "--grace-period-secs",
-            "0",
-        ])
-        .current_dir("..")
-        .output()
-        .await
-        .expect("failed to prune blobs via admin CLI");
+async fn prune_blob(blobs: &[Blob]) {
+    // Build the admin CLI tool once and use the created binary below.
+    static BUILD: Once = Once::new();
+    BUILD.call_once(|| {
+        std::process::Command::new("cargo")
+            .args(["build", "--quiet", "--bin", "server"])
+            .current_dir("..")
+            .status()
+            .expect("failed to build server");
+    });
 
-    if output.status.success() {
-        return;
+    let mut output;
+    let mut i = 0;
+    loop {
+        i += 1;
+
+        let mut blob_exists = false;
+        for blob in blobs {
+            if get_blob(blob).await.is_some() {
+                blob_exists = true;
+                break;
+            }
+        }
+        if !blob_exists {
+            // Another prune call already removed the blob(s).
+            return;
+        }
+
+        output = tokio::process::Command::new("../../target/debug/server")
+            .args(["prune-blobs", "--grace-period-secs", "0"])
+            .current_dir("..")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .await
+            .expect("failed to prune blobs via admin CLI");
+
+        if String::from_utf8_lossy(&output.stdout).contains("skip") {
+            // If we skipped the pruning (e.g. when another process is holding
+            // the lock) we need to try again to ensure the blob(s) the caller
+            // cares about are pruned.
+            sleep(Duration::from_millis(50)).await;
+            continue;
+        }
+
+        if output.status.success() {
+            for blob in blobs {
+                if get_blob(blob).await.is_some() {
+                    panic!("blob still existing after pruning {blob:?}");
+                }
+            }
+
+            return;
+        }
+
+        if i >= 3 {
+            break;
+        }
     }
 
     use std::io::Write;
