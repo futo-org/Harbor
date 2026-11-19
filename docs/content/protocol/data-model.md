@@ -189,5 +189,5 @@ event's collection is 7 (`Labels`).
 Media is stored as blobs in object storage and referenced by digest. Images may carry
 multiple size variants.
 
-```protobuf file=protos/polycentric/v2/content.proto#Blob,Image,ImageSet
+```protobuf file=protos/polycentric/v2/media.proto#Blob,Image,ImageSet
 ```
