@@ -4,15 +4,18 @@
 
 use std::time::Duration;
 
-use entity::{blob_index, content, content_delete, content_image, event};
+use entity::{
+    blob_index, content, content_blob, content_delete, content_image, event,
+};
 use polycentric_common::models::protos_v2::{
     Blob, ContentDigest, Image, ImageSet,
 };
 use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    DeleteStatement, DynIden, Expr, ExprTrait, InsertStatement,
-    SelectStatement, SubQueryStatement, WithClause,
+    CommonTableExpression, DeleteStatement, DynIden, Expr, ExprTrait, Func,
+    InsertStatement, SelectStatement, SubQueryStatement, Value, ValueType,
+    WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
@@ -76,14 +79,57 @@ impl Mutation {
     }
 
     /// Removes all blobs with a key in `keys` from the index.
-    pub(crate) async fn remove_blobs_from_index<C: Connection>(
+    pub(crate) async fn remove_blobs<C: Connection>(
         db: &mut C,
-        keys: Vec<String>,
+        to_remove: Vec<(String, ContentDigest)>,
     ) -> Result<(), DbErr> {
-        let mut query = DeleteStatement::new();
-        query.from_table(blob_index::Entity).and_where(
+        let mut keys = Vec::with_capacity(to_remove.len());
+        let mut digest_types = Vec::with_capacity(to_remove.len());
+        let mut digest_values = Vec::with_capacity(to_remove.len());
+        for (key, ContentDigest { r#type, value }) in to_remove {
+            keys.push(key);
+            digest_types.push(Value::from(r#type));
+            digest_values.push(Value::from(value));
+        }
+
+        let mut delete_from_index = DeleteStatement::new();
+        delete_from_index.from_table(blob_index::Entity).and_where(
             Expr::col(blob_index::Column::Key.as_column_ref()).eq_any(keys),
         );
+
+        let mut delete_from_content = DeleteStatement::new();
+        delete_from_content
+            .from_table(content_blob::Entity)
+            .and_where(
+                Expr::tuple([
+                    Expr::col(content_blob::Column::DigestType.as_column_ref()),
+                    Expr::col(
+                        content_blob::Column::DigestBytes.as_column_ref(),
+                    ),
+                ])
+                .in_subquery({
+                    let mut q = SelectStatement::new();
+                    q.expr(Func::cust("UNNEST").arg(Value::Array(
+                        <i32 as ValueType>::array_type(),
+                        Some(Box::new(digest_types)),
+                    )))
+                    .expr(Func::cust("UNNEST").arg(
+                        Value::Array(
+                            <Vec<u8> as ValueType>::array_type(),
+                            Some(Box::new(digest_values)),
+                        ),
+                    ));
+                    q
+                }),
+            );
+
+        let mut with = WithClause::new();
+        let mut cte = CommonTableExpression::new();
+        cte.table_name("delete_from_content_blob")
+            .query(delete_from_content);
+        with.cte(cte);
+        let query = delete_from_index.with(with);
+
         db.execute(&query).await?;
         Ok(())
     }
