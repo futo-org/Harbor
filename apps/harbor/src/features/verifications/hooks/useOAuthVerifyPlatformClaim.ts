@@ -77,6 +77,7 @@ export default function useOAuthVerifyPlatformClaim() {
       }
       setPending(true);
       try {
+        const identity = client.activeIdentityKey;
         const { server, username, token } = await oauthSignIn(platform);
 
         // Check the token before publishing anything.
@@ -87,6 +88,10 @@ export default function useOAuthVerifyPlatformClaim() {
           token,
         );
 
+        if (identity !== client.activeIdentityKey) {
+          throw new Error('Unexpected identity switch');
+        }
+
         // One account field: the authenticated username. The profile URL is
         // derived from it where the platform has one.
         const { schema, values } = platformClaimParts(
@@ -95,6 +100,10 @@ export default function useOAuthVerifyPlatformClaim() {
           platform.profileUrl?.(username),
         );
         const ref = await createClaim.submit({ schema, values });
+
+        if (identity !== client.activeIdentityKey) {
+          throw new Error('Unexpected identity switch');
+        }
 
         // Verify needs the claim published; roll it back on failure so
         // retries don't pile up claims.
@@ -107,8 +116,11 @@ export default function useOAuthVerifyPlatformClaim() {
             token,
           );
         } catch (e) {
-          await deleteClaim(client, ref.id).catch(() => {});
-          invalidateQuery(client, ['claims-list', ref.identity]);
+          if (identity === client.activeIdentityKey) {
+            await deleteClaim(client, ref.id).catch(() => {});
+            invalidateQuery(client, ['claims-list', ref.identity]);
+          }
+
           throw e;
         }
 
