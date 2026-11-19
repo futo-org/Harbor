@@ -4,9 +4,7 @@
 
 use std::time::Duration;
 
-use entity::{
-    blob_index, content, content_blob, content_delete, content_image, event,
-};
+use entity::{blob_index, content, content_delete, content_image, event};
 use polycentric_common::models::protos_v2::{
     Blob, ContentDigest, Image, ImageSet,
 };
@@ -14,12 +12,12 @@ use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
     DeleteStatement, DynIden, Expr, ExprTrait, InsertStatement,
-    SelectStatement, SubQueryStatement, UnionType, WithClause,
+    SelectStatement, SubQueryStatement, WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
 
-use crate::db::Connection;
+use crate::db::{Connection, interval};
 use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
 
 mod attributed_to_reaction;
@@ -171,46 +169,19 @@ impl Query {
         db: &mut C,
         grace_period: Duration,
     ) -> Result<Vec<(String, ContentDigest)>, DbErr> {
-        // NOTE: query below is broken.
-        return Ok(Vec::new());
-
-        let mut select_content_image_id = SelectStatement::new();
-        select_content_image_id
-            .expr(Expr::col(content_image::Column::ContentId.as_column_ref()))
+        let mut live_blobs = SelectStatement::new();
+        live_blobs
             .expr(Expr::col(content_image::Column::DigestType.as_column_ref()))
             .expr(Expr::col(
                 content_image::Column::DigestBytes.as_column_ref(),
             ))
-            .from(content_image::Entity);
-
-        let mut select_content_blob_id = SelectStatement::new();
-        select_content_blob_id
-            .expr(Expr::col(content_blob::Column::ContentId.as_column_ref()))
-            .expr(Expr::col(content_blob::Column::DigestType.as_column_ref()))
-            .expr(Expr::col(content_blob::Column::DigestBytes.as_column_ref()))
-            .from(content_blob::Entity);
-
-        const BLOB_CONTENT: &str = "blob_content";
-        let mut live_blobs = SelectStatement::new();
-        live_blobs
-            .expr(Expr::col((BLOB_CONTENT, content_blob::Column::DigestType)))
-            .expr(Expr::col((BLOB_CONTENT, content_blob::Column::DigestBytes)))
-            .from_subquery(
-                {
-                    select_content_blob_id
-                        .union(UnionType::All, select_content_image_id);
-                    select_content_blob_id
-                },
-                BLOB_CONTENT,
-            )
+            .from(content_image::Entity)
             .inner_join(
                 content::Entity,
-                Expr::col(content::Column::Id.as_column_ref()).eq(Expr::col((
-                    BLOB_CONTENT,
-                    content_blob::Column::ContentId,
-                ))),
+                Expr::col(content::Column::Id.as_column_ref()).eq(Expr::col(
+                    content_image::Column::ContentId.as_column_ref(),
+                )),
             )
-            // FIXME: this is broken.
             .inner_join(
                 event::Entity,
                 Expr::col(event::Column::ContentDigestType.as_column_ref())
@@ -272,6 +243,10 @@ impl Query {
             .expr(Expr::col(blob_index::Column::DigestType.as_column_ref()))
             .expr(Expr::col(blob_index::Column::DigestValue.as_column_ref()))
             .from(blob_index::Entity)
+            .and_where(
+                Expr::col(blob_index::Column::LastModified)
+                    .lte(Expr::current_timestamp().sub(interval(grace_period))),
+            )
             .and_where(
                 Expr::tuple([
                     Expr::col(blob_index::Column::DigestType.as_column_ref()),
