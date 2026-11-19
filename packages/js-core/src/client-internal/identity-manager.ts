@@ -199,7 +199,7 @@ export class IdentityManager {
     if (!state) throw new Error('No active identity');
 
     const signingKeys = state.signingKeys.filter(
-      (k) => !bytesEqual(k.key, publicKey.key),
+      (k) => !IdentityManager.keysEqual(k, publicKey),
     );
     const { signedEvent } = await this.publishUpdate({ ...state, signingKeys });
     return signedEvent;
