@@ -29,22 +29,11 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     avatar
   ) : (
     <View
-      style={[
-        Atoms.flex_row,
-        Atoms.justify_between,
-        Atoms.items_center,
-        Atoms.gap_sm,
-      ]}
+      style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm, Atoms.px_sm]}
     >
       {avatar}
       <View
-        style={[
-          Atoms.flex_1,
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.px_sm,
-          Atoms.py_sm,
-        ]}
+        style={[Atoms.flex_1, Atoms.flex_row, Atoms.items_center, Atoms.py_sm]}
       >
         <View style={[Atoms.flex_col, Atoms.flex_1]}>
           <Username
