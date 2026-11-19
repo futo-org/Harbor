@@ -46,6 +46,7 @@ pub(crate) fn start(
 }
 
 /// Prune blobs.
+#[allow(clippy::collapsible_if)]
 pub(crate) async fn run(
     db: &mut DbConn,
     filestore: &ContentFilestore,
@@ -105,22 +106,22 @@ pub(crate) async fn run(
         tracing::info!(%key, "pruning unused blob");
 
         processed += 1;
-        if !dry_run && let Err(error) = filestore.delete_blob(&digest).await {
-            tracing::warn!(%key, %error, "failed to delete unused blob");
-            failed += 1;
-            i += 1;
-        } else {
-            deleted += 1;
-            unused_blobs.swap_remove(i); // NOTE: not incrementing i.
+        if !dry_run {
+            if let Err(error) = filestore.delete_blob(digest).await {
+                tracing::warn!(%key, %error, "failed to delete unused blob");
+                failed += 1;
+                unused_blobs.swap_remove(i); // NOTE: not incrementing i.
+                continue;
+            }
         }
+        deleted += 1;
+        i += 1;
     }
 
     let next_run = next_run(&mut tx).await;
 
-    if !unused_blobs.is_empty() {
-        if !dry_run
-            && let Err(error) =
-                Mutation::remove_blobs(&mut tx, unused_blobs).await
+    if !dry_run && !unused_blobs.is_empty() {
+        if let Err(error) = Mutation::remove_blobs(&mut tx, unused_blobs).await
         {
             tracing::warn!(%error, "failed remove unused blobs from database (already removed from content storage)");
             if let Err(error) = tx.rollback().await {
