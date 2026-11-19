@@ -126,7 +126,9 @@ impl AdvisoryLock {
         tx: &mut DbTx<'_>,
     ) -> Result<bool, DbErr> {
         let mut query = SelectStatement::new();
-        query.expr(PgFunc::try_advisory_lock(Expr::Constant(self.0.into())));
+        query.expr(PgFunc::try_advisory_xact_lock(Expr::Constant(
+            self.0.into(),
+        )));
         if tx
             .query_one(&query)
             .await?
