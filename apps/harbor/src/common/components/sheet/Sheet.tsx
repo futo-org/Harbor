@@ -68,6 +68,8 @@ type CommonProps = {
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
+  /** Web only: a layer over the card's body and footer, below the header. */
+  overlay?: ReactElement;
   /** Fired once the sheet has finished presenting. */
   onPresented?: () => void;
 };
@@ -448,6 +450,7 @@ function WebModal({
   height,
   header,
   footer,
+  overlay,
   onPresented,
 }: SheetProps) {
   const { theme } = useTheme();
@@ -524,12 +527,15 @@ function WebModal({
           ]}
         >
           {header}
-          {/* The scroll container between the pinned header and footer. A
+          <View style={Atoms.flex_1}>
+            {/* The scroll container between the pinned header and footer. A
               scroll container's automatic minimum size is 0, so it shrinks to
               the space the card has left instead of forcing the card past its
               max height, and grows to fill a fixed-height card. */}
-          <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
-          {footer}
+            <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
+            {footer}
+            {overlay}
+          </View>
         </View>
       </View>
     </Reanimated.View>
