@@ -351,6 +351,7 @@ async fn prune_blob() {
     let output = tokio::process::Command::new("cargo")
         .args([
             "run",
+            "--quiet",
             "--bin",
             "server",
             "--",
