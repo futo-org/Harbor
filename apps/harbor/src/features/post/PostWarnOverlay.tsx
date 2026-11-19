@@ -39,7 +39,7 @@ export function PostWarnOverlay({
         Atoms.align_center,
         Atoms.rounded_md,
         Atoms.overflow_hidden,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <View
@@ -53,13 +53,13 @@ export function PostWarnOverlay({
           Atoms.py_sm,
         ]}
       >
-        <Icon name="infoOutline" color="neutral_700" />
+        <Icon name="infoOutline" color="secondary" />
         <View style={[Atoms.flex_1]}>
-          <Text variant="secondary" fontWeight="bold" color="neutral_700">
+          <Text variant="secondary" fontWeight="bold" color="secondary">
             Hidden for {labelNames(labels).toLowerCase()}
           </Text>
           {attribution ? (
-            <Text variant="small" color="neutral_500" fontWeight="regular">
+            <Text variant="small" color="muted" fontWeight="regular">
               {attribution}
             </Text>
           ) : null}
@@ -80,11 +80,11 @@ export function PostWarnOverlay({
           Atoms.px_md,
           Atoms.self_stretch,
           Atoms.justify_center,
-          { backgroundColor: theme.palette.neutral_50 },
-          pressed && { opacity: 0.5 },
+          theme.atoms.box.secondary.bg_hover,
+          pressed && Atoms.faded,
         ]}
       >
-        <Text variant="secondary" fontWeight="bold" color="neutral_600">
+        <Text variant="secondary" fontWeight="bold" color="secondary">
           Show
         </Text>
       </Pressable>

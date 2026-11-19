@@ -1,9 +1,12 @@
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { COLLECTION } from '../constants';
 import { MemoryStorageDriver } from '../memory-storage';
 import {
+  type ContentStatus,
   type EventKey,
+  type EventRow,
   EventRepositoryError,
   type EventRepositoryErrorCode,
   type IEventRepository,
@@ -217,6 +220,70 @@ describe('EventStore', () => {
       expect(
         await codeOf(store.addContent(OWNER, makeEventKey(), content)),
       ).toBe('not found');
+    });
+  });
+
+  describe('getProfiles', () => {
+    const OTHER = 'cd'.repeat(32);
+
+    function makeRow(
+      owner: string,
+      identity: string,
+      collection: number,
+      sequence: number,
+      contentStatus: ContentStatus = 'present',
+    ): EventRow {
+      return {
+        owner,
+        eventKey: {
+          identity,
+          signedBy,
+          collection,
+          sequence: BigInt(sequence),
+        },
+        eventBytes: new Uint8Array([collection, sequence]),
+        eventSignature: new Uint8Array([1]),
+        contentStatus,
+        contentBytes: contentStatus === 'present' ? content : undefined,
+      };
+    }
+
+    function sortKey(row: EventRow): string {
+      const { collection, sequence } = row.eventKey;
+      return `${row.owner}|${row.eventKey.identity}|${collection}|${sequence}`;
+    }
+
+    function sorted(rows: EventRow[]): EventRow[] {
+      return [...rows].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    }
+
+    it('returns identity and profile events for every owner', async () => {
+      const expected = [
+        makeRow(OWNER, OWNER, COLLECTION.IDENTITY, 1),
+        makeRow(OWNER, OWNER, COLLECTION.IDENTITY, 2),
+        makeRow(OWNER, OWNER, COLLECTION.PROFILE, 1, 'absent'),
+        makeRow(OTHER, OTHER, COLLECTION.IDENTITY, 1),
+        makeRow(OTHER, OTHER, COLLECTION.PROFILE, 1, 'omitted'),
+      ];
+
+      const excluded = [
+        // Other collections
+        makeRow(OWNER, OWNER, COLLECTION.FEED, 1),
+        makeRow(OTHER, OTHER, COLLECTION.INTERACTIONS, 1),
+        // Another identity's events stored by an owner
+        makeRow(OWNER, OTHER, COLLECTION.IDENTITY, 1),
+        makeRow(OWNER, OTHER, COLLECTION.PROFILE, 1),
+      ];
+
+      for (const row of [...expected, ...excluded]) {
+        await repository.insert(row);
+      }
+
+      expect(sorted(await store.getProfiles())).toEqual(sorted(expected));
+    });
+
+    it('returns nothing for an empty repository', async () => {
+      expect(await store.getProfiles()).toEqual([]);
     });
   });
 });

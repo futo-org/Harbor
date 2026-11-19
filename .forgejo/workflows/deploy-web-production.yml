@@ -42,5 +42,5 @@ jobs:
           tag: ${{ inputs.sha || 'staging' }}
           environment: production
           web-assets: "true"
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}

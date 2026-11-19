@@ -68,6 +68,8 @@ type CommonProps = {
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
+  /** Web only: a layer over the card's body and footer, below the header. */
+  overlay?: ReactElement;
   /** Fired once the sheet has finished presenting. */
   onPresented?: () => void;
 };
@@ -176,9 +178,9 @@ function SheetHeader({
         onPress={onClose}
         hitSlop={Spacing['lg']}
         disabled={disabled}
-        style={({ pressed }) => [(disabled || pressed) && { opacity: 0.5 }]}
+        style={({ pressed }) => [(disabled || pressed) && Atoms.faded]}
       >
-        <Icon name={closeIcon} size={24} color="neutral_900" />
+        <Icon name={closeIcon} size={24} color="primary" />
       </Pressable>
     ));
   right = right ?? <View style={{ width: 40, height: 40 }} />;
@@ -209,7 +211,6 @@ export function SheetFooter({
   const { theme } = useTheme();
 
   const insets = useSafeAreaInsets();
-  const backgroundColor = theme.palette.neutral_0;
   const padding = Spacing.lg;
 
   return (
@@ -218,14 +219,17 @@ export function SheetFooter({
       style={[
         Atoms.flex_row,
         { padding, paddingBottom: insets.bottom + padding },
-        !fadeTop && { backgroundColor },
+        !fadeTop && theme.atoms.box.primary.bg,
         // The web footer sits below the scrolling body instead of over it, so
         // pull it up over the body's bottom padding for the fade to overlap.
         fadeTop && isWeb && { marginTop: -padding },
       ]}
     >
       {fadeTop && (
-        <FooterFadeBackground color={backgroundColor} height={padding} />
+        <FooterFadeBackground
+          color={theme.colors.box.primary.bg}
+          height={padding}
+        />
       )}
       <View style={Atoms.flex_1}>{left}</View>
       <View style={Atoms.self_end}>{right}</View>
@@ -339,7 +343,6 @@ function NativeSheet({
   const [sheetWidth, setSheetWidth] = useState(0);
   const { width: windowWidth } = useWindowDimensions();
 
-  const surface = theme.palette.neutral_0;
   const sizesToContent = detents.includes('auto');
   const detent = detents[detentIndex];
   // The sheet is horizontally centered: a few points off the screen edges in
@@ -357,7 +360,7 @@ function NativeSheet({
     <TrueSheet
       ref={sheetRef}
       dimmed={dimmed}
-      backgroundColor={surface}
+      backgroundColor={theme.colors.box.primary.bg}
       detents={detents}
       initialDetentIndex={0}
       dismissible={dismissible}
@@ -391,7 +394,7 @@ function NativeSheet({
         style={[
           Atoms.w_full,
           !sizesToContent && Atoms.flex_1,
-          { backgroundColor: surface },
+          theme.atoms.box.primary.bg,
           sideInsets,
         ]}
       >
@@ -447,6 +450,7 @@ function WebModal({
   height,
   header,
   footer,
+  overlay,
   onPresented,
 }: SheetProps) {
   const { theme } = useTheme();
@@ -503,11 +507,7 @@ function WebModal({
       >
         <Pressable
           accessibilityLabel="Dismiss"
-          style={[
-            Atoms.fixed,
-            Atoms.inset_0,
-            { backgroundColor: 'rgba(0,0,0,0.45)' },
-          ]}
+          style={[Atoms.fixed, Atoms.inset_0, theme.atoms.backdrop.modal]}
           onPress={dismissible ? close : undefined}
         />
         <View
@@ -522,19 +522,20 @@ function WebModal({
             { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
             compact && Atoms.max_w_full,
             maxWidth !== undefined && { maxWidth },
-            {
-              backgroundColor: theme.palette.neutral_0,
-              borderRadius: BorderRadius.xl,
-            },
+            theme.atoms.box.primary.bg,
+            { borderRadius: BorderRadius.xl },
           ]}
         >
           {header}
-          {/* The scroll container between the pinned header and footer. A
+          <View style={Atoms.flex_1}>
+            {/* The scroll container between the pinned header and footer. A
               scroll container's automatic minimum size is 0, so it shrinks to
               the space the card has left instead of forcing the card past its
               max height, and grows to fill a fixed-height card. */}
-          <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
-          {footer}
+            <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
+            {footer}
+            {overlay}
+          </View>
         </View>
       </View>
     </Reanimated.View>

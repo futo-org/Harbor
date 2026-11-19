@@ -54,24 +54,18 @@ export function TabFilterSheet<T extends string>({
                 Atoms.gap_md,
                 Atoms.py_lg,
                 Atoms.px_lg,
-                (hovered || pressed) && {
-                  backgroundColor: theme.palette.neutral_25,
-                },
+                (pressed || hovered) && theme.atoms.box.primary.bg_hover,
               ]}
             >
               {option.icon ? (
-                <Icon name={option.icon} size={24} color="neutral_900" />
+                <Icon name={option.icon} size={24} color="primary" />
               ) : null}
               <View style={Atoms.flex_1}>
                 <Text variant="title" fontWeight="regular">
                   {option.label}
                 </Text>
                 {option.subtitle ? (
-                  <Text
-                    variant="small"
-                    style={theme.atoms.text_neutral_medium}
-                    fontWeight="regular"
-                  >
+                  <Text variant="small" color="secondary" fontWeight="regular">
                     {option.subtitle}
                   </Text>
                 ) : null}

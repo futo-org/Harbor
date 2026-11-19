@@ -75,7 +75,7 @@ jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
 }));
 jest.mock('@/src/common/theme', () => ({
-  useTheme: () => ({ theme: { palette: { primary_500: '#000' } } }),
+  useTheme: () => ({ theme: { colors: { accent: '#000' } } }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
   typography: { lineHeight: new Proxy({}, { get: () => 20 }) },

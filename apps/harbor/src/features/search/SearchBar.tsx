@@ -12,8 +12,8 @@ export function SearchBar() {
       accessibilityLabel="Search"
       onPress={() => router.navigate(Routes.tabs.explore.search)}
     >
-      <Icon name="search" size={16} color="neutral_500" />
-      <Text color="neutral_500" style={Atoms.flex_1} numberOfLines={1}>
+      <Icon name="search" size={16} color="muted" />
+      <Text color="muted" style={Atoms.flex_1} numberOfLines={1}>
         Search
       </Text>
     </SearchField>

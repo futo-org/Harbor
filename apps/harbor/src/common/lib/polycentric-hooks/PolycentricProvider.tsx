@@ -7,6 +7,7 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { showPushIssueToasts } from '@/src/features/core/event-push-issues/pushIssueToasts';
 import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
 import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
+import { useLastSyncStore } from '@/src/features/core/sync-status/useLastSyncStore';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -119,7 +120,7 @@ function DefaultLoadingComponent() {
   return (
     <View
       style={[
-        theme.atoms.bg,
+        theme.atoms.box.primary.bg,
         Atoms.flex_1,
         Atoms.align_center,
         Atoms.justify_center,
@@ -217,7 +218,7 @@ export function PolycentricProvider({
       try {
         const token = await registerForPushNotifications();
         if (!token) return;
-        await client.registerPushNotifications(DEFAULT_NOTIFICATION_SERVERS, {
+        await client.setDevicePushSubscriptions(DEFAULT_NOTIFICATION_SERVERS, {
           service: 'expo',
           token,
         });
@@ -307,6 +308,7 @@ export function PolycentricProvider({
       if (cancelled) return;
       const added = useEventPushIssuesStore.getState().record(results);
       useServerFailuresStore.getState().record(results);
+      useLastSyncStore.getState().record(results);
       const active = ready?.client.activeIdentityKey;
       showPushIssueToasts(added.filter((i) => i.key.identity === active));
     };

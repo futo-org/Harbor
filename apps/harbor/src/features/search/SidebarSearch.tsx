@@ -45,7 +45,7 @@ export function SidebarSearch() {
   return (
     <View style={[Atoms.w_full, { zIndex: ZIndex.raised }]}>
       <SearchField>
-        <Icon name="search" size={16} color="neutral_500" />
+        <Icon name="search" size={16} color="muted" />
         <TextInput
           variant="plain"
           placeholder="Search"
@@ -61,9 +61,9 @@ export function SidebarSearch() {
             accessibilityLabel="Clear search"
             onPress={() => setQuery('')}
             hitSlop={Spacing.sm}
-            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            style={({ pressed }) => [pressed && Atoms.faded]}
           >
-            <Icon name="close" size={16} color="neutral_500" />
+            <Icon name="close" size={16} color="muted" />
           </Pressable>
         ) : null}
       </SearchField>
@@ -76,11 +76,11 @@ export function SidebarSearch() {
               position: 'absolute',
               top: '100%',
               marginTop: Spacing.sm,
-              backgroundColor: theme.palette.neutral_0,
-              borderWidth: 1,
-              borderColor: theme.palette.neutral_25,
               borderRadius: BorderRadius.lg,
             },
+            theme.atoms.box.primary.bg,
+            theme.atoms.box.primary.border,
+            Atoms.border,
           ]}
         >
           <SearchPhraseRow phrase={phrase} onPress={submit} />

@@ -1,13 +1,20 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      scheme: 'light',
+      colors: {
+        accent: '#000',
+        success: '#000',
+        muted: '#000',
+        box: new Proxy({}, { get: () => ({ bg_subtle: '#000' }) }),
+      },
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+      },
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
-  withHexOpacity: (color: string) => color,
 }));
 
 jest.mock('@/src/common/components', () => {
@@ -36,6 +43,10 @@ jest.mock('@/src/common/components', () => {
 jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
+}));
+
+jest.mock('@/src/common/components/composites', () => ({
+  ImageDropOverlay: () => null,
 }));
 
 jest.mock('@/src/common/components/sheet', () => {
@@ -101,6 +112,7 @@ const EXISTING_CLAIM: DecodedClaim = {
   id: 'aabb',
   schemaName: 'Freeform',
   fields: [],
+  images: [],
   identity: 'me',
   keyFingerprint: 'fp',
   sequence: 7n,

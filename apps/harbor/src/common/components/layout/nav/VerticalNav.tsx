@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import Icon from '@/src/common/components/Icon';
 import { Routes } from '@/src/common/constants';
+import { useFeatureFlag } from '@/src/common/feature-flags';
 import useUnreadNotificationCount, {
   unreadNotificationsBadgeLabel,
 } from '@/src/features/notifications/hooks/useUnreadNotificationCount';
@@ -18,6 +19,7 @@ type VerticalNavProps = {
 
 export function VerticalNav({ style, showLabels }: VerticalNavProps) {
   const { identity } = useCurrentIdentity();
+  const anywhereEnabled = useFeatureFlag('anywhere');
   const unreadNotificationsLabel = unreadNotificationsBadgeLabel(
     useUnreadNotificationCount(),
   );
@@ -41,12 +43,14 @@ export function VerticalNav({ style, showLabels }: VerticalNavProps) {
         href={identity ? '/explore' : '/'}
         showLabel={showLabels}
       />
-      <NavItem
-        label="Anywhere"
-        icon={<Icon name="globe" size={24} />}
-        href={Routes.tabs.anywhere.index}
-        showLabel={showLabels}
-      />
+      {anywhereEnabled && (
+        <NavItem
+          label="Anywhere"
+          icon={<Icon name="globe" size={24} />}
+          href={Routes.tabs.anywhere.index}
+          showLabel={showLabels}
+        />
+      )}
       {identity && (
         <>
           <NavItem

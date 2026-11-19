@@ -84,11 +84,11 @@ export function Tabs({
 }: TabsProps) {
   const { theme } = useTheme();
 
-  const surface = {
-    backgroundColor: theme.palette.neutral_0,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.palette.neutral_25,
-  };
+  const surface = [
+    theme.atoms.box.primary.bg,
+    theme.atoms.box.primary.border,
+    Atoms.border_b,
+  ];
 
   const groupRef = useRef<HorizontalScrollGroupRef>(null);
   const reveal = useCallback((x: number, width: number) => {
@@ -199,12 +199,8 @@ export function Tabs({
                 style={[
                   Atoms.absolute,
                   Atoms.rounded_full,
-                  {
-                    left: 0,
-                    bottom: 0,
-                    height: INDICATOR_HEIGHT,
-                    backgroundColor: theme.palette.primary_500,
-                  },
+                  theme.atoms.box.accent.bg,
+                  { left: 0, bottom: 0, height: INDICATOR_HEIGHT },
                   indicatorStyle,
                   restingStyle,
                 ]}
@@ -273,9 +269,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
           Atoms.flex_row,
           Atoms.align_center,
           Atoms.justify_center,
-          (hovered || pressed) && {
-            backgroundColor: theme.palette.neutral_25,
-          },
+          (pressed || hovered) && theme.atoms.box.primary.bg_hover,
         ]}
         {...props}
       >
@@ -296,7 +290,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
             // Content-sized tabs keep a constant weight so they don't change
             // width when selected.
             fontWeight={expand ? (active ? 'bold' : 'regular') : 'semibold'}
-            color={active ? 'neutral_900' : 'neutral_500'}
+            color={active ? 'primary' : 'muted'}
             selectable={false}
           >
             {children}
@@ -305,7 +299,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
             <Icon
               name="chevronDown"
               size={14}
-              color={active ? 'neutral_900' : 'neutral_500'}
+              color={active ? 'primary' : 'muted'}
               // The glyph's ink centers on the cap height; sink it to the
               // mostly-lowercase label's x-height center.
               style={{ transform: [{ translateY: 2 }] }}
@@ -319,11 +313,8 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
                 Atoms.self_center,
                 Atoms.w_full,
                 Atoms.rounded_full,
-                {
-                  height: INDICATOR_HEIGHT,
-                  bottom: 0,
-                  backgroundColor: theme.palette.primary_500,
-                },
+                theme.atoms.box.accent.bg,
+                { height: INDICATOR_HEIGHT, bottom: 0 },
               ]}
             />
           )}

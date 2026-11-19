@@ -98,6 +98,14 @@ export const Routes = {
       keyFingerprint: string,
       sequence: string,
     ) => `/${identityId}/verifications/${keyFingerprint}/${sequence}` as const,
+    claimImage: (
+      identityId: string,
+      keyFingerprint: string,
+      sequence: string,
+      /** 1-based image position, as it appears in the URL. */
+      index: number,
+    ) =>
+      `/${identityId}/verifications/${keyFingerprint}/${sequence}/image/${index}` as const,
     settings: {
       index: '/settings',
       identity: '/settings/identity',
@@ -105,6 +113,7 @@ export const Routes = {
       createBackup: '/settings/create-backup',
       checkBackup: '/settings/check-backup',
       servers: '/settings/servers',
+      syncEvents: '/settings/sync-events',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
       appearance: '/settings/appearance',
@@ -114,6 +123,7 @@ export const Routes = {
       legalNotices: '/settings/legal-notices',
       feedback: '/settings/feedback',
       logs: '/settings/logs',
+      featureFlags: '/settings/feature-flags',
       clientInformation: '/settings/client-information',
       reportBug: '/settings/report-bug',
     },

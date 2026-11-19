@@ -54,7 +54,7 @@ function InboxPage({ active, ready }: PageProps) {
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
-            <Text variant="body" color="neutral_500" style={Atoms.text_center}>
+            <Text variant="body" color="muted" style={Atoms.text_center}>
               When someone asks you to verify a claim, it will show up here.
             </Text>
           </View>
@@ -82,7 +82,7 @@ function OutboxPage({
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
-            <Text variant="body" color="neutral_500" style={Atoms.text_center}>
+            <Text variant="body" color="muted" style={Atoms.text_center}>
               You haven't made any claims yet
             </Text>
             <Button
@@ -171,10 +171,10 @@ function CreateClaimButton({ onPress }: { onPress: () => void }) {
       style={({ pressed }) => [
         Atoms.p_xs,
         Atoms.rounded_full,
-        pressed && { backgroundColor: theme.palette.neutral_25 },
+        pressed && theme.atoms.box.primary.bg_hover,
       ]}
     >
-      <Icon name="add" size={24} color="neutral_800" />
+      <Icon name="add" size={24} color="primary" />
     </Pressable>
   );
 }

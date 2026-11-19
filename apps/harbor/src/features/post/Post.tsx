@@ -2,8 +2,9 @@ import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { COLLECTION } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -48,11 +49,8 @@ export const Post = memo(function Post({
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    const keyFingerprint = getKeyFingerprint(post.signedBy);
-    if (!keyFingerprint) return;
-    router.navigate(
-      Routes.tabs.post(post.identity, keyFingerprint, post.sequence),
-    );
+    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
+    if (route) router.navigate(route);
   }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
@@ -100,17 +98,13 @@ export const Post = memo(function Post({
           <>
             <Text
               variant="secondary"
-              color="neutral_500"
+              color="muted"
               fontWeight="bold"
               style={Atoms.flex_shrink_0}
             >
               ·
             </Text>
-            <Text
-              variant="secondary"
-              color="neutral_500"
-              style={Atoms.flex_shrink_0}
-            >
+            <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
               <TimeAgo since={shownAt} />
             </Text>
           </>
@@ -147,13 +141,8 @@ export const Post = memo(function Post({
       style={({ pressed }) => [
         Atoms.w_full,
         Atoms.px_md,
-        !hideBottomBorder && {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
-        pressed && {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
+        !hideBottomBorder && [theme.atoms.box.primary.border, Atoms.border_b],
+        pressed && theme.atoms.box.primary.bg_hover,
       ]}
       onPress={handlePress}
       disabled={disablePress}
@@ -179,7 +168,7 @@ export const Post = memo(function Post({
           </View>
           <View style={Atoms.gap_2xs}>{body}</View>
           {fullTimestamp ? (
-            <Text variant="secondary" color="neutral_500">
+            <Text variant="secondary" color="muted">
               {fullTimestamp}
             </Text>
           ) : null}
@@ -194,13 +183,8 @@ export const Post = memo(function Post({
               <View
                 style={[
                   Atoms.flex_1,
-                  {
-                    width: 2,
-                    backgroundColor: withHexOpacity(
-                      theme.palette.neutral_500,
-                      '30',
-                    ),
-                  },
+                  theme.atoms.outline,
+                  { borderLeftWidth: 2 },
                 ]}
               />
             ) : null}

@@ -45,7 +45,7 @@ console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 uniffi = { workspace = true, features = ["wasm-unstable-single-threaded"] }
-uniffi-runtime-wasm = "0.31.0-6"
+uniffi-runtime-wasm = "0.31.0-7"
 # The ubrn wasm player stages this cdylib with the `wasm-bindgen` CLI, which
 # only accepts modules built against its own version. Pinned so the CLI in
 # .forgejo/images/rust/Dockerfile and on dev machines matches.

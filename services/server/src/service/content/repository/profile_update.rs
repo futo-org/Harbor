@@ -1,12 +1,18 @@
-use crate::service::proto::ImageSet;
-use crate::service::proto::ProfileUpdate;
 use entity::content_profile_update;
 use sea_orm::DbErr;
 use sea_orm::prelude::Json;
-use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
+use sea_orm::sea_query::{
+    CommonTableExpression, DynIden, Expr, InsertStatement, SelectStatement,
+    WithClause,
+};
 use tonic::Status;
 
+use crate::service::content::repository::Mutation;
+use crate::service::proto::ImageSet;
+use crate::service::proto::ProfileUpdate;
+
 pub(super) fn add_query(
+    with: &mut WithClause,
     update: ProfileUpdate,
     content_id: (DynIden, DynIden),
 ) -> Result<InsertStatement, Status> {
@@ -32,10 +38,10 @@ pub(super) fn add_query(
         .select_from({
             let mut q = SelectStatement::new();
             q.from(content_id.0.clone())
-                .expr(Expr::col(content_id))
+                .expr(Expr::col(content_id.clone()))
                 .expr(Expr::from(name))
-                .expr(Expr::from(to_json(avatar)?))
-                .expr(Expr::from(to_json(banner)?))
+                .expr(Expr::from(to_json(avatar.as_ref())?))
+                .expr(Expr::from(to_json(banner.as_ref())?))
                 .expr(Expr::from(description))
                 .expr(Expr::from(alias));
            q
@@ -46,10 +52,36 @@ pub(super) fn add_query(
             Status::internal("internal server error")
         })?;
 
+    if let Some(avatar) = avatar
+    && let Some(query) =
+        Mutation::store_image_sets(vec![avatar], content_id.clone())
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to create query to store profile update avatar");
+            Status::internal("internal server error")
+        })?
+    {
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("profile_update_avatar").query(query);
+            with.cte(cte);
+    }
+
+    if let Some(banner) = banner
+    && let Some(query) =
+        Mutation::store_image_sets(vec![banner], content_id.clone())
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to create query to store profile update banner");
+            Status::internal("internal server error")
+        })?
+    {
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("profile_update_banner").query(query);
+            with.cte(cte);
+    }
+
     Ok(query)
 }
 
-fn to_json(set: Option<ImageSet>) -> Result<Option<Json>, Status> {
+fn to_json(set: Option<&ImageSet>) -> Result<Option<Json>, Status> {
     match set {
         Some(set) => match serde_json::to_value(set) {
             Ok(value) => Ok(Some(value)),

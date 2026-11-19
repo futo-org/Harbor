@@ -1,7 +1,9 @@
+import { ImageDropOverlay } from '@/src/common/components/composites';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Button, Text } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
+import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
@@ -58,7 +60,7 @@ export function ComposeSheet({
   const postAction = composer.submitting ? (
     <ActivityIndicator
       size="small"
-      color={theme.palette.primary_500}
+      color={theme.colors.accent}
       accessibilityLabel="Posting"
     />
   ) : (
@@ -120,9 +122,9 @@ export function ComposeSheet({
                 accessibilityLabel="Cancel"
                 onPress={composer.handleClose}
                 hitSlop={Spacing.lg}
-                style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+                style={({ pressed }) => [pressed && Atoms.faded]}
               >
-                <Text color="neutral_500">Cancel</Text>
+                <Text color="muted">Cancel</Text>
               </Pressable>
             }
             right={postAction}
@@ -158,6 +160,13 @@ export function ComposeSheet({
           title={composer.title}
           onClose={composer.handleClose}
           right={postAction}
+        />
+      }
+      overlay={
+        <ImageDropOverlay
+          onDrop={composer.ingestAssets}
+          remainingSlots={MAX_ATTACHMENTS - composer.attachments.length}
+          disabled={composer.attachDisabled}
         />
       }
     >

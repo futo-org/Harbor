@@ -22,6 +22,8 @@ import useModerationStatus from '@/src/features/moderation/hooks/useModerationSt
 import { serverHost } from '@/src/features/moderation/serverHost';
 import { ErrorReportsSettingRow } from '@/src/features/telemetry/TelemetrySettingRows';
 import { Username } from '@/src/features/profile/Username';
+import { SyncIssuesChip, useSyncIssues } from './sync-events/SyncIssues';
+import { useLastSyncedLabel } from './sync-events/useLastSyncedLabel';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -44,9 +46,10 @@ function AppearanceSettingRow() {
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
           <Icon
-            name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+            name={theme.scheme === 'dark' ? 'themeDark' : 'themeLight'}
             size={22}
-            color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+            // Gray in dark mode, unlike the other settings icons
+            color={theme.scheme === 'dark' ? 'secondary' : 'accent'}
           />
           <Text variant="body">Theme</Text>
         </View>
@@ -79,7 +82,7 @@ function LinkPreviewSettingRow() {
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
-          <Icon name="image" size={22} color="primary_600" />
+          <Icon name="image" size={22} color="accent" />
           <Text variant="body">Generate Link Previews</Text>
         </View>
         <Switch value={enabled} onValueChange={setEnabled} />
@@ -159,6 +162,7 @@ export default function SettingsTabScreen() {
                     {canRotate ? 'Configure servers' : 'View servers'}
                   </Text>
                 </ListItemWrapper>
+                <SyncEventsSettingRow identityKey={identityKey} />
               </ListItemGroup>
 
               {moderatedServers.length > 0 ? (
@@ -220,6 +224,16 @@ export default function SettingsTabScreen() {
                 <ErrorReportsSettingRow />
               </ListItemGroup>
 
+              <ListItemGroup label="Developer">
+                <ListItemWrapper
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.featureFlags)
+                  }
+                >
+                  <Text variant="body">Feature flags</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
+
               <ListItemGroup label="About">
                 <VersionRow />
                 {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
@@ -265,6 +279,27 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
   );
 }
 
+function SyncEventsSettingRow({ identityKey }: { identityKey: string | null }) {
+  const issues = useSyncIssues(identityKey);
+  const lastSynced = useLastSyncedLabel(identityKey);
+
+  return (
+    <ListItemWrapper
+      onPress={() => router.navigate(Routes.tabs.settings.syncEvents)}
+    >
+      <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
+        <Text variant="body">Sync events</Text>
+        <Text variant="small" color="muted">
+          {lastSynced}
+        </Text>
+      </View>
+      <View style={Atoms.pr_sm}>
+        <SyncIssuesChip issues={issues} />
+      </View>
+    </ListItemWrapper>
+  );
+}
+
 function ListItemWrapper({
   children,
   onPress,
@@ -280,11 +315,11 @@ function ListItemWrapper({
           Atoms.items_center,
           Atoms.justify_between,
           Atoms.pl_xs,
-          !onPress && { opacity: 0.5 },
+          !onPress && Atoms.faded,
         ]}
       >
         {children}
-        <Icon name="chevronForward" size={18} color="neutral_500" />
+        <Icon name="chevronForward" size={18} color="muted" />
       </View>
     </ListItem>
   );
@@ -307,7 +342,7 @@ function VersionRow() {
         ]}
       >
         <Text variant="body">Version</Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           {version ?? 'unknown'}
           {build ? ` (${build})` : ''}
         </Text>
@@ -340,7 +375,7 @@ function CheckForUpdatesRow() {
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
-          <Icon name="download" size={22} color="primary_600" />
+          <Icon name="download" size={22} color="accent" />
           <Text variant="body">Check for updates</Text>
         </View>
         {checking ? <ActivityIndicator size="small" /> : null}

@@ -1,14 +1,19 @@
-import { Text } from '@/src/common/components';
-import { Sheet } from '@/src/common/components/sheet';
-import { Atoms } from '@/src/common/theme';
+import { Screen, ScreenHeader, Text } from '@/src/common/components';
+import { Routes } from '@/src/common/constants/routes';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddServerForm } from './AddServerForm';
 import { ServerRow } from './ServerRow';
 import { useServerSettings } from './useServerSettings';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
-export function ServersSettingsSheet() {
+export default function ServersSettingsScreen() {
+  usePageTitle('Servers');
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     servers,
     suggestedServers,
@@ -19,63 +24,69 @@ export function ServersSettingsSheet() {
   } = useServerSettings();
   const { canRotate } = useCurrentAuthorization();
 
+  const back = () =>
+    router.canGoBack()
+      ? router.back()
+      : router.navigate(Routes.tabs.settings.index);
+
   return (
-    <Sheet
-      detents={[0.5, 1]}
-      header={
-        <Sheet.Header
-          title="Servers"
-          onClose={() => router.canGoBack() && router.back()}
-        />
-      }
-      dismissible
-    >
-      <Sheet.Content style={[Atoms.gap_lg]}>
-        {servers.length === 0 ? (
-          <Text variant="secondary" color="neutral_500">
-            No servers configured
-          </Text>
-        ) : (
-          <View style={Atoms.gap_sm}>
-            {servers.map((server) => (
-              <ServerRow
-                key={server}
-                server={server}
-                status="active"
-                onAction={canRotate ? () => removeServer(server) : undefined}
-              />
-            ))}
-          </View>
-        )}
+    <Screen>
+      <Screen.PrimaryColumn>
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
+          <ScreenHeader title="Servers" onBack={back} />
+          <ScrollView
+            style={Atoms.flex_1}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              Atoms.gap_lg,
+              { paddingBottom: insets.bottom + Spacing['4xl'] },
+            ]}
+          >
+            {servers.length === 0 ? (
+              <Text variant="secondary" color="muted">
+                No servers configured
+              </Text>
+            ) : (
+              <View style={Atoms.gap_sm}>
+                {servers.map((server) => (
+                  <ServerRow
+                    key={server}
+                    server={server}
+                    status="active"
+                    onAction={
+                      canRotate ? () => removeServer(server) : undefined
+                    }
+                  />
+                ))}
+              </View>
+            )}
 
-        {suggestedServers.length > 0 && (
-          <View style={Atoms.gap_sm}>
-            <Text variant="secondary" color="neutral_500">
-              Suggested servers
-            </Text>
-            {suggestedServers.map((server) => (
-              <ServerRow
-                key={server}
-                server={server}
-                status="suggested"
-                onAction={canRotate ? () => addServer(server) : undefined}
-              />
-            ))}
-          </View>
-        )}
+            {suggestedServers.length > 0 && (
+              <View style={Atoms.gap_sm}>
+                <Text variant="secondary" color="muted">
+                  Suggested servers
+                </Text>
+                {suggestedServers.map((server) => (
+                  <ServerRow
+                    key={server}
+                    server={server}
+                    status="suggested"
+                    onAction={canRotate ? () => addServer(server) : undefined}
+                  />
+                ))}
+              </View>
+            )}
 
-        {canRotate ? (
-          <AddServerForm
-            isBusy={isBusy}
-            error={addError}
-            onSubmit={addServer}
-          />
-        ) : null}
-      </Sheet.Content>
-    </Sheet>
+            {canRotate ? (
+              <AddServerForm
+                isBusy={isBusy}
+                error={addError}
+                onSubmit={addServer}
+              />
+            ) : null}
+          </ScrollView>
+        </View>
+      </Screen.PrimaryColumn>
+    </Screen>
   );
-}
-
-export default function ServersSettingsScreen() {
-  return <ServersSettingsSheet />;
 }

@@ -1,4 +1,5 @@
 import { Routes } from '@/src/common/constants';
+import { useFeatureFlag } from '@/src/common/feature-flags';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import useUnreadNotificationCount, {
@@ -11,6 +12,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 export default function TabsLayout() {
   const { theme } = useTheme();
   const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+  const anywhereEnabled = useFeatureFlag('anywhere');
   // The web sidebar subscribes itself.
   const unreadNotificationsLabel = unreadNotificationsBadgeLabel(
     useUnreadNotificationCount(!isWeb),
@@ -45,6 +47,7 @@ export default function TabsLayout() {
           <Stack.Screen name="claims" />
         </Stack.Protected>
         <Stack.Screen name="explore" />
+        {/* The flag only takes it out of the sidebar: its address still opens. */}
         <Stack.Screen name="anywhere" />
         <Stack.Screen name="search" />
       </Stack>
@@ -55,13 +58,13 @@ export default function TabsLayout() {
     <NativeTabs
       backBehavior="history"
       minimizeBehavior="never"
-      backgroundColor={theme.palette.neutral_0}
-      iconColor={theme.palette.neutral_900}
-      tintColor={theme.palette.neutral_900}
-      indicatorColor={theme.palette.neutral_25}
-      rippleColor={theme.palette.neutral_50}
-      badgeBackgroundColor={theme.palette.primary_500}
-      badgeTextColor={theme.palette.neutral_0}
+      backgroundColor={theme.colors.box.primary.bg}
+      iconColor={theme.colors.primary}
+      tintColor={theme.colors.primary}
+      indicatorColor={theme.colors.box.secondary.bg}
+      rippleColor={theme.colors.box.secondary.bg_hover}
+      badgeBackgroundColor={theme.colors.box.accent.bg}
+      badgeTextColor={theme.colors.light}
     >
       <NativeTabs.Trigger name="feed">
         <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
@@ -73,7 +76,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="anywhere">
+      <NativeTabs.Trigger name="anywhere" hidden={!anywhereEnabled}>
         <NativeTabs.Trigger.Label>Anywhere</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="globe" md="language" />
       </NativeTabs.Trigger>

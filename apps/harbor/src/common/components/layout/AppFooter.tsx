@@ -6,7 +6,8 @@ import {
   typography,
   useTheme,
 } from '@/src/common/theme';
-import { type ExternalPathString, Link } from 'expo-router';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import { type ExternalPathString, type Href, Link } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Pressable, View } from 'react-native';
 import {
@@ -14,21 +15,37 @@ import {
   DOCS_URL,
   FAQ_URL,
   FUTO_URL,
+  MERCH_URL,
   PRIVACY_POLICY_URL,
   ROADMAP_URL,
   SOURCE_CODE_URL,
+  Routes,
   SUPPORT_URL,
 } from '../../constants';
 
-const LINKS: { text: string; href: ExternalPathString }[] = [
+type FooterLinkProps = {
+  /** A page of the app, or a site that opens in a new tab. */
+  href: Href | ExternalPathString;
+  text: string;
+};
+
+// The feedback form is sent as the signed-in identity.
+const FEEDBACK: FooterLinkProps = {
+  text: 'Feedback',
+  href: Routes.tabs.settings.feedback,
+};
+const SUPPORT: FooterLinkProps = { text: 'Support', href: SUPPORT_URL };
+
+const linksFor = (signedIn: boolean): FooterLinkProps[] => [
   { text: 'Docs', href: DOCS_URL },
   { text: 'FAQ', href: FAQ_URL },
-  { text: 'Support', href: SUPPORT_URL },
+  signedIn ? FEEDBACK : SUPPORT,
   { text: 'Roadmap', href: ROADMAP_URL },
   { text: 'Code', href: SOURCE_CODE_URL },
-  { text: 'Privacy Policy', href: PRIVACY_POLICY_URL },
+  { text: 'Merch', href: MERCH_URL },
+  { text: 'Privacy', href: PRIVACY_POLICY_URL },
   { text: 'Content Policy', href: CONTENT_POLICY_URL },
-  { text: 'FUTO © 2026.', href: FUTO_URL },
+  { text: '© 2026 FUTO', href: FUTO_URL },
 ];
 
 type AppFooterProps = ComponentProps<typeof View> & {
@@ -45,6 +62,8 @@ export function AppFooter({
   style,
   ...props
 }: AppFooterProps) {
+  const { identity } = useCurrentIdentity();
+
   return (
     <View
       style={[
@@ -60,8 +79,8 @@ export function AppFooter({
       {...props}
     >
       {showThemeSwitcher && <ThemeSwitcher />}
-      {LINKS.map(({ text, href }) => (
-        <FooterLink key={href} href={href} text={text} />
+      {linksFor(!!identity).map(({ text, href }) => (
+        <FooterLink key={text} href={href} text={text} />
       ))}
     </View>
   );
@@ -85,30 +104,25 @@ function ThemeSwitcher() {
       accessibilityRole="button"
       hitSlop={8}
       onPress={() => setThemePreference(next.preference)}
-      style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+      style={({ pressed }) => [pressed && Atoms.faded]}
     >
-      <Icon
-        name={current.icon}
-        size={typography.fontSize.sm}
-        color="neutral_500"
-      />
+      <Icon name={current.icon} size={typography.fontSize.sm} color="muted" />
     </Pressable>
   );
 }
 
-type FooterLinkProps = {
-  href: ExternalPathString;
-  text: string;
-};
+const isExternal = (href: FooterLinkProps['href']) =>
+  typeof href === 'string' && /^https?:/.test(href);
+
 function FooterLink({ href, text }: FooterLinkProps) {
   const { theme } = useTheme();
   return (
     <Link
       className="underlineOnHover"
       href={href}
-      target="_blank"
+      target={isExternal(href) ? '_blank' : undefined}
       accessibilityLabel={text}
-      style={theme.atoms.text_neutral_low}
+      style={theme.atoms.muted}
     >
       {text}
     </Link>

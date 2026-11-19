@@ -89,7 +89,7 @@ profile and Maestro (`ios-e2e`).
 
 Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 
-- `REGISTRY_USER` (variable), `REGISTRY_TOKEN`: zot API key of the CI user.
+- `REGISTRY_USER`, `REGISTRY_TOKEN`: zot API key of the CI user.
 - `EXPO_TOKEN`, `OPEN_ROUTER_API_TOKEN`, `CLOUDFLARE_API_TOKEN`,
   `CLOUDFLARE_ACCOUNT_ID`,
   `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
@@ -102,7 +102,8 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
   `/ci/harbor`, entered in its UI) under the names `wxt submit` reads, each
   store skipped until its listing is set. Chrome: `CHROME_EXTENSION_ID`,
   `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`,
-  `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`. Firefox: `FIREFOX_JWT_ISSUER`,
+  `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` (the last two default to the account
+  in `GOOGLE_APIS_SERVICE_ACCOUNT_JSON`). Firefox: `FIREFOX_JWT_ISSUER`,
   `FIREFOX_JWT_SECRET`. Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`,
   `EDGE_API_KEY`.
 - `SCCACHE_R2_ENDPOINT`, `SCCACHE_R2_ACCESS_KEY_ID`,

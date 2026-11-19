@@ -1,4 +1,4 @@
-import { type PaletteColorToken, useTheme } from '@/src/common/theme';
+import { type TextColor, useTheme } from '@/src/common/theme';
 // Per-set imports: the package index bundles every icon set and its fonts.
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -33,6 +33,7 @@ export const IconsMap = {
   addCircleOutline: defineIcon(MaterialCommunityIcons, 'plus-circle-outline'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
   airplane: defineIcon(MaterialCommunityIcons, 'airplane'),
+  alertCircle: defineIcon(Ionicons, 'alert-circle-outline'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
   at: defineIcon(Ionicons, 'at'),
   ban: defineIcon(Ionicons, 'ban'),
@@ -104,12 +105,10 @@ export const IconsMap = {
   trash: defineIcon(Ionicons, 'trash-outline'),
   trashBin: defineIcon(Ionicons, 'trash-bin'),
   verify: defineIcon(MaterialCommunityIcons, 'check-decagram-outline'),
+  warning: defineIcon(Ionicons, 'warning-outline'),
 };
 
 export type IconName = keyof typeof IconsMap;
-
-/** A palette token (resolved against the theme) or any raw color string. */
-type IconColor = PaletteColorToken | (string & {});
 
 export type IconProps = Omit<
   ComponentProps<typeof Ionicons>,
@@ -117,22 +116,42 @@ export type IconProps = Omit<
 > & {
   name: IconName;
   size?: number;
-  /** Palette token (resolved against the active theme) or a raw color string. */
-  color?: IconColor;
+  color?: TextColor;
+  // A color outside the text tokens, e.g. a verification platform's tint;
+  // takes precedence over `color`.
+  customColor?: string;
 };
+
+// For components that draw an icon at their own size and color: a function
+// draws something other than a plain `Icon` (a wrapped glyph, a logo).
+export type IconRenderFn = (props: {
+  size: number;
+  color: TextColor;
+}) => ReactNode;
 
 export default function Icon({
   name,
   size = 16,
-  color = 'neutral_1000',
+  color = 'primary',
+  customColor,
   ...rest
 }: IconProps): ReactNode {
   const { theme } = useTheme();
 
-  // Palette tokens resolve against the theme; anything else is passed through as
-  // a literal color (e.g. a resolved color injected via render-prop / cloneElement).
-  const resolvedColor =
-    color in theme.palette ? theme.palette[color as PaletteColorToken] : color;
+  return IconsMap[name].render({
+    size,
+    color: customColor ?? theme.colors[color],
+    ...rest,
+  });
+}
 
-  return IconsMap[name].render({ size, color: resolvedColor, ...rest });
+export function renderIcon(
+  icon: IconName | IconRenderFn,
+  props: { size: number; color: TextColor },
+): ReactNode {
+  return typeof icon === 'function' ? (
+    icon(props)
+  ) : (
+    <Icon name={icon} {...props} />
+  );
 }

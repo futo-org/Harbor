@@ -44,10 +44,10 @@ export function ClaimAuthorLine({
         />
         <IdentityHandle identity={identity} />
       </Pressable>
-      <Text variant="secondary" color="neutral_500" fontWeight="bold">
+      <Text variant="secondary" color="muted" fontWeight="bold">
         ·
       </Text>
-      <Text variant="secondary" color="neutral_500" style={Atoms.flex_shrink_0}>
+      <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
         <TimeAgo since={createdAt} />
       </Text>
     </View>

@@ -116,7 +116,13 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 }));
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),
-  useTheme: () => ({ theme: { palette: { neutral_0: '#fff' } } }),
+  useTheme: () => ({
+    theme: {
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+      },
+    },
+  }),
   createThemedStyles: () => () => ({}),
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
@@ -145,11 +151,7 @@ describe('ProfileHeader alias', () => {
     async (kind) => {
       mockHandle = { kind, text: 'test@domain.com' };
       const { queryByText } = await render(
-        <ProfileHeader
-          bannerColors={['#a', '#b']}
-          onBack={() => undefined}
-          scrollY={scrollY}
-        />,
+        <ProfileHeader onBack={() => undefined} scrollY={scrollY} />,
       );
       expect(queryByText('test@domain.com')).not.toBeNull();
       expect(queryByText(IDENTITY)).not.toBeNull();
@@ -158,11 +160,7 @@ describe('ProfileHeader alias', () => {
 
   it('shows only the id without an alias', async () => {
     const { queryByText } = await render(
-      <ProfileHeader
-        bannerColors={['#a', '#b']}
-        onBack={() => undefined}
-        scrollY={scrollY}
-      />,
+      <ProfileHeader onBack={() => undefined} scrollY={scrollY} />,
     );
     expect(queryByText(IDENTITY)).not.toBeNull();
     // No alias-style text rendered.
@@ -178,11 +176,7 @@ describe('ProfileHeader identity key', () => {
 
   it('opens the identity sheet when the key is pressed', async () => {
     const { getByText } = await render(
-      <ProfileHeader
-        bannerColors={['#a', '#b']}
-        onBack={() => undefined}
-        scrollY={scrollY}
-      />,
+      <ProfileHeader onBack={() => undefined} scrollY={scrollY} />,
     );
 
     await fireEvent.press(getByText(IDENTITY));
@@ -200,11 +194,7 @@ describe('ProfileHeader follow counters', () => {
   it('renders the counts from the profile', async () => {
     mockCounts = { followingCount: 3, followersCount: 7 };
     const { getByText } = await render(
-      <ProfileHeader
-        bannerColors={['#a', '#b']}
-        onBack={() => undefined}
-        scrollY={scrollY}
-      />,
+      <ProfileHeader onBack={() => undefined} scrollY={scrollY} />,
     );
 
     expect(getByText('3')).toBeTruthy();
@@ -215,11 +205,7 @@ describe('ProfileHeader follow counters', () => {
 
   it('links to the following and followers lists', async () => {
     const { getByText } = await render(
-      <ProfileHeader
-        bannerColors={['#a', '#b']}
-        onBack={() => undefined}
-        scrollY={scrollY}
-      />,
+      <ProfileHeader onBack={() => undefined} scrollY={scrollY} />,
     );
 
     await fireEvent.press(getByText(/Following/));

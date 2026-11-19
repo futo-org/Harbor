@@ -9,12 +9,18 @@ import Icon from '@/src/common/components/Icon';
 import type { IconProps } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants/routes';
-import { Atoms, type Palette, useTheme } from '@/src/common/theme';
+import { Atoms, type TextColor, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { router } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Switch,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { pairingLinkFrom } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
@@ -96,13 +102,7 @@ export default function PairIdentityIssuerScreen() {
     <>
       <Screen>
         <Screen.PrimaryColumn>
-          <View
-            style={[
-              Atoms.px_lg,
-              Atoms.flex_1,
-              { backgroundColor: theme.atoms.bg.backgroundColor },
-            ]}
-          >
+          <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
             <ScreenHeader title="Pair Identity" onBack={exit} />
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -145,7 +145,7 @@ function PairingInfoCard({
         Atoms.p_lg,
         Atoms.rounded_lg,
         Atoms.my_3xl,
-        { backgroundColor: theme.palette.neutral_50 },
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <PairingQRCode link={link} />
@@ -167,17 +167,15 @@ function PairingQRCode({ link }: { link: string | null }) {
         Atoms.justify_center,
         Atoms.rounded_lg,
         Atoms.overflow_hidden,
-        {
-          backgroundColor: theme.palette.white,
-        },
+        { backgroundColor: theme.colors.light },
       ]}
     >
       {link ? (
         <QRCode
           value={link}
           size={PAIRING_BLOCK_WIDTH}
-          color={theme.palette.black}
-          backgroundColor={theme.palette.white}
+          color={theme.colors.dark}
+          backgroundColor={theme.colors.light}
           quietZone={32}
         />
       ) : (
@@ -197,8 +195,6 @@ function CountdownTimer({
 }: {
   remainingSeconds: number | null;
 }) {
-  const { theme } = useTheme();
-
   let timeStr = '--:--';
 
   if (remainingSeconds !== null) {
@@ -209,16 +205,10 @@ function CountdownTimer({
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-      <Icon name="time" size={16} color="neutral_500" />
-      <Text variant="small" color="neutral_500">
+      <Icon name="time" size={16} color="muted" />
+      <Text variant="small" color="muted">
         Valid for{'  '}
-        <Text
-          variant="small"
-          monospace
-          style={{
-            color: theme.palette.primary_500,
-          }}
-        >
+        <Text variant="small" monospace color="accent">
           {timeStr}
         </Text>
       </Text>
@@ -240,22 +230,25 @@ function StatusDisplay({
 
   let iconName: IconProps['name'];
   let iconColor: IconProps['color'];
-  let detailsColor: keyof Palette;
-  let detailsBg: string;
-  let detailsBorder: string;
+  let detailsColor: TextColor;
+  let detailsBox: ViewStyle[];
 
   if (icon === 'success') {
     iconName = 'checkmarkCircle';
-    iconColor = 'primary_500';
-    detailsColor = 'neutral_900';
-    detailsBg = theme.palette.neutral_25;
-    detailsBorder = theme.palette.neutral_100;
+    iconColor = 'accent';
+    detailsColor = 'primary';
+    detailsBox = [
+      theme.atoms.box.secondary.bg,
+      theme.atoms.box.secondary.border,
+    ];
   } else {
     iconName = 'closeCircle';
-    iconColor = 'negative_500';
-    detailsColor = 'negative_600';
-    detailsBg = theme.palette.negative_25;
-    detailsBorder = theme.palette.negative_100;
+    iconColor = 'danger';
+    detailsColor = 'danger';
+    detailsBox = [
+      theme.atoms.box.danger.bg_subtle,
+      theme.atoms.box.danger.border_subtle,
+    ];
   }
 
   return (
@@ -277,11 +270,8 @@ function StatusDisplay({
             Atoms.p_sm,
             Atoms.rounded_lg,
             Atoms.w_full,
-            {
-              backgroundColor: detailsBg,
-              borderWidth: 1,
-              borderColor: detailsBorder,
-            },
+            detailsBox,
+            Atoms.border,
           ]}
         >
           <Text variant="secondary" color={detailsColor}>
@@ -349,7 +339,7 @@ function ApprovalSheet({
 
               <Text
                 variant="small"
-                color="neutral_500"
+                color="muted"
                 monospace
                 style={{ textAlign: 'center' }}
                 selectable
@@ -393,54 +383,33 @@ function ApprovalSheet({
               />
             </View>
 
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: asRotation }}
-              onPress={() => setAsRotation(!asRotation)}
-              disabled={currentlyApproving}
+            <View
               style={[
                 Atoms.flex_row,
-                Atoms.items_start,
+                Atoms.items_center,
                 Atoms.gap_md,
                 Atoms.p_md,
                 Atoms.rounded_md,
-                {
-                  backgroundColor: theme.palette.neutral_50,
-                  borderWidth: 1,
-                  borderColor: theme.palette.neutral_200,
-                },
+                theme.atoms.box.secondary.bg,
+                theme.atoms.box.secondary.border,
+                Atoms.border,
               ]}
             >
-              <View
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 7,
-                  borderWidth: 1.5,
-                  borderColor: asRotation
-                    ? theme.palette.primary_500
-                    : theme.palette.neutral_300,
-                  backgroundColor: asRotation
-                    ? theme.palette.primary_500
-                    : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: 1,
-                }}
-              >
-                {asRotation ? (
-                  <Icon name="checkmark" size={14} color="neutral_0" />
-                ) : null}
-              </View>
               <View style={[Atoms.flex_1, Atoms.gap_xs]}>
                 <Text variant="small" fontWeight="semibold">
                   Add as rotation key
                 </Text>
-                <Text variant="small" color="neutral_500">
+                <Text variant="small" color="muted">
                   Gives this device management access.
                 </Text>
               </View>
-            </Pressable>
+              <Switch
+                value={asRotation}
+                onValueChange={setAsRotation}
+                disabled={currentlyApproving}
+                accessibilityLabel="Add as rotation key"
+              />
+            </View>
           </>
         ) : null}
       </Sheet.Content>

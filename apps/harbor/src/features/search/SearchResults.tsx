@@ -118,7 +118,7 @@ export function SearchResults({
               Atoms.pt_xl,
             ]}
           >
-            <Text color="neutral_500">Search for posts and people.</Text>
+            <Text color="muted">Search for posts and people.</Text>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -146,7 +146,7 @@ export function SearchResults({
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <View style={{ backgroundColor: theme.palette.neutral_0 }}>
+    <View style={theme.atoms.box.primary.bg}>
       {topbar}
       <Tabs progress={dragProgress}>
         {SEARCH_TAB_VALUES.map((value) => (
@@ -196,11 +196,12 @@ export function SearchPhraseRow({
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_lg,
-        { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
-        (hovered || pressed) && { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
-      <Icon name="search" size={16} color="neutral_500" />
+      <Icon name="search" size={16} color="muted" />
       <Text fontWeight="bold" numberOfLines={1} style={Atoms.flex_1}>
         {phrase}
       </Text>
@@ -240,7 +241,7 @@ function UserResults({
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Searching"
             />
           </View>
@@ -253,7 +254,7 @@ function UserResults({
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Loading more"
             />
           </View>
@@ -277,7 +278,7 @@ function UserRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
+      style={[theme.atoms.box.primary.border, Atoms.border_b]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

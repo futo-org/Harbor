@@ -35,9 +35,11 @@ export default function useCreateClaim() {
     submit: async ({
       schema,
       values,
+      images = [],
     }: {
       schema: v2.VerificationSchema;
       values: Record<string, string>;
+      images?: v2.ImageSet[];
     }): Promise<ClaimRef> => {
       if (isPending) {
         throw 'Already pending';
@@ -59,6 +61,7 @@ export default function useCreateClaim() {
             verificationClaim: {
               schema: serializeSchema(schema),
               fields,
+              images,
             },
           },
         });
