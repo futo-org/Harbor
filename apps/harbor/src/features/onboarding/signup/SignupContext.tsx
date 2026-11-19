@@ -3,13 +3,10 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import { createIdentity } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
-import {
-  DEFAULT_SERVER,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
-import { updateProfile } from '@/src/features/profile/lib/updateProfile';
+import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import { beginProfileUpdate } from '@/src/features/profile/lib/updateProfile';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { profileQueryKey } from '@/src/features/profile/hooks/useProfile';
 
@@ -99,12 +96,7 @@ export function useSignup() {
         return;
       }
 
-      await createIdentity(client, DEFAULT_SERVER);
-      await updateProfile(client, {
-        name: data.displayName,
-        description: data.about,
-        avatarUri: data.avatarUri,
-      });
+      await initializeIdentity(client, data);
       await client.sync();
       await refreshCurrentIdentity();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
@@ -130,4 +122,55 @@ export function useSignup() {
     finish,
     submitting,
   };
+}
+
+/** Locally create a new identity along with its initial profile. */
+async function initializeIdentity(
+  client: PolycentricClient,
+  initialData: SignupData,
+): Promise<void> {
+  // Generate new identity
+  const { login, keyPair, genesisEvent, identityContent, serializedContent } =
+    await client.loginManager.beginSignup();
+
+  // Persist genesis identity event
+  await client.commitEvent({
+    owner: login.identity,
+    signedEvent: genesisEvent,
+    content: identityContent,
+    contentBytes: serializedContent.contentBytes,
+  });
+
+  // Create and persist initial profile event and its blobs
+  const initialProfile = await beginProfileUpdate(client, {
+    name: initialData.displayName,
+    description: initialData.about,
+    avatarUri: initialData.avatarUri,
+  });
+
+  const { event, contentBytes } = await client.buildEvent({
+    identityKey: login.identity,
+    collection: initialProfile.collection,
+    signer: login.publicKey,
+    content: initialProfile.content,
+  });
+
+  const signedEvent = await client.signEvent(event, keyPair);
+
+  if (initialProfile.blobs) {
+    for (const { digest, bytes } of initialProfile.blobs) {
+      await client.fileStore.put(login.identity, digest, bytes);
+    }
+  }
+
+  await client.commitEvent({
+    owner: login.identity,
+    signedEvent,
+    content: initialProfile.content,
+    contentBytes,
+  });
+
+  // Use the new identity
+  await client.loginManager.finishSignup(login);
+  await client.loginAs(login);
 }

@@ -75,9 +75,15 @@ export type CommitEventArgs = {
   contentBytes: Uint8Array;
 };
 
+export type NewBlob = {
+  digest: Proto.ContentDigest;
+  bytes: Uint8Array;
+};
+
 export type CreateEventArgs = {
   collection: Collection | number;
   content: Proto.Content;
+  blobs?: NewBlob[];
 };
 
 export type CreatedEvent = {
@@ -88,6 +94,7 @@ export type CreatedEvent = {
   eventBytes: Uint8Array;
   content: Proto.Content;
   contentBytes: Uint8Array;
+  blobs: NewBlob[];
 };
 
 /**
@@ -485,14 +492,17 @@ export class PolycentricClient {
 
   /**
    * Create a new event under the current login.
+   * Any blobs provided will be stored first, and then the event+content will be
+   * persisted locally.
    * This should be used for most user content where the API fits.
-   * Handles signing, persisting locally, and mirroring to rs-core.
+   * This method handles signing, persisting locally, and mirroring to rs-core.
    * Does not sync to remote servers.
    * Throws on failure.
    */
   async createEvent({
     collection,
     content,
+    blobs,
   }: CreateEventArgs): Promise<CreatedEvent> {
     // Snapshot the current login at the start
     const identityKey = this.activeIdentityKey;
@@ -512,6 +522,13 @@ export class PolycentricClient {
     // Sign event
     const signedEvent = await this.signEvent(event, keyPair);
 
+    // Store blobs
+    if (blobs) {
+      for (const { digest, bytes } of blobs) {
+        await this.fileStore.put(identityKey, digest, bytes);
+      }
+    }
+
     // Persist event and content locally
     // This event can be considered canonical after this succeeds
     await this.commitEvent({
@@ -521,7 +538,7 @@ export class PolycentricClient {
       contentBytes,
     });
 
-    // Expose all derived objects to caller
+    // Expose all relevant objects to caller
     return {
       signedEvent,
       event,
@@ -530,6 +547,7 @@ export class PolycentricClient {
       eventBytes: signedEvent.eventBytes,
       content,
       contentBytes,
+      blobs: blobs ?? [],
     };
   }
 

@@ -4,6 +4,7 @@ import {
 } from '@/src/common/lib/images/processAndUploadImage';
 import {
   COLLECTION,
+  type CreateEventArgs,
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
@@ -20,13 +21,11 @@ type UpdateProfileInput = {
   alias?: string | null;
 };
 
-export async function updateProfile(
+/** Assemble the full profile update in-memory but don't persist it. */
+export async function beginProfileUpdate(
   client: PolycentricClient,
   { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
-): Promise<void> {
-  const identity = client.activeIdentityKey;
-  if (!identity) throw new Error('No active identity');
-
+): Promise<CreateEventArgs> {
   // Build profile update event
   let avatarMeta: v2.ImageSet | undefined;
   let newAvatarVariants: ImageVariant[] = [];
@@ -53,12 +52,17 @@ export async function updateProfile(
     },
   });
 
-  // Persist profile update locally
-  await Promise.all(
-    newAvatarVariants.map(({ digest, bytes }) =>
-      client.fileStore.put(identity, digest, bytes),
-    ),
-  );
+  // Types are already compatible
+  const blobs = newAvatarVariants;
 
-  await client.createEvent({ collection: COLLECTION.PROFILE, content });
+  return { collection: COLLECTION.PROFILE, content, blobs };
+}
+
+/** Update the active identity's profile locally. */
+export async function updateProfile(
+  client: PolycentricClient,
+  input: UpdateProfileInput,
+): Promise<void> {
+  const args = await beginProfileUpdate(client, input);
+  await client.createEvent(args);
 }
