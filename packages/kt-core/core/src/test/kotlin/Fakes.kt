@@ -462,11 +462,6 @@ class FakeCore(
         eventBundlesBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
 
-    override suspend fun registerPushNotifications(
-        serverUrl: String,
-        signedMessageBytes: ByteArray,
-    ) = error("not used by sync tests")
-
     override fun resolveIdentityChain(identity: String): ByteArray = error("not used by sync tests")
 
     override suspend fun resolveReport(
@@ -480,6 +475,11 @@ class FakeCore(
         serverUrl: String,
         requestBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
+
+    override suspend fun setDevicePushSubscriptions(
+        serverUrl: String,
+        requestBytes: ByteArray,
+    ) = error("not used by sync tests")
 
     override suspend fun urlInfo(
         serverUrl: String,
