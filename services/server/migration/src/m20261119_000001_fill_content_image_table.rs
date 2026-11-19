@@ -19,6 +19,8 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let tx = manager.get_connection();
 
+        tx.execute_unprepared("CREATE UNIQUE INDEX IF NOT EXISTS content_image_temp_unique ON content_image (content_id, digest_type, digest_bytes)").await?;
+
         let mut content_id: i64 = 0;
         loop {
             let mut query = SelectStatement::new();
@@ -116,6 +118,9 @@ impl MigrationTrait for Migration {
 
             tx.execute(&query).await?;
         }
+
+        tx.execute_unprepared("DROP INDEX IF EXISTS content_image_temp_unique")
+            .await?;
 
         Ok(())
     }
