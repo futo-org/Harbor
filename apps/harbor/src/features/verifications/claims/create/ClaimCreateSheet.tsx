@@ -1,5 +1,6 @@
 import { Button, Text } from '@/src/common/components';
 import Icon, { type IconName } from '@/src/common/components/Icon';
+import { ImageDropOverlay } from '@/src/common/components/composites';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
@@ -197,6 +198,15 @@ export function ClaimCreateSheet({
             ) : undefined
           }
         />
+      }
+      overlay={
+        form ? (
+          <ImageDropOverlay
+            onDrop={form.ingestAssets}
+            remainingSlots={form.remainingAttachmentSlots}
+            disabled={form.attachDisabled}
+          />
+        ) : undefined
       }
     >
       {/* The sheet portals its subtree, so the provider must ride inside. */}
