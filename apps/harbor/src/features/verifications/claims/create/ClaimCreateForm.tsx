@@ -6,6 +6,7 @@ import {
 import {
   type ImageAttachment,
   type ImageAttachmentStatus,
+  MAX_ATTACHMENTS,
   useImageAttachments,
 } from '@/src/common/lib/images/useImageAttachments';
 import { Atoms } from '@/src/common/theme';
@@ -16,13 +17,18 @@ import type { ClaimType, FormField } from '../../utils/forms';
 import useCreateClaim, { type ClaimRef } from '../../hooks/useCreateClaim';
 import { formToSchema } from '../../utils/schemas';
 
-// Submission is driven from outside (the sheet header's Create button), so
-// the form reports its current state upward instead of rendering a button.
+// The sheet renders the Create button in its header and the image drop
+// overlay over its body, so the form reports what they need upward.
 export type ClaimFormState = {
   submit: () => void;
   isValid: boolean;
   isPending: boolean;
   hasAttachments: boolean;
+  ingestAssets: (
+    assets: { uri: string; width: number; height: number }[],
+  ) => void;
+  remainingAttachmentSlots: number;
+  attachDisabled: boolean;
 };
 
 // Renders the input form for a claim type, collects values, and publishes the
@@ -63,6 +69,7 @@ export function ClaimCreateForm({
     handleAttachImage,
     handleCaptureImage,
     handleRemoveAttachment,
+    ingestAssets,
     resolveImageSets,
   } = useImageAttachments({
     getAttachments,
@@ -103,7 +110,7 @@ export function ClaimCreateForm({
 
   // `onSubmit` closes over hook values that change identity every render, so
   // hand the parent a stable wrapper around a ref and only re-report when the
-  // state the header button renders from changes — reporting on every render
+  // state the sheet renders from changes — reporting on every render
   // would loop: report -> parent setState -> re-render -> report.
   const onSubmitRef = useRef(onSubmit);
   useEffect(() => {
@@ -116,9 +123,20 @@ export function ClaimCreateForm({
       isValid,
       isPending,
       hasAttachments,
+      ingestAssets,
+      remainingAttachmentSlots: MAX_ATTACHMENTS - attachments.length,
+      attachDisabled,
     });
     return () => onFormState(null);
-  }, [onFormState, isValid, isPending, hasAttachments]);
+  }, [
+    onFormState,
+    isValid,
+    isPending,
+    hasAttachments,
+    ingestAssets,
+    attachments.length,
+    attachDisabled,
+  ]);
 
   return (
     <View style={Atoms.gap_md}>

@@ -45,6 +45,10 @@ jest.mock('@/src/common/components/Icon', () => ({
   default: () => null,
 }));
 
+jest.mock('@/src/common/components/composites', () => ({
+  ImageDropOverlay: () => null,
+}));
+
 jest.mock('@/src/common/components/sheet', () => {
   const react = require('react');
   const { Text, View } = require('react-native');

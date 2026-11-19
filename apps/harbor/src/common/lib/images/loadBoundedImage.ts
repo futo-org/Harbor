@@ -99,7 +99,7 @@ async function downscaleInBrowser(
 }
 
 /** Read the intrinsic size through an `<img>`; browsers take it from the header. */
-function readImageDimensions(
+export function readImageDimensions(
   uri: string,
 ): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
