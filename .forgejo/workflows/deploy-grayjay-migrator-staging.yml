@@ -64,7 +64,7 @@ jobs:
           dockerfile: services/grayjay-migrator
           registry: ${{ env.REGISTRY }}
           stage-artifact: rust-service-binaries
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/chart-publish
@@ -72,7 +72,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           chart: harbor-grayjay-migrator
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/deploy-tag
@@ -82,5 +82,5 @@ jobs:
           chart: harbor-grayjay-migrator
           chart-version: ${{ steps.chart.outputs.version }}
           environment: staging
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}

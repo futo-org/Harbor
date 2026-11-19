@@ -37,5 +37,5 @@ jobs:
           chart-version: ${{ inputs.sha || 'staging' }}
           tag: ${{ inputs.sha || 'staging' }}
           environment: production
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}

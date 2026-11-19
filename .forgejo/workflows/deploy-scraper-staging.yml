@@ -64,7 +64,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           stage-artifact: scraper-build
           stage: build
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/chart-publish
@@ -72,7 +72,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           chart: harbor-scraper
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/deploy-tag
@@ -82,5 +82,5 @@ jobs:
           chart: harbor-scraper
           chart-version: ${{ steps.chart.outputs.version }}
           environment: staging
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}

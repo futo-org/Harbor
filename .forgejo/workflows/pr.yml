@@ -60,7 +60,7 @@ jobs:
         with:
           registry: ${{ needs.changes.outputs.registry }}
           tag: ${{ needs.changes.outputs.images_tag }}
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -671,7 +671,7 @@ jobs:
           android-artifact: ${{ needs.android.result == 'success' }}
           ios-artifact: ${{ needs.ios.result == 'success' }}
           rn-sdk: ${{ fromJSON(needs.changes.outputs.plan).flags.build_rn_sdk }}
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
 
   # Images -------------------------------------------------------------------
@@ -724,7 +724,7 @@ jobs:
           dockerfile: ${{ matrix.dockerfile }}
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: rust-service-binaries
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -771,7 +771,7 @@ jobs:
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: scraper-build
           stage: build
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -818,7 +818,7 @@ jobs:
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: verifier-bot-build
           stage: build
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -896,7 +896,7 @@ jobs:
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: web-build
           stage: build
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
