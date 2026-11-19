@@ -1,3 +1,4 @@
+import { COLLECTION } from '../constants';
 import type {
   IEventRepository,
   FileStoreEntry,
@@ -120,6 +121,26 @@ class MemoryEventRepository implements IEventRepository {
     }
 
     return [...heads.values()].map(copyEventKey);
+  }
+
+  async getProfiles(): Promise<EventRow[]> {
+    const events: EventRow[] = [];
+
+    for (const [owner, rows] of this.owners) {
+      for (const row of rows.values()) {
+        const { identity, collection } = row.eventKey;
+
+        const isProfile =
+          collection === COLLECTION.IDENTITY ||
+          collection === COLLECTION.PROFILE;
+
+        if (identity === owner && isProfile) {
+          events.push(copyRow(row));
+        }
+      }
+    }
+
+    return events;
   }
 }
 
