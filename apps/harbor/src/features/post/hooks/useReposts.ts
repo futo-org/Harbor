@@ -98,7 +98,6 @@ const useReposts = create<RepostsState>((set, get) => ({
       invalidateFeeds(client, client.activeIdentityKey ?? post.identity);
     } catch (err) {
       console.error(err);
-      set({ reposts });
     }
   },
   /**
