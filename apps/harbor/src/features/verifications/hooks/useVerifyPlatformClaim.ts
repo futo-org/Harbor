@@ -93,9 +93,14 @@ export default function useVerifyPlatformClaim() {
 
         // Check the profile before publishing anything. The token is the
         // author's identity key (see the bot's claims.ts).
-        const token = client.activeIdentityKey;
+        const identity = client.activeIdentityKey;
+        const token = identity;
         if (!token) throw new Error('No active identity');
         await verifierApi.checkTextClaim(platform.slug, claimFields, token);
+
+        if (identity !== client.activeIdentityKey) {
+          throw new Error('Unexpected identity switch');
+        }
 
         const { schema, values } = platformClaimParts(
           platform,
@@ -104,14 +109,21 @@ export default function useVerifyPlatformClaim() {
         );
         const ref = await createClaim.submit({ schema, values });
 
+        if (identity !== client.activeIdentityKey) {
+          throw new Error('Unexpected identity switch');
+        }
+
         // Verify needs the claim published; roll it back on failure so
         // retries don't pile up claims.
         try {
           await publishVerifierBotTargets(client, ref.id);
           await verifierApi.requestTextVerify(platform.slug, ref.id);
         } catch (e) {
-          await deleteClaim(client, ref.id).catch(() => {});
-          invalidateQuery(client, ['claims-list', ref.identity]);
+          if (identity === client.activeIdentityKey) {
+            await deleteClaim(client, ref.id).catch(() => {});
+            invalidateQuery(client, ['claims-list', ref.identity]);
+          }
+
           throw e;
         }
 

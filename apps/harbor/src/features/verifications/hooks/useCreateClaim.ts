@@ -11,7 +11,7 @@ import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
 import { useClaimCreateOptions } from '../claims/create/ClaimCreateContext';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
-import { publishVerificationTarget } from './useRequestVerification';
+import { createVerificationTarget } from './useRequestVerification';
 
 // Identifies a created claim event for routing to its view.
 export interface ClaimRef {
@@ -71,15 +71,9 @@ export default function useCreateClaim() {
           content,
         });
 
-        try {
-          await client.sync(SyncStrategy.PARTIAL_PUSH);
-        } catch (err) {
-          console.error(err);
-        }
-
         // The same sync below delivers both events.
         if (requestFrom) {
-          await publishVerificationTarget(client, eventKey, [requestFrom]);
+          await createVerificationTarget(client, eventKey, [requestFrom]);
         }
 
         // Delivery to servers is best-effort — the claim is already saved

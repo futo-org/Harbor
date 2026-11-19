@@ -10,7 +10,7 @@ type Client = ReturnType<typeof usePolycentric>;
  * Publish a VerificationTarget aiming a claim at identities. Committed
  * locally — the caller owns syncing.
  */
-export async function publishVerificationTarget(
+export async function createVerificationTarget(
   client: Client,
   claimEventKey: v2.EventKey,
   targetIdentities: string[],
@@ -25,11 +25,6 @@ export async function publishVerificationTarget(
     },
   });
   await client.createEvent({ collection: COLLECTION.VERIFICATIONS, content });
-  try {
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
-  } catch (err) {
-    console.error(err);
-  }
 }
 
 /**
@@ -43,9 +38,16 @@ export async function publishVerifierBotTargets(
 ): Promise<void> {
   const bots = await verifierApi.verifierIdentities();
   if (bots.size === 0) return;
+
   const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
-  await publishVerificationTarget(client, claimEventKey, [...bots]);
-  invalidateQuery(client, ['verification-targets', claimId]);
+  await createVerificationTarget(client, claimEventKey, [...bots]);
+
+  try {
+    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    invalidateQuery(client, ['verification-targets', claimId]);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 // Request verification of an existing claim from a specific identity.
@@ -70,7 +72,7 @@ export default function useRequestVerification() {
       setPending(true);
       try {
         const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
-        await publishVerificationTarget(client, claimEventKey, [identity]);
+        await createVerificationTarget(client, claimEventKey, [identity]);
 
         // Delivery to servers is best-effort — the target is already saved
         // locally and will be pushed on the next sync if this fails.
