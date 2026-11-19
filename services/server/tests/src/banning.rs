@@ -1,9 +1,6 @@
 //! Tests for banned identities.
 
-use crate::blobs::{
-    banned_avatar, banned_banner, banned_post, banned_verification, get_blob,
-    test_blob_upload,
-};
+use crate::blobs::{get_blob, random_image, test_blob_upload};
 use crate::search_users::expect_searched_users;
 use crate::*;
 
@@ -145,7 +142,7 @@ async fn banning_removes_posts() {
 
 #[tokio::test]
 async fn banning_removes_posts_with_images() {
-    let (banned_post_image, banned_post_image_bytes) = banned_post();
+    let (banned_post_image, banned_post_image_bytes) = random_image();
     let banned_post_image_blob = banned_post_image.blob.clone().unwrap();
 
     let mut banned_client = TestClient::new().await;
@@ -158,7 +155,7 @@ async fn banning_removes_posts_with_images() {
     };
     banned_client.post(post, current_timestamp());
     banned_client.submit_events().await;
-    test_blob_upload(&banned_post_image_blob, banned_post_image_bytes).await;
+    test_blob_upload(&banned_post_image_blob, &banned_post_image_bytes).await;
     let banned_identity = banned_client.identity().to_owned();
 
     set_ban_status(&banned_identity, true).await;
@@ -171,7 +168,7 @@ async fn banning_removes_posts_with_images() {
 #[tokio::test]
 async fn banning_removes_verification_claims_with_images() {
     let (banned_verification_image, banned_verification_image_bytes) =
-        banned_verification();
+        random_image();
     let banned_verification_image_blob =
         banned_verification_image.blob.clone().unwrap();
 
@@ -184,7 +181,7 @@ async fn banning_removes_verification_claims_with_images() {
     banned_client.submit_events().await;
     test_blob_upload(
         &banned_verification_image_blob,
-        banned_verification_image_bytes,
+        &banned_verification_image_bytes,
     )
     .await;
     let banned_identity = banned_client.identity().to_owned();
@@ -198,9 +195,9 @@ async fn banning_removes_verification_claims_with_images() {
 
 #[tokio::test]
 async fn banning_removes_profile_updates_with_avatars_and_banners() {
-    let (banned_avatar_image, banned_avatar) = banned_avatar();
+    let (banned_avatar_image, banned_avatar) = random_image();
     let banned_avatar_blob = banned_avatar_image.blob.clone().unwrap();
-    let (banned_banner_image, banned_banner) = banned_banner();
+    let (banned_banner_image, banned_banner) = random_image();
     let banned_banner_blob = banned_banner_image.blob.clone().unwrap();
 
     let mut banned_client = TestClient::new().await;
@@ -218,8 +215,8 @@ async fn banning_removes_profile_updates_with_avatars_and_banners() {
     };
     banned_client.profile_update(profile_update, current_timestamp());
     banned_client.submit_events().await;
-    test_blob_upload(&banned_avatar_blob, banned_avatar).await;
-    test_blob_upload(&banned_banner_blob, banned_banner).await;
+    test_blob_upload(&banned_avatar_blob, &banned_avatar).await;
+    test_blob_upload(&banned_banner_blob, &banned_banner).await;
     let banned_identity = banned_client.identity().to_owned();
 
     set_ban_status(&banned_identity, true).await;

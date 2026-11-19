@@ -365,11 +365,22 @@ image_fn!(
     verification0.png: 100, 100;
     verification1.png: 100, 100;
     verification2.png: 100, 100;
-    pub(crate) banned_avatar.png: 100, 100;
-    pub(crate) banned_banner.png: 100, 100;
-    pub(crate) banned_post.png: 100, 100;
-    pub(crate) banned_verification.png: 100, 100;
 );
+
+/// NOTE: image data is invalid.
+pub(crate) fn random_image() -> (Image, Vec<u8>) {
+    let bytes = crate::random_blob();
+    let image = Image {
+        blob: Some(Blob {
+            digest: Some(content_digest(&bytes)),
+            mime_type: "image/svg+xml".to_owned(),
+            size: bytes.len() as _,
+        }),
+        width: 32,
+        height: 32,
+    };
+    (image, bytes)
+}
 
 pub(crate) async fn test_blob_upload(blob: &Blob, bytes: &[u8]) {
     upload(blob, bytes).await.expect("failed to upload blob");

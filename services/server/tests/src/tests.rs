@@ -21,8 +21,7 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
-use rand::distr::Distribution;
-use rand::distr::{Alphabetic, SampleString};
+use rand::distr::{Alphabetic, Distribution, SampleString, StandardUniform};
 use rand::{Rng, RngExt};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -119,6 +118,11 @@ pub fn random_unstemmed_string() -> String {
     }
 
     SampleString::sample_string(&Unstemmed, &mut rand::rng(), 20)
+}
+
+pub fn random_blob() -> Vec<u8> {
+    let mut rng = rand::rng();
+    StandardUniform.sample_iter(&mut rng).take(32).collect()
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
