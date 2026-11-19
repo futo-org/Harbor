@@ -72,10 +72,7 @@ interface TestIdentity {
 }
 
 /**
- * Build an identity whose key is derived exactly as `IdentityManager.publish()`
- * does: the hex sha256 of the serialized initial Identity document.
- * All authorized keys live in that single initial document (signed by the first
- * rotation key) — a valid identity state that avoids a long event stream.
+ * Build a new identity derived from the keys given.
  */
 function makeIdentity(
   rotationKeys: Signer[],
