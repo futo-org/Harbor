@@ -1,14 +1,13 @@
 import { toast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants';
 import { bytesToHex, usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { isWeb } from '@/src/common/util/platform';
 import type {
   LoginId,
   LoginOverview,
   LoginStatus,
   PolycentricClient,
 } from '@polycentric/react-native';
-import { reloadAppAsync } from 'expo';
+import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 
@@ -99,7 +98,7 @@ type IdentitySwitcherState = {
   /** Toggle whether the sheet is switching identities or adding an identity. */
   toggleMode: () => void;
 
-  /** Persist the active login and restart the app. */
+  /** Switch the active login and close the sheet. */
   switchTo: (client: PolycentricClient, login: LoginId) => Promise<void>;
 };
 
@@ -145,28 +144,26 @@ export const useIdentitySwitcherStore = create<IdentitySwitcherState>(
         if (get().switchingIdentity !== null) return;
         set({ switchingIdentity: login.identity });
 
-        // Set the active identity for the next launch
+        // Do identity switch
         try {
-          await client.storageDriver.setActiveLogin(login);
+          await client.loginAs(login);
+
+          get().close();
+
+          // Dismiss pages since they may contain stale data from the old
+          // identity.
+          if (router.canDismiss()) router.dismissAll();
+          router.replace(Routes.tabs.feed.index);
+
+          // Sync in the background
+          client.sync().catch((e) => {
+            console.warn('Sync after identity switch failed:', e);
+          });
         } catch (e) {
           console.warn('IdentitySwitcher: failed to switch identity:', e);
           toast.error('Failed to switch identity');
+        } finally {
           set({ switchingIdentity: null });
-          return;
-        }
-
-        // Reload/restart the app so that the new identity is active
-        if (isWeb) {
-          window.location.replace(Routes.tabs.feed.index);
-          return;
-        }
-        try {
-          await reloadAppAsync('Identity switched');
-        } catch (e) {
-          // Tell the user to restart and leave the identity switcher in the
-          // switching state
-          console.warn('IdentitySwitcher: failed to restart app:', e);
-          toast.error('Restart the app to use your new identity');
         }
       },
     };
