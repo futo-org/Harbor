@@ -5,7 +5,7 @@ import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardin
 import type { PolycentricClient } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { draftProfileUpdate } from '@/src/features/profile/lib/updateProfile';
+import { beginProfileUpdate } from '@/src/features/profile/lib/updateProfile';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { profileQueryKey } from '@/src/features/profile/hooks/useProfile';
 
@@ -135,7 +135,7 @@ async function initializeIdentity(
   });
 
   // Create and persist initial profile event and its blobs
-  const initialProfile = await draftProfileUpdate(client, {
+  const initialProfile = await beginProfileUpdate(client, {
     name: initialData.displayName,
     description: initialData.about,
     avatarUri: initialData.avatarUri,
