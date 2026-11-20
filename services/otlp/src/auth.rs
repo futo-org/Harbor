@@ -13,6 +13,7 @@ use crate::routes::AppState;
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuthenticatedIdentity {
     pub identity: String,
+    /// String representation of a `PublicKey`.
     pub signing_key: String,
 }
 
@@ -69,7 +70,7 @@ pub async fn authenticate(
 
     Ok(AuthenticatedIdentity {
         identity: verified.claims.iss,
-        signing_key: verified.signed_by.to_str(),
+        signing_key: verified.signed_by.to_string(),
     })
 }
 

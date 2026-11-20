@@ -136,9 +136,10 @@ pub async fn access_log_middleware(
 
     let (identity, public_key) =
         match response.extensions().get::<AuthenticatedIdentity>() {
-            Some(auth) => {
-                (Some(auth.identity.clone()), Some(auth.public_key.to_str()))
-            }
+            Some(auth) => (
+                Some(auth.identity.clone()),
+                Some(auth.public_key.to_string()),
+            ),
             None => (None, None),
         };
     // Present on gRPC-Web trailers-only responses; full gRPC puts it in

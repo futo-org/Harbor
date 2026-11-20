@@ -61,7 +61,7 @@ pub async fn auth_middleware(
                 tracing::Span::current()
                     .record("harbor.identity", &auth.identity);
                 tracing::Span::current()
-                    .record("harbor.public_key", auth.public_key.to_str());
+                    .record("harbor.public_key", auth.public_key.to_string());
                 authenticated = Some(auth.clone());
                 request.extensions_mut().insert(auth);
             }
