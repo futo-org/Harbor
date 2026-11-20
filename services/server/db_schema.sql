@@ -582,6 +582,40 @@ COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 
 --
+-- Name: identity_audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.identity_audit_log (
+    id bigint NOT NULL,
+    identity text NOT NULL,
+    action smallint NOT NULL,
+    by_identity text,
+    by_public_key text,
+    "timestamp" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT action_performed_by CHECK (((by_identity IS NOT NULL) OR (by_public_key IS NOT NULL)))
+);
+
+
+--
+-- Name: identity_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.identity_audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: identity_audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.identity_audit_log_id_seq OWNED BY public.identity_audit_log.id;
+
+
+--
 -- Name: interaction_tally; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -793,6 +827,13 @@ CREATE TABLE public.verification_schema (
 
 
 --
+-- Name: identity_audit_log id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.identity_audit_log ALTER COLUMN id SET DEFAULT nextval('public.identity_audit_log_id_seq'::regclass);
+
+
+--
 -- Name: application application_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -982,6 +1023,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.follow
     ADD CONSTRAINT follow_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: identity_audit_log identity_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.identity_audit_log
+    ADD CONSTRAINT identity_audit_log_pkey PRIMARY KEY (id);
 
 
 --

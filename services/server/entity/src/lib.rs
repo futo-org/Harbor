@@ -85,6 +85,7 @@ pub mod deleted_event;
 pub mod event;
 pub mod follow;
 pub mod gravity;
+pub mod identity_audit_log;
 pub mod interaction_tally;
 pub mod moderator;
 pub mod notification;
