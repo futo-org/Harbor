@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@noble/curves": "catalog:",
-    "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-client": "workspace:*",
     "@polycentric/js-storage-postgres": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-wasm": "workspace:*",

@@ -1,7 +1,7 @@
 // Shown on docs/content/developer/examples.md under "Creating a client".
 
 // #region browser-client
-import { PolycentricClient } from '@polycentric/js-core';
+import { PolycentricClient } from '@polycentric/js-client';
 import {
   IndexedDBStorageDriver,
   OpfsFileStoreDriver,

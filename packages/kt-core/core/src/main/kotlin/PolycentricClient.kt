@@ -39,7 +39,7 @@ import java.security.MessageDigest
 import java.util.logging.Logger
 
 /**
- * Kotlin port of js-core `PolycentricClient` (polycentric-client.ts).
+ * Kotlin port of js-client `PolycentricClient` (polycentric-client.ts).
  *
  * Thin orchestration shell over the shared Rust protocol engine
  * (rs-core via UniFFI): the core owns sequences, Merkle anchoring,
@@ -83,7 +83,7 @@ class PolycentricClient(
     val pairingSessionManager = PairingSessionManager(this)
 
     /**
-     * Outward event bus (js-core `client.events`; renamed here because
+     * Outward event bus (js-client `client.events`; renamed here because
      * `events` is the event *repository* on this flattened client).
      */
     val eventService = EventService()
@@ -100,7 +100,7 @@ class PolycentricClient(
      * [ClientState.READY] — the point at which `currentKeyPair`/`currentSystem`
      * are guaranteed set. Returns immediately if already ready. Throws the
      * initialization failure if the client ended in [ClientState.ERROR], rather
-     * than suspending forever. Lets callers gate on readiness the way js-core's
+     * than suspending forever. Lets callers gate on readiness the way js-client's
      * `await create()` does, instead of touching a half-built client.
      */
     suspend fun awaitReady() {
@@ -114,7 +114,7 @@ class PolycentricClient(
         }
     }
 
-    /** The active device public key as a proto (js-core `currentSystem`). */
+    /** The active device public key as a proto (js-client `currentSystem`). */
     val currentSystem: PublicKey
         get() = requireNotNull(currentKeyPair) { "No keypair set" }.toPublicKeyProto()
 
@@ -123,7 +123,7 @@ class PolycentricClient(
     init {
         // Authenticate every outgoing gRPC request as the active identity.
         // The core caches each server's token and only calls back when it
-        // expires (js-core parity: the PolycentricClient constructor).
+        // expires (js-client parity: the PolycentricClient constructor).
         core.setAuthTokenProvider(
             object : AuthTokenProvider {
                 override suspend fun authToken(serverUrl: String): AuthToken? {
@@ -142,7 +142,7 @@ class PolycentricClient(
     companion object {
         private val log = Logger.getLogger("PolycentricClient")
 
-        /** Construct and initialize in one step (js-core `PolycentricClient.create`). */
+        /** Construct and initialize in one step (js-client `PolycentricClient.create`). */
         suspend fun create(
             core: PolycentricCoreInterface,
             storageDriver: IStorageDriver,
@@ -156,12 +156,12 @@ class PolycentricClient(
                 .also { it.initialize() }
     }
 
-    // ── Lifecycle (js-core: initialize) ────────────────────────────────
+    // ── Lifecycle (js-client: initialize) ────────────────────────────────
 
     /**
      * Hydrate the Rust core's ephemeral in-memory stores from persistent
      * storage, restore (or create) a keypair, and push the server list
-     * into the core. Mirrors js-core `initialize()` including its state
+     * into the core. Mirrors js-client `initialize()` including its state
      * machine and progress/hydration signals.
      */
     suspend fun initialize() {
@@ -176,11 +176,11 @@ class PolycentricClient(
             eventService.emitHydrationStatus(HydrationStatus.COMPLETED)
 
             // Restore the first stored keypair, or create an ephemeral one —
-            // the SDK always has a keypair after initialize (js-core parity).
+            // the SDK always has a keypair after initialize (js-client parity).
             val session = storageDriver.loadActiveSession()
             val allKeys = keys.getAll()
             // The keypair holding the signed-in identity; fall back to any
-            // stored key so the client always has a keypair (js-core parity)
+            // stored key so the client always has a keypair (js-client parity)
             // when logged out.
             val sessionKey =
                 session?.let { s ->
@@ -214,13 +214,13 @@ class PolycentricClient(
         }
     }
 
-    /** js-core `copyEvents`: replay stored events into the core. */
+    /** js-client `copyEvents`: replay stored events into the core. */
     suspend fun copyEvents(events: List<SignedEvent>? = null) {
         val all = events ?: this.events.getAll()
         coreCall { core.copyEvents(all.map { SignedEvent.ADAPTER.encode(it) }) }
     }
 
-    /** js-core `copyContents`: replay stored content into the core. */
+    /** js-client `copyContents`: replay stored content into the core. */
     suspend fun copyContents() {
         coreCall {
             core.copyContents(
@@ -234,13 +234,13 @@ class PolycentricClient(
         }
     }
 
-    // ── Event construction (js-core: buildEvent / signEvent / commitEvent) ──
+    // ── Event construction (js-client: buildEvent / signEvent / commitEvent) ──
 
     /**
      * Build an unsigned Event for `content` in `collection` using the
      * active identity and current keypair. Sequences, previous
      * signature/root (RFC-6962), and the vector clock all come from the
-     * core — the exact steps of js-core `buildEvent`.
+     * core — the exact steps of js-client `buildEvent`.
      *
      * Note: proto uint64 fields surface as Long in Wire and ULong across
      * the FFI; conversions are lossless bit-reinterpretations.
@@ -314,7 +314,7 @@ class PolycentricClient(
     /**
      * Sign via the core's canonical envelope. Private keys never cross
      * the FFI — the core calls back into [crypto] with the exact bytes
-     * to sign (js-core `signEvent`).
+     * to sign (js-client `signEvent`).
      */
     suspend fun signEvent(event: Event): SignedEvent {
         val keyPair = requireNotNull(currentKeyPair) { "No keypair" }
@@ -335,7 +335,7 @@ class PolycentricClient(
     /**
      * Persist a signed event (and its content) locally and mirror both
      * into the core so subsequent sequence/clock reads see them
-     * (js-core `commitEvent`).
+     * (js-client `commitEvent`).
      */
     suspend fun commitEvent(
         signedEvent: SignedEvent,
@@ -365,7 +365,7 @@ class PolycentricClient(
         eventService.emitContentCreated(ContentCreatedPayload(signedEvent, content))
     }
 
-    // ── Queries (js-core: listEvents / listValidEvents) ────────────────
+    // ── Queries (js-client: listEvents / listValidEvents) ────────────────
 
     /** One-shot ListEvents across all configured servers. */
     suspend fun listEvents(
@@ -419,19 +419,19 @@ class PolycentricClient(
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
 
-    // ── Sync (js-core: sync / pull / push) ─────────────────────────────
+    // ── Sync (js-client: sync / pull / push) ─────────────────────────────
 
     /**
      * Bidirectional sync for the active identity. Pull fetches bundles
      * (optionally bounded by local heads) and persists new ones; push
      * delegates to the core's `pushLocalEvents`, then uploads any blobs
-     * the server reports missing. Mirrors js-core `sync()`.
+     * the server reports missing. Mirrors js-client `sync()`.
      */
     suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int =
         coroutineScope {
             val identity = activeIdentityKey ?: return@coroutineScope 0
 
-            // A pull failure must not cancel in-flight pushes (js-core joins
+            // A pull failure must not cancel in-flight pushes (js-client joins
             // both with allSettled): capture it and rethrow after the pushes.
             val pullTask =
                 async {
@@ -508,7 +508,7 @@ class PolycentricClient(
         val bundles = listEvents(identity = identity, heads = heads)
 
         // Blobs referenced by pulled content, deduped by digest so each
-        // is fetched once (js-core `pull`).
+        // is fetched once (js-client `pull`).
         val blobs = mutableMapOf<String, polycentric.v2.Blob>()
 
         var newCount = 0
@@ -523,7 +523,7 @@ class PolycentricClient(
 
     /**
      * Absorb errors and return true only when the event is new and added.
-     * Discovered blobs are added to [blobs]. (js-core `trySaveBundle`.)
+     * Discovered blobs are added to [blobs]. (js-client `trySaveBundle`.)
      */
     internal suspend fun trySaveBundle(
         bundle: EventBundle,
@@ -557,7 +557,7 @@ class PolycentricClient(
      * Absorb errors and return true only when the content is new and
      * added. Discovered blobs are added to [blobs] BEFORE the existence
      * check, in case we are missing a blob referenced by content we already
-     * have. (js-core `trySaveContent`.) Content whose bytes do not hash
+     * have. (js-client `trySaveContent`.) Content whose bytes do not hash
      * to [Event.content_digest] is rejected.
      */
     internal suspend fun trySaveContent(
@@ -589,7 +589,7 @@ class PolycentricClient(
             false
         }
 
-    // ── Blobs (js-core: commitBlob / fetchBlobBytes / uploadBlob) ──────
+    // ── Blobs (js-client: commitBlob / fetchBlobBytes / uploadBlob) ──────
 
     /** Blob URL for each configured server, in order, for fallback. */
     fun blobUrls(digest: ContentDigest): List<String> {
@@ -645,7 +645,7 @@ class PolycentricClient(
         }
     }
 
-    // ── Key / identity state (js-core: setCurrentKeyPair etc.) ─────────
+    // ── Key / identity state (js-client: setCurrentKeyPair etc.) ─────────
 
     suspend fun setCurrentKeyPair(keyPair: StoredKeyPair) {
         currentKeyPair = keyPair
@@ -682,7 +682,7 @@ class PolycentricClient(
     /**
      * Derive `servers` from the active identity's latest Identity doc
      * (falling back to seeds) and push the list into the core so its
-     * fan-out queries have targets. Mirrors js-core `refreshServers`.
+     * fan-out queries have targets. Mirrors js-client `refreshServers`.
      */
     suspend fun refreshServers() {
         if (activeIdentityKey != null) {
@@ -696,7 +696,7 @@ class PolycentricClient(
      * source of truth) and propagate it to the core. Used by IdentityManager
      * right after publishing so a newly added server receives the push, and by
      * clients that need to point at a negotiated server before claiming an
-     * identity during device pairing (js-core exposes `servers` as settable).
+     * identity during device pairing (js-client exposes `servers` as settable).
      */
     fun adoptServers(list: List<String>) {
         servers = list.toList()

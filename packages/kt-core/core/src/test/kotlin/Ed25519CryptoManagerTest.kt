@@ -9,7 +9,7 @@ import org.junit.Test
 
 /**
  * Plain-JVM tests for the Ed25519 crypto manager. The RFC 8032 known-answer
- * test pins BouncyCastle to the same behavior js-core's @noble/curves
+ * test pins BouncyCastle to the same behavior js-client's @noble/curves
  * manager has
  */
 class Ed25519CryptoManagerTest {

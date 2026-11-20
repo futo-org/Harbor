@@ -1,4 +1,4 @@
-# @polycentric/js-core
+# @polycentric/js-client
 
 TypeScript client for the Polycentric protocol. This wraps around the Rust core
 `@polycentric/rs-core`, which handles protocol work (Event signing, validation, identity resolution,

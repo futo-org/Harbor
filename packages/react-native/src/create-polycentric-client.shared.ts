@@ -2,7 +2,7 @@ import {
   type PolycentricClient,
   SyncStrategy,
   type v2Types,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 
 export interface CreatePolycentricClientConfig {
   databaseName?: string;

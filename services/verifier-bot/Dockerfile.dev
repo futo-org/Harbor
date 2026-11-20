@@ -48,7 +48,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY packages/rs-core-wasm packages/rs-core-wasm
-COPY packages/js-core packages/js-core
+COPY packages/js-client packages/js-client
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
 COPY packages/js-storage-postgres packages/js-storage-postgres
 COPY packages/js-node packages/js-node
@@ -60,7 +60,7 @@ RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 # .js so plain node can load them), then the JS SDKs, then typecheck and
 # tsc-compile the bot to dist/.
 RUN pnpm --filter @polycentric/rs-core-wasm build
-RUN pnpm --filter @polycentric/js-core \
+RUN pnpm --filter @polycentric/js-client \
          --filter @polycentric/js-storage-sqlite \
          --filter @polycentric/js-storage-postgres \
          --filter @polycentric/js-node build

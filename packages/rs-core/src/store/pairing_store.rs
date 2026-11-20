@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 /// Tracks the highest issuer state sequence seen for each pairing session.
 /// This lets us handle sequence checking and prevent state rollbacks in a way
-/// that's transparent to js-core.
+/// that's transparent to js-client.
 #[derive(Debug, Default)]
 pub struct PairingStore {
     /// Maps a SHA256 hash of a pairing session digest to the highest sequence

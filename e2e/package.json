@@ -12,7 +12,7 @@
     "seed": "node seed.mjs"
   },
   "devDependencies": {
-    "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-client": "workspace:*",
     "@polycentric/js-node": "workspace:*",
     "@polycentric/rs-core-wasm": "workspace:*",
     "maestro-runner": "^1.1.25"

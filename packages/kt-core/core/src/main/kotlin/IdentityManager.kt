@@ -24,7 +24,7 @@ import java.security.MessageDigest
 
 /**
  * Resolved identity state from the latest Identity document.
- * Port of js-core `IdentityState`.
+ * Port of js-client `IdentityState`.
  */
 class IdentityState(
     /** The identity key (hex-encoded sha256 of the initial Identity content). */
@@ -57,8 +57,8 @@ class PublishResult(
  * IdentityManager owns all identity lifecycle operations — publishing,
  * claiming, key rotation — and the authorization checks that go with them.
  *
- * Port of js-core `client-internal/identity-manager.ts`. Chain-validity
- * rules live in rs-core; like js-core, methods here do only the local
+ * Port of js-client `client-internal/identity-manager.ts`. Chain-validity
+ * rules live in rs-core; like js-client, methods here do only the local
  * bookkeeping and the "basic precaution" checks noted per method.
  */
 class IdentityManager(
@@ -86,7 +86,7 @@ class IdentityManager(
 
     /**
      * Resolves the active identity's validated head document from the core
-     * (js-core `resolveIdentity()`). Returns an empty state when there is no
+     * (js-client `resolveIdentity()`). Returns an empty state when there is no
      * active identity or no valid chain for it is known locally.
      */
     suspend fun getCurrent(): IdentityState =
@@ -206,7 +206,7 @@ class IdentityManager(
      * the core's rs-common chain logic — which validates content-digest
      * match, vector-clock/collection integrity, and signer authorization
      * across the whole chain, rather than trusting a single event
-     * (js-core #200: "always use rs-common for identity chain logic").
+     * (js-client #200: "always use rs-common for identity chain logic").
      */
     suspend fun fetchIdentityState(
         identityKey: String,
@@ -250,7 +250,7 @@ class IdentityManager(
 
     /**
      * Resolve an identity's latest validated state from the core's LOCAL
-     * store via rs-common chain validation (js-core #200). Returns null when
+     * store via rs-common chain validation (js-client #200). Returns null when
      * no valid chain is known locally — callers hydrate the events first
      * (e.g. [fetchIdentityState] or a sync).
      */

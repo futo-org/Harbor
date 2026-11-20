@@ -1,4 +1,4 @@
-import { DatabaseError } from '@polycentric/js-core';
+import { DatabaseError } from '@polycentric/js-client';
 import { m000003_20261020_initial } from './m000003_20261020_initial';
 import { m000004_20261021_drop_event_acks } from './m000004_20261021_drop_event_acks';
 import { m000005_20261021_login_repository } from './m000005_20261021_login_repository';

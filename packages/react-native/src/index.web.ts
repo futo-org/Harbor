@@ -32,8 +32,8 @@ export type {
   PostLabel,
 } from '@polycentric/rs-core-wasm/web';
 
-export * from '@polycentric/js-core';
-export * as types from '@polycentric/js-core';
+export * from '@polycentric/js-client';
+export * as types from '@polycentric/js-client';
 
 export {
   createPolycentricClient,

@@ -1,6 +1,6 @@
 # @polycentric/js-storage-postgres
 
-A Postgres implementation of `@polycentric/js-core`'s `IStorageDriver`, built on Drizzle ORM's
+A Postgres implementation of `@polycentric/js-client`'s `IStorageDriver`, built on Drizzle ORM's
 `node-postgres` driver. It mirrors `@polycentric/js-storage-sqlite`.
 
 ## Exports

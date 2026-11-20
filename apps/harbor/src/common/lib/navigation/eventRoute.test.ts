@@ -1,6 +1,6 @@
 jest.mock('@polycentric/react-native', () => ({
   COLLECTION: jest.requireActual(
-    '../../../../../../packages/js-core/src/constants',
+    '../../../../../../packages/js-client/src/constants',
   ).COLLECTION,
 }));
 

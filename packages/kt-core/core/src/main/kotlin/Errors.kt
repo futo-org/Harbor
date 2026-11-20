@@ -1,7 +1,7 @@
 package org.futo.polycentric.core
 
 /**
- * Typed error hierarchy — port of js-core `errors.ts` (grown as the
+ * Typed error hierarchy — port of js-client `errors.ts` (grown as the
  * managers that throw them get ported; only IdentityManager's errors
  * exist so far).
  */

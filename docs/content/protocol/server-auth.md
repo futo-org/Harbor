@@ -48,7 +48,7 @@ authorization: Bearer <jwt>
 
 ## Client side
 
-`createServerJwt` in js-core mints tokens:
+`createServerJwt` in js-client mints tokens:
 
 ```ts file=docs/examples/src/server-auth.ts#create-jwt
 ```

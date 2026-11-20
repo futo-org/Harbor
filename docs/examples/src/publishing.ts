@@ -1,8 +1,8 @@
 // Shown on docs/content/developer/examples.md under "Publishing content".
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-client';
 // #region post
-import { COLLECTION, v2 } from '@polycentric/js-core';
+import { COLLECTION, v2 } from '@polycentric/js-client';
 
 // #endregion post
 // #region image

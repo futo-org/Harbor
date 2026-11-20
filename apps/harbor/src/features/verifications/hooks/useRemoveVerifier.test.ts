@@ -1,7 +1,7 @@
 // The barrel pulls in native uniffi init at import time — expose just what
 // the hook needs.
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-client/src/proto/v2'),
   COLLECTION: { VERIFICATIONS: 8 },
   SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
 }));

@@ -96,9 +96,9 @@ jest.mock('@/src/common/components/Icon', () => {
 });
 
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-client/src/proto/v2'),
   COLLECTION: jest.requireActual(
-    '../../../../../../packages/js-core/src/constants',
+    '../../../../../../packages/js-client/src/constants',
   ).COLLECTION,
   FetchMode: { OfflineOnly: 3 },
 }));

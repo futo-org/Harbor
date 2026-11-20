@@ -5,7 +5,7 @@ import {
   segmentsFromPath,
   type FileStoreEntry,
   type IFileStoreDriver,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 
 /**
  * expo-file-system-backed IFileStoreDriver.

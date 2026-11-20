@@ -624,9 +624,9 @@ importers:
       '@polycentric/js-browser':
         specifier: workspace:*
         version: link:../../packages/js-browser
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../../packages/js-core
+        version: link:../../packages/js-client
       '@polycentric/js-node':
         specifier: workspace:*
         version: link:../../packages/js-node
@@ -649,9 +649,9 @@ importers:
 
   e2e:
     devDependencies:
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../packages/js-core
+        version: link:../packages/js-client
       '@polycentric/js-node':
         specifier: workspace:*
         version: link:../packages/js-node
@@ -670,9 +670,9 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.4.0
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../js-core
+        version: link:../js-client
       '@sqlite.org/sqlite-wasm':
         specifier: 3.49.1-build4
         version: 3.49.1-build4
@@ -708,7 +708,7 @@ importers:
         specifier: ^7.0.0
         version: 7.3.1(js-yaml@4.3.1)(json5@2.2.3)(webpack-bundle-analyzer@4.10.2)(webpack-dev-server@5.2.4)(webpack@5.112.2)
 
-  packages/js-core:
+  packages/js-client:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
@@ -768,9 +768,9 @@ importers:
       '@noble/curves':
         specifier: 'catalog:'
         version: 2.4.0
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../js-core
+        version: link:../js-client
       '@polycentric/js-storage-postgres':
         specifier: workspace:*
         version: link:../js-storage-postgres
@@ -840,9 +840,9 @@ importers:
         specifier: ^8.16.0
         version: 8.23.1
     devDependencies:
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../js-core
+        version: link:../js-client
       '@polycentric/tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -859,9 +859,9 @@ importers:
         specifier: ^0.45.2
         version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
     devDependencies:
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../js-core
+        version: link:../js-client
       '@polycentric/tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -880,9 +880,9 @@ importers:
       '@polycentric/js-browser':
         specifier: workspace:*
         version: link:../js-browser
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../js-core
+        version: link:../js-client
       '@polycentric/js-storage-sqlite':
         specifier: workspace:*
         version: link:../js-storage-sqlite
@@ -1015,9 +1015,9 @@ importers:
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.4.0
-      '@polycentric/js-core':
+      '@polycentric/js-client':
         specifier: workspace:*
-        version: link:../../packages/js-core
+        version: link:../../packages/js-client
       '@polycentric/js-node':
         specifier: workspace:*
         version: link:../../packages/js-node

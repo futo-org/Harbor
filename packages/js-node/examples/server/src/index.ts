@@ -1,4 +1,4 @@
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-client';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 import ejs from 'ejs';
 import {

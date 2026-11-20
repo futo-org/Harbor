@@ -4,12 +4,12 @@ import type {
   EventRow,
   IEventRepository,
   KeyType,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import {
   COLLECTION,
   EventRepositoryError,
   v2 as Proto,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import { IndexedDBDatabase } from './database';
 
 /**

@@ -13,7 +13,7 @@ import {
   type PolycentricClient,
   SyncStrategy,
   v2,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 import { parseClaimId, SCHEMA_NAME } from './claims.js';
 import { createIdentity } from './identity.js';

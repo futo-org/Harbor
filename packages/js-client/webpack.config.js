@@ -1,7 +1,7 @@
 import path from 'path';
 
 // `@polycentric/rs-core-wasm` is the wasm-backed bindings
-// package; pulling it into js-core's bundle would also drag in its
+// package; pulling it into js-client's bundle would also drag in its
 // uniffi runtime (whose CJS index has relative requires that don't
 // survive webpack cleanly) and the wasm asset. Externalising it
 // leaves a clean bare import in the dist — consumers (apps' Metro /

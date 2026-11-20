@@ -3,7 +3,7 @@
 // Query stub keeps the args it was constructed with so the tests can assert
 // on what the hook passed in.
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-client/src/proto/v2'),
   Query: {
     SearchPosts: class SearchPosts {
       constructor(args: Record<string, unknown>) {

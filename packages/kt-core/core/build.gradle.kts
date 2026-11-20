@@ -105,7 +105,7 @@ ktlint {
 
 // ── Protobuf (Wire) ────────────────────────────────────────────────────
 // Generates Kotlin message classes from the SAME .proto files the server,
-// js-core, and rs-core are generated from. Only v2 is needed; the legacy
+// js-client, and rs-core are generated from. Only v2 is needed; the legacy
 // protos/polycentric.proto (v1) is intentionally excluded — pull it in
 // only if this library grows a v1→v2 migration surface.
 wire {

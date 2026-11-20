@@ -27,7 +27,7 @@ pub struct CursorInfo {
     more_data: bool,
 }
 
-/// Our responses to js-core need to contain data aggregated from multiple servers,
+/// Our responses to js-client need to contain data aggregated from multiple servers,
 /// but "look like" a single server response.
 /// Easy enough for lists of events, but the opaque tokens need to be faked as
 /// an aggregate opaque token.

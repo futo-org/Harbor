@@ -2,7 +2,7 @@
 
 Polycentric SDK for React Native applications, used by `apps/harbor`. It passeswires
 the Rust core (`packages/rs-core`) and platform storage into a
-`PolycentricClient` from `@polycentric/js-core`, and re-exports js-core and the
+`PolycentricClient` from `@polycentric/js-client`, and re-exports js-client and the
 rs-core bindings so apps need only this one package.
 
 ## Usage

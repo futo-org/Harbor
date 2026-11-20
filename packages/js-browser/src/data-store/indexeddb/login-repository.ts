@@ -4,13 +4,13 @@ import type {
   LoginDetails,
   LoginOverview,
   LoginStatus,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import {
   bytesToHex,
   hexToBytes,
   LoginRepositoryError,
   v2 as Proto,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import { IndexedDBDatabase } from './database';
 
 /**

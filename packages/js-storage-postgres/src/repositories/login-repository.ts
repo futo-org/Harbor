@@ -5,8 +5,8 @@ import type {
   LoginDetails,
   LoginOverview,
   LoginStatus,
-} from '@polycentric/js-core';
-import { LoginRepositoryError, v2 as Proto } from '@polycentric/js-core';
+} from '@polycentric/js-client';
+import { LoginRepositoryError, v2 as Proto } from '@polycentric/js-client';
 import { all, type PgDb } from '../database.js';
 
 interface LoginRow {

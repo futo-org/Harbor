@@ -33,7 +33,7 @@ import {
   type PolycentricClient,
   SyncStrategy,
   v2,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 
 const oauthSecrets = new Map<

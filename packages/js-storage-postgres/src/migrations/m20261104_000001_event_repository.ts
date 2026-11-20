@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bytesToHex, v2 as Proto } from '@polycentric/js-core';
+import { bytesToHex, v2 as Proto } from '@polycentric/js-client';
 import { all, type PgExecutor } from '../database.js';
 
 export const name = 'm20261104_000001_event_repository';

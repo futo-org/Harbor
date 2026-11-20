@@ -1,4 +1,4 @@
-import { bytesEqual, bytesToHex, v2 as Proto } from '@polycentric/js-core';
+import { bytesEqual, bytesToHex, v2 as Proto } from '@polycentric/js-client';
 import { requestAsPromise } from '../request';
 import type { IndexedDBMigration } from './index';
 

@@ -10,7 +10,7 @@ Protocol types (protobuf models, signing, identity chains, validation rules) liv
 in `packages/rs-common` (`polycentric-common`), which is shared with the
 server/services.
 
-The bindings and the higher-level clients (`js-core`, `kt-core`) manage
+The bindings and the higher-level clients (`js-client`, `kt-core`) manage
 storeage/persistence, key storage, and signing. rs-core asks for signatures through
 `SignBytesCallback` and never holds private keys.
 

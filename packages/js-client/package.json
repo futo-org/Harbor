@@ -1,5 +1,5 @@
 {
-  "name": "@polycentric/js-core",
+  "name": "@polycentric/js-client",
   "version": "0.0.0",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -13,7 +13,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-core/scripts/generate-proto-barrel.mjs",
+    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-client/scripts/generate-proto-barrel.mjs",
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",
     "lint": "biome lint .",

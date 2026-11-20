@@ -1,4 +1,4 @@
-import { type EventRow, v2 as Proto } from '@polycentric/js-core';
+import { type EventRow, v2 as Proto } from '@polycentric/js-client';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IndexedDBDatabase } from './database';
 import { DATABASE_VERSION } from './migrations';

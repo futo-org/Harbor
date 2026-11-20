@@ -19,13 +19,13 @@
     "test": "echo 'No tests'"
   },
   "peerDependencies": {
-    "@polycentric/js-core": "workspace:*"
+    "@polycentric/js-client": "workspace:*"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
-    "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-client": "workspace:*",
     "@polycentric/tsconfig": "workspace:*",
     "typescript": "catalog:"
   }

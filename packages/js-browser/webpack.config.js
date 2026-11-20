@@ -19,7 +19,7 @@ export default [
       outputModule: true,
     },
     externals: {
-      '@polycentric/js-core': '@polycentric/js-core',
+      '@polycentric/js-client': '@polycentric/js-client',
     },
     output: {
       filename: 'index.es.js',
@@ -45,7 +45,7 @@ export default [
       extensions: ['.tsx', '.ts', '.js'],
     },
     externals: {
-      '@polycentric/js-core': '@polycentric/js-core',
+      '@polycentric/js-client': '@polycentric/js-client',
     },
     output: {
       filename: 'index.cjs.js',

@@ -1,8 +1,8 @@
 // `@polycentric/react-native`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest. We only need the pure `v2` protobuf-ts
-// namespace, so expose just that (sourced from js-core's generated protos).
+// namespace, so expose just that (sourced from js-client's generated protos).
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../packages/js-client/src/proto/v2'),
 }));
 
 // The `polycentric-hooks` barrel imports the (native-heavy) provider. The

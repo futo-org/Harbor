@@ -19,7 +19,7 @@ import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
 import polycentric.v2.VectorClock
 
-// Port of js-core `polycentric-client.sync.test.ts`.
+// Port of js-client `polycentric-client.sync.test.ts`.
 
 /**
  * In-memory `IEventRepository` backed by a map keyed by EventKey. `saved`
@@ -347,7 +347,7 @@ class FakeCore(
                 ),
             )
 
-    /** js-core verifies elsewhere; faking keeps the guard cases exercised. */
+    /** js-client verifies elsewhere; faking keeps the guard cases exercised. */
     override fun verifySignedEvent(signedEvent: ByteArray): ByteArray = signedEvent
 
     override suspend fun pushLocalEvents(
@@ -519,7 +519,7 @@ class MakeClientArgs {
 /**
  * Build a `PolycentricClient` wired to the in-memory mocks and ready to sync.
  * The constructor does not run `initialize()`, so the fields that step would
- * normally populate are set directly here, exactly as the js-core tests do.
+ * normally populate are set directly here, exactly as the js-client tests do.
  */
 fun makeClient(configure: MakeClientArgs.() -> Unit = {}): ClientFixture {
     val args = MakeClientArgs().apply(configure)

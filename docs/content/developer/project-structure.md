@@ -34,7 +34,7 @@ scripts fan out across them.
 The packages layer around a Rust core, called `rs-core`. It does the protocol work
 (event assembly and validation, the query engine, sync, and gRPC transport), and is
 exposed through [uniffi](https://mozilla.github.io/uniffi-rs/) as
-`PolycentricCore`. The client libraries, `js-core` and its Kotlin port
+`PolycentricCore`. The client libraries, `js-client` and its Kotlin port
 `kt-core`, own identities, keys, logins, and persistence, and hand protocol work to
 that core. The SDK packages build a client for one platform by supplying a
 core, a storage driver, and a blob store.
@@ -45,10 +45,10 @@ flowchart TD
   core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
-  wasm --> jscore[js-core]
-  jscore --> browser[js-browser]
-  jscore --> node[js-node]
-  jscore --> rn
+  wasm --> jsclient[js-client]
+  jsclient --> browser[js-browser]
+  jsclient --> node[js-node]
+  jsclient --> rn
   sqlite[js-storage-sqlite] --> node
   sqlite --> rn
   pg[js-storage-postgres] --> node
@@ -59,18 +59,18 @@ flowchart TD
 
 Arrows point from a dependency to its dependants.
 
-| Package                        | Description                                                                                                                        |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |
-| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
-| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
-| `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
-| `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |
-| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                          |
-| `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                              |
-| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                      |
-| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                 |
-| `packages/kt-core`             | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
+| Package                        | Description                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.    |
+| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                            |
+| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                  |
+| `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.      |
+| `packages/js-client`           | Core JavaScript library holding the protocol logic and generated protobuf types.                                                     |
+| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                            |
+| `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                                |
+| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                        |
+| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                   |
+| `packages/kt-core`             | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-client`. |
 
 ## Services
 

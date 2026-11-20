@@ -7,7 +7,7 @@
 // These are throwaway test users, so the keys being public is fine.
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
-import { COLLECTION, KEY_TYPE, v2 } from '@polycentric/js-core';
+import { COLLECTION, KEY_TYPE, v2 } from '@polycentric/js-client';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 
 // Passed to the flows as -e variables. Avoid English stop words in names: the

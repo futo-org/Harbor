@@ -1,4 +1,4 @@
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-client';
 
 /**
  * Create a new identity locally and activate it.

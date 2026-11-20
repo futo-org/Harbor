@@ -4,7 +4,7 @@ import org.futo.polycentric.core.StoredKeyPair
 import polycentric.v2.PublicKey
 
 /**
- * Port of js-core `client-internal/keypair-manager.ts` — device keypair
+ * Port of js-client `client-internal/keypair-manager.ts` — device keypair
  * lifecycle. A device may hold several keypairs (one per identity it
  * participates in); exactly one is "current".
  */

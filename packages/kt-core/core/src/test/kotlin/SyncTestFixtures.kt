@@ -26,7 +26,7 @@ import org.futo.polycentric.ffi.EventKey as FfiEventKey
 import org.futo.polycentric.ffi.PublicKey as FfiPublicKey
 
 // Deterministic data helpers — 1:1 port of the fixtures at the top of
-// js-core `polycentric-client.sync.test.ts`. Signatures are produced by
+// js-client `polycentric-client.sync.test.ts`. Signatures are produced by
 // real Ed25519 (BouncyCastle, the same implementation
 // [Ed25519CryptoManager] wraps), so the fixtures are valid v2 events.
 

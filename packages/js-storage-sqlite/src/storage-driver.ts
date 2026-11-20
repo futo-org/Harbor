@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import type { IStorageDriver, LoginId } from '@polycentric/js-core';
-import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
+import type { IStorageDriver, LoginId } from '@polycentric/js-client';
+import { DatabaseError, v2 as Proto } from '@polycentric/js-client';
 import type { SqliteDb } from './database.js';
 import { EventRepository } from './repositories/event-repository.js';
 import { LoginRepository } from './repositories/login-repository.js';

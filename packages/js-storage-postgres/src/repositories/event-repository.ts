@@ -4,12 +4,12 @@ import type {
   EventKey,
   EventRow,
   IEventRepository,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import {
   COLLECTION,
   EventRepositoryError,
   v2 as Proto,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import { all, type PgDb } from '../database.js';
 
 interface EventKeyColumns {

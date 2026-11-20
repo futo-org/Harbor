@@ -1,8 +1,8 @@
 version: v2
 plugins:
-  # protoc-gen-ts from @protobuf-ts/plugin (installed in packages/js-core).
+  # protoc-gen-ts from @protobuf-ts/plugin (installed in packages/js-client).
   - local: protoc-gen-ts
-    out: packages/js-core/src/proto
+    out: packages/js-client/src/proto
 inputs:
   - directory: protos
     # rs-core-ffi.proto is consumed by the Rust FFI, not the JS client.

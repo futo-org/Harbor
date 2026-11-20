@@ -11,10 +11,10 @@ flowchart TD
   core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
-  wasm --> jscore[js-core]
-  jscore --> browser[js-browser]
-  jscore --> node[js-node]
-  jscore --> rn
+  wasm --> jsclient[js-client]
+  jsclient --> browser[js-browser]
+  jsclient --> node[js-node]
+  jsclient --> rn
   sqlite[js-storage-sqlite] --> node
   sqlite --> rn
   pg[js-storage-postgres] --> node
@@ -33,7 +33,7 @@ summarizes the function of each package.
 
 ## How a client is put together
 
-`js-core` provides `PolycentricClient.create()`, which takes:
+`js-client` provides `PolycentricClient.create()`, which takes:
 
 1. **`core`**: a `PolycentricCore` type from the UniFFI bindings generated around `rs-core`.
     - Web and Node use a wrapper around a WASM build at `rs-core-wasm`.
@@ -53,7 +53,7 @@ summarizes the function of each package.
 ## Generated code
 
 - Protobuf types are generated from `protos/`: `prost`/`tonic` in `rs-common`,
-  `protobuf-ts` in `js-core`, and Wire in `kt-core`.
+  `protobuf-ts` in `js-client`, and Wire in `kt-core`.
 - uniffi bindings for `rs-core` are generated at build time and not
   committed: into `rs-core-wasm/src/generated/` and into `react-native`
   (`pnpm generate`). `kt-core`'s Gradle build generates its own.

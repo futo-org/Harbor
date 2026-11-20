@@ -275,7 +275,7 @@ jobs:
         with:
           install-args: --filter polycentric
       - name: Biome
-        run: pnpm exec biome check packages/js-core --diagnostic-level=error
+        run: pnpm exec biome check packages/js-client --diagnostic-level=error
 
   js-services-lint:
     name: Lint JS services
@@ -364,12 +364,12 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric
-      - name: js-core protos
+      - name: js-client protos
         run: |
-          pnpm -C packages/js-core generate
+          pnpm -C packages/js-client generate
           stale=$(git status --porcelain)
           [ -z "$stale" ] ||
-            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js-core generate' and commit the result"; exit 1; }
+            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js-client generate' and commit the result"; exit 1; }
 
   # Unit tests ---------------------------------------------------------------
 
@@ -450,18 +450,18 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # js-core's tests call into the real rs-core wasm.
+      # js-client's tests call into the real rs-core wasm.
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
-          install-args: --filter @polycentric/js-core...
-      - name: js-core
-        run: pnpm --filter @polycentric/js-core test:ci
+          install-args: --filter @polycentric/js-client...
+      - name: js-client
+        run: pnpm --filter @polycentric/js-client test:ci
       - uses: forgejo/upload-artifact@v4
         if: always()
         with:
-          name: junit-js-core
-          path: packages/js-core/junit.xml
+          name: junit-js-client
+          path: packages/js-client/junit.xml
           retention-days: 7
 
   scraper:

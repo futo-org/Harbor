@@ -36,8 +36,8 @@
       "!packages/rs-core",
       "!packages/rs-core-wasm-browser",
       "!packages/rs-core-wasm-node",
-      "!packages/js-core/src/proto/polycentric.ts",
-      "!packages/js-core/src/proto/polycentric/v2",
+      "!packages/js-client/src/proto/polycentric.ts",
+      "!packages/js-client/src/proto/polycentric/v2",
       "!**/rust_modules",
       "!docs/src/tailwind.css",
       "!dev/loadtest/internal/web/static/vendor"

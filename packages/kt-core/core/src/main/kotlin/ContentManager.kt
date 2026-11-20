@@ -13,7 +13,7 @@ import polycentric.v2.ImageSet
 import java.security.MessageDigest
 
 /**
- * Port of js-core `client-internal/content-manager.ts` — content digest
+ * Port of js-client `client-internal/content-manager.ts` — content digest
  * construction, local persistence, and blob replication.
  */
 class ContentManager(
@@ -57,7 +57,7 @@ class ContentManager(
     /**
      * Download any blobs in the list that we don't have locally, so blobs
      * of an identity eventually persist on every device in that identity.
-     * Per-blob failures are logged but absorbed (best-effort, like js-core).
+     * Per-blob failures are logged but absorbed (best-effort, like js-client).
      */
     suspend fun pullBlobs(blobs: List<Blob>): Unit =
         coroutineScope {

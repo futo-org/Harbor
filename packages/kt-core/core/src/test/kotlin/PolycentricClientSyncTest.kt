@@ -23,18 +23,18 @@ import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
 
 /**
- * Port of js-core `polycentric-client.sync.test.ts`.
+ * Port of js-client `polycentric-client.sync.test.ts`.
  *
  * Known divergences:
  *  - a failed pull throws [CoreFailureException] (the core's `awaitQuery`
  *    reports an all-servers-Error status as `CoreException.Network`, folded
- *    by `coreCall`) instead of js-core's first-per-server-error rejection;
+ *    by `coreCall`) instead of js-client's first-per-server-error rejection;
  *  - `trySaveBundle` runs `core.verifySignedEvent` before persisting (the
  *    fake no-ops it); the structural guards are what these tests exercise;
  *  - `sync()` swallows per-server push failures (log-only, js-parity). The
  *    tests pin that behavior rather than "improve" it;
  *  - blob tests drive the client's REAL OkHttp path through MockWebServer
- *    (js-core mocked `client.fetchBlobBytes` directly); response bodies are
+ *    (js-client mocked `client.fetchBlobBytes` directly); response bodies are
  *    selected per request path via a Dispatcher so fetch order is
  *    irrelevant, and the on-disk/URL digest-key convention
  *    (`"${type.value}_${hex}"`) is pinned by asserting request paths.
@@ -222,7 +222,7 @@ class PolycentricClientSyncTest {
         runTest {
             // Divergence: the core's awaitQuery throws CoreException when every
             // server reports Error (folded into CoreFailureException by
-            // coreCall), instead of js-core's first-server rejection.
+            // coreCall), instead of js-client's first-server rejection.
             val core = FakeCore { pullError = "server exploded" }
             val f =
                 makeClient {
@@ -294,7 +294,7 @@ class PolycentricClientSyncTest {
             assertEquals(5L, feedHead.sequence.toLong())
         }
 
-    /** js-core swallows per-server push failures; Kotlin `sync` captures them and
+    /** js-client swallows per-server push failures; Kotlin `sync` captures them and
      *  rethrows the first one AFTER the pull completes (PolycentricClient.sync).
      *  This test pins that: the pull is not cancelled and its events persist,
      *  but the push failure still surfaces. */

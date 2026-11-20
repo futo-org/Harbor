@@ -47,7 +47,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 
 jest.mock('@polycentric/react-native', () => {
   const actual = jest.requireActual(
-    '../../../../../../packages/js-core/src/proto/v2',
+    '../../../../../../packages/js-client/src/proto/v2',
   );
   return {
     v2: actual,

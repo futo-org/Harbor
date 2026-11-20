@@ -2,7 +2,7 @@
 // only an http client, so run.mjs serves this in its own process (and it dies
 // with it): POST /verify-newest-claim {"name"} does what it says for that user.
 import { createServer } from 'node:http';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-client';
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
 import { SEEDED_USERS, signupInfoFor } from './seed.mjs';
 

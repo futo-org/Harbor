@@ -6,9 +6,9 @@ import polycentric.v2.PublicKey
 import polycentric.v2.SignedEvent
 
 /**
- * 1:1 ports of js-core platform-interfaces. Implementations are
+ * 1:1 ports of js-client platform-interfaces. Implementations are
  * pluggable so the library core stays storage-agnostic (SQLite on
- * Android, in-memory in tests) — the same pattern js-core uses for
+ * Android, in-memory in tests) — the same pattern js-client uses for
  * IndexedDB vs sqlite vs postgres drivers.
  */
 
@@ -128,7 +128,7 @@ interface IStorageDriver {
 }
 
 /**
- * Parameter order matches js-core's ICryptoManager exactly — in
+ * Parameter order matches js-client's ICryptoManager exactly — in
  * particular `verify(publicKey, message, signature, keyType)` — so code
  * ported between the two wrappers can't silently swap two ByteArrays.
  */

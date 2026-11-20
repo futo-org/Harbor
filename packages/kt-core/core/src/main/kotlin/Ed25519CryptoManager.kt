@@ -17,7 +17,7 @@ private const val ED25519_PUBLIC_KEY_LENGTH = 32
 private const val ED25519_SIGNATURE_LENGTH = 64
 
 /**
- * Ed25519 via BouncyCastle, mirroring js-core's @noble/curves CryptoManager.
+ * Ed25519 via BouncyCastle, mirroring js-client's @noble/curves CryptoManager.
  *
  * Keys are raw 32-byte scalars, wire-compatible with both v1 system keys
  * and v2 `PublicKey.key`. Android Keystore cannot hold ed25519 signing

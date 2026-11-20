@@ -1,5 +1,5 @@
-import type { IStorageDriver, LoginId } from '@polycentric/js-core';
-import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
+import type { IStorageDriver, LoginId } from '@polycentric/js-client';
+import { DatabaseError, v2 as Proto } from '@polycentric/js-client';
 import { IndexedDBDatabase } from './database';
 import { IndexedDBLoginRepository } from './login-repository';
 import { IndexedDBEventRepository } from './event-repository';

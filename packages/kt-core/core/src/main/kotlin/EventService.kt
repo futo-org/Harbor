@@ -8,10 +8,10 @@ import org.futo.polycentric.core.StoredKeyPair
 import polycentric.v2.Content
 import polycentric.v2.SignedEvent
 
-/** Port of js-core `ClientState`. */
+/** Port of js-client `ClientState`. */
 enum class ClientState { UNINITIALIZED, INITIALIZING, READY, ERROR }
 
-/** Port of js-core `InitializationStep` (display strings preserved). */
+/** Port of js-client `InitializationStep` (display strings preserved). */
 enum class InitializationStep(
     val label: String,
 ) {
@@ -25,7 +25,7 @@ enum class InitializationStep(
     COMPLETE("Initialization complete."),
 }
 
-/** Port of js-core `HydrationStatus`. */
+/** Port of js-client `HydrationStatus`. */
 enum class HydrationStatus { NOT_STARTED, IN_PROGRESS, FAILED, COMPLETED }
 
 /**
@@ -47,7 +47,7 @@ class ContentCreatedPayload(
 )
 
 /**
- * Port of js-core `client-internal/event-service.ts` — the client's
+ * Port of js-client `client-internal/event-service.ts` — the client's
  * outward event bus, as Kotlin flows instead of eventemitter3.
  *
  * Stateful signals (client state, hydration, progress) are [StateFlow]s

@@ -29,7 +29,7 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-client": "workspace:*",
     "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",

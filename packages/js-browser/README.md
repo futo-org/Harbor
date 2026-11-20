@@ -1,6 +1,6 @@
 # @polycentric/js-browser
 
-Browser implementations of the `@polycentric/js-core` platform interfaces:
+Browser implementations of the `@polycentric/js-client` platform interfaces:
 
 - `IndexedDBStorageDriver`: an `IStorageDriver` backed by IndexedDB.
 - `OpfsFileStoreDriver`: an `IFileStoreDriver` backed by the Origin Private

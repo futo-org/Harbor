@@ -7,7 +7,7 @@ import org.futo.polycentric.core.PolycentricException
 import org.futo.polycentric.core.StoredKeyPair
 
 /**
- * Port of js-core `crypto/server-jwt.ts` — the bearer token attached to
+ * Port of js-client `crypto/server-jwt.ts` — the bearer token attached to
  * every outgoing gRPC request. EdDSA-signed JWT authenticating `iss` (an
  * identity key) against `aud` (a server URL); the signing key travels in
  * the header's `kid` as hex.

@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import { PolycentricClient } from '@polycentric/js-core';
+import { PolycentricClient } from '@polycentric/js-client';
 import { PolycentricCore, setLogger } from './generated/rn/polycentric_core';
 import { createReactNativeStorageDriver } from './datastore/expo-sqlite';
 import { createReactNativeFileStoreDriver } from './filestore/expo-file-system';

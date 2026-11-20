@@ -1,4 +1,4 @@
-import { DatabaseError } from '@polycentric/js-core';
+import { DatabaseError } from '@polycentric/js-client';
 import { DATABASE_VERSION, onUpgradeNeeded } from './migrations';
 import { requestAsPromise } from './request';
 

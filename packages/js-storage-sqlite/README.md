@@ -1,6 +1,6 @@
 # @polycentric/js-storage-sqlite
 
-A SQLite implementation of `@polycentric/js-core`'s `IStorageDriver`, written
+A SQLite implementation of `@polycentric/js-client`'s `IStorageDriver`, written
 against Drizzle ORM so it works with any Drizzle SQLite backend. It is shared by:
 
 - `@polycentric/js-node`, using better-sqlite3.

@@ -1,7 +1,7 @@
 import type { EventKey } from '@polycentric/react-native';
 
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-client/src/proto/v2'),
 }));
 
 const mockNavigate = jest.fn();

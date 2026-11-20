@@ -7,7 +7,7 @@ import {
   type FileStoreEntry,
   type FileStoreErrorCode,
   type IFileStoreDriver,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 
 /**
  * Node.js filesystem-backed IFileStoreDriver.

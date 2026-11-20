@@ -12,9 +12,9 @@ import org.junit.Test
 import java.util.Base64
 
 /**
- * Port of js-core `crypto/server-jwt.test.ts`.
+ * Port of js-client `crypto/server-jwt.test.ts`.
  *
- * The extra base64url test at the bottom has no js counterpart: js-core
+ * The extra base64url test at the bottom has no js counterpart: js-client
  * encodes with a library, while ServerJwt hand-rolls the encoder (no
  * java.util.Base64 before API 26), so it is pinned against the JDK here.
  */

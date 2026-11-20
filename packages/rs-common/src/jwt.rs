@@ -1,5 +1,5 @@
 //! Verification of the JWTs clients mint to authenticate against a server
-//! (see js-core's `createServerJwt`). EdDSA over `header.claims`, signing
+//! (see js-client's `createServerJwt`). EdDSA over `header.claims`, signing
 //! key carried as hex in the header's `kid`.
 
 use base64::Engine;
@@ -118,7 +118,7 @@ mod tests {
         SigningKey::from_bytes(&[7u8; 32])
     }
 
-    /// Mint a token matching js-core's `createServerJwt` format.
+    /// Mint a token matching js-client's `createServerJwt` format.
     fn mint(alg: &str, kid: &str, exp: u64) -> String {
         let header = format!(r#"{{"alg":"{alg}","typ":"JWT","kid":"{kid}"}}"#);
         let claims = format!(r#"{{"iss":"{IDENTITY}","aud":"{SERVER}","iat":1000,"exp":{exp}}}"#);

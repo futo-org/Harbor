@@ -1,5 +1,5 @@
-import type { IStorageDriver } from '@polycentric/js-core';
-import { PolycentricClient } from '@polycentric/js-core';
+import type { IStorageDriver } from '@polycentric/js-client';
+import { PolycentricClient } from '@polycentric/js-client';
 
 import { createNodeStorageDriver } from './datastore/better-sqlite3/index.js';
 import { createNodePgStorageDriver } from './datastore/postgres/index.js';

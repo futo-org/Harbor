@@ -2,7 +2,7 @@ import {
   MemoryFileStoreDriver,
   MemoryStorageDriver,
   PolycentricClient,
-} from '@polycentric/js-core';
+} from '@polycentric/js-client';
 import {
   IndexedDBStorageDriver,
   OpfsFileStoreDriver,

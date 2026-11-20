@@ -1,5 +1,5 @@
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-client/src/proto/v2'),
 }));
 jest.mock('@/src/common/query/hooks/useQuery', () => ({}));
 jest.mock('@noble/hashes/sha2.js', () => ({

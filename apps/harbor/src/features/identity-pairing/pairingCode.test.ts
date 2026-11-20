@@ -1,7 +1,7 @@
-// We need some js-core functionality but not any of the native/wasm code.
+// We need some js-client functionality but not any of the native/wasm code.
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
-  ...jest.requireActual('../../../../../packages/js-core/src/utils/hex'),
+  v2: jest.requireActual('../../../../../packages/js-client/src/proto/v2'),
+  ...jest.requireActual('../../../../../packages/js-client/src/utils/hex'),
 }));
 jest.mock('@/src/common/constants', () => ({
   ...jest.requireActual('@/src/common/constants'),
