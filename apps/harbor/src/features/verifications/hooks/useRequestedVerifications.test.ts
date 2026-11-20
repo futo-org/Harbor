@@ -26,9 +26,8 @@ jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
   };
 });
 
-let mockOmitLabels: string[] = [];
 jest.mock('@/src/common/settings/useOmitLabels', () => ({
-  useOmitLabels: () => mockOmitLabels,
+  useOmitLabels: () => [],
 }));
 
 let mockQueryData: Uint8Array | null = null;
@@ -149,7 +148,6 @@ function renderHook(identity: string | undefined): { current: HookResult } {
 beforeEach(() => {
   mockQueryData = null;
   mockLabelMap = new Map();
-  mockOmitLabels = [];
 });
 
 describe('useRequestedVerifications', () => {
@@ -192,18 +190,6 @@ describe('useRequestedVerifications', () => {
     mockLabelMap = new Map([[claimId('alice', 1), [VIOLENCE]]]);
 
     expect(renderHook('me').current.claims[0].labels).toEqual([VIOLENCE]);
-  });
-
-  it('drops claims with a label the user hides', () => {
-    respond([
-      { claim: claimBundle('alice', 1), targets: [], verifies: [] },
-      { claim: claimBundle('bob', 2), targets: [], verifies: [] },
-    ]);
-    mockLabelMap = new Map([[claimId('bob', 2), [VIOLENCE]]]);
-    mockOmitLabels = ['violence'];
-
-    const result = renderHook('me');
-    expect(result.current.claims.map((c) => c.identity)).toEqual(['alice']);
   });
 
   it('returns nothing without an identity', () => {

@@ -52,6 +52,12 @@ export interface ListVerificationClaimsRequest {
      * @generated from protobuf field: string claimed_by_identity = 1
      */
     claimedByIdentity: string;
+    /**
+     * Label values for which the requester does not want to see claims
+     *
+     * @generated from protobuf field: repeated string omit_labels = 2
+     */
+    omitLabels: string[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListVerificationClaimsResponse
@@ -161,6 +167,12 @@ export interface ListTargetedVerificationClaimsRequest {
      * @generated from protobuf field: string target_identity = 1
      */
     targetIdentity: string;
+    /**
+     * Label values for which the requester does not want to see claims
+     *
+     * @generated from protobuf field: repeated string omit_labels = 2
+     */
+    omitLabels: string[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListTargetedVerificationClaimsResponse
@@ -301,12 +313,14 @@ export const VerificationClaimBundle = new VerificationClaimBundle$Type();
 class ListVerificationClaimsRequest$Type extends MessageType<ListVerificationClaimsRequest> {
     constructor() {
         super("polycentric.v2.ListVerificationClaimsRequest", [
-            { no: 1, name: "claimed_by_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "claimed_by_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<ListVerificationClaimsRequest>): ListVerificationClaimsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.claimedByIdentity = "";
+        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<ListVerificationClaimsRequest>(this, message, value);
         return message;
@@ -318,6 +332,9 @@ class ListVerificationClaimsRequest$Type extends MessageType<ListVerificationCla
             switch (fieldNo) {
                 case /* string claimed_by_identity */ 1:
                     message.claimedByIdentity = reader.string();
+                    break;
+                case /* repeated string omit_labels */ 2:
+                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -334,6 +351,9 @@ class ListVerificationClaimsRequest$Type extends MessageType<ListVerificationCla
         /* string claimed_by_identity = 1; */
         if (message.claimedByIdentity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.claimedByIdentity);
+        /* repeated string omit_labels = 2; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -715,12 +735,14 @@ export const ListVerificationVerifiesResponse = new ListVerificationVerifiesResp
 class ListTargetedVerificationClaimsRequest$Type extends MessageType<ListTargetedVerificationClaimsRequest> {
     constructor() {
         super("polycentric.v2.ListTargetedVerificationClaimsRequest", [
-            { no: 1, name: "target_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "target_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<ListTargetedVerificationClaimsRequest>): ListTargetedVerificationClaimsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.targetIdentity = "";
+        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<ListTargetedVerificationClaimsRequest>(this, message, value);
         return message;
@@ -732,6 +754,9 @@ class ListTargetedVerificationClaimsRequest$Type extends MessageType<ListTargete
             switch (fieldNo) {
                 case /* string target_identity */ 1:
                     message.targetIdentity = reader.string();
+                    break;
+                case /* repeated string omit_labels */ 2:
+                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -748,6 +773,9 @@ class ListTargetedVerificationClaimsRequest$Type extends MessageType<ListTargete
         /* string target_identity = 1; */
         if (message.targetIdentity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.targetIdentity);
+        /* repeated string omit_labels = 2; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

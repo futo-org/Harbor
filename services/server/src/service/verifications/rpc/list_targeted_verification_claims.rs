@@ -5,6 +5,7 @@ use std::collections::HashSet;
 
 use tonic::Status;
 
+use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
@@ -20,6 +21,7 @@ use super::common::map_db_err;
 
 struct Params {
     target_identity: String,
+    omit_labels: Vec<String>,
 }
 
 pub async fn handle(
@@ -33,13 +35,14 @@ pub async fn handle(
 
     let params = Params {
         target_identity: req.target_identity,
+        omit_labels: req.omit_labels,
     };
     let view = pipeline::create_pipeline(
         &mut ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
-        claim_bundles::filter,
+        filter,
         claim_bundles::view,
     )
     .await?;
@@ -82,6 +85,21 @@ async fn fetch(
     claim_bundles::fetch_verification_state(ctx, claims).await
 }
 
+/// Drop tombstoned events and claims carrying an omitted label.
+async fn filter(
+    ctx: &mut PublicContext,
+    params: &Params,
+    fetched: FetchedClaims,
+    hydration: &HydrationState,
+) -> Result<FetchedClaims, Status> {
+    let live = claim_bundles::filter(ctx, params, fetched, hydration).await?;
+    Ok(claim_bundles::drop_omitted(
+        live,
+        hydration,
+        &params.omit_labels,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use sea_orm::{DbBackend, MockDatabase};
@@ -117,6 +135,7 @@ mod tests {
             ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
+                omit_labels: Vec::new(),
             },
         )
         .await
@@ -167,6 +186,7 @@ mod tests {
             ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
+                omit_labels: Vec::new(),
             },
         )
         .await
@@ -196,6 +216,7 @@ mod tests {
             ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
+                omit_labels: Vec::new(),
             },
         )
         .await
@@ -217,6 +238,7 @@ mod tests {
             ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: String::new(),
+                omit_labels: Vec::new(),
             },
         )
         .await;

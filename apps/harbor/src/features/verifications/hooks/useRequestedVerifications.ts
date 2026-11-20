@@ -1,4 +1,5 @@
 import { labelMapFromSets } from '@/src/common/lib/polycentric-hooks/helpers';
+import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
   Query,
   labelsFromTargetedVerificationClaimsResponse,
@@ -24,10 +25,12 @@ export function useRequestedVerifications(
   identity: string | undefined,
   enabled = true,
 ) {
+  const omitLabels = useOmitLabels();
   return useClaimBundleList(
     ['targeted-verification-claims', identity ?? ''],
     new Query.ListTargetedVerificationClaims({
       targetIdentity: identity ?? '',
+      omitLabels,
     }),
     parse,
     enabled && !!identity,

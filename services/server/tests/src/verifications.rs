@@ -14,6 +14,7 @@ async fn list_verification_claims_none() {
     let response = verifications
         .list_verification_claims(ListVerificationClaimsRequest {
             claimed_by_identity: client.identity().to_owned(),
+            omit_labels: Vec::new(),
         })
         .await
         .unwrap()
@@ -35,6 +36,7 @@ async fn list_verification_claims_one() {
     let response = verifications
         .list_verification_claims(ListVerificationClaimsRequest {
             claimed_by_identity: client.identity().to_owned(),
+            omit_labels: Vec::new(),
         })
         .await
         .unwrap()

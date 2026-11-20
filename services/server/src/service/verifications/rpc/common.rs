@@ -13,7 +13,7 @@ pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
 /// Stages producing `VerificationClaimBundle`s: each claim wrapped with the
 /// targets and verifies referencing it.
 pub(crate) mod claim_bundles {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use entity::{content, event};
     use tonic::Status;
@@ -24,6 +24,7 @@ pub(crate) mod claim_bundles {
     use crate::service::events::TargetEventKey;
     use crate::service::events::tombstone::{self, HasEventKey};
     use crate::service::feeds::repository::Query as FeedsRepository;
+    use crate::service::feeds::rpc::common::has_matching_label;
     use crate::service::identity::service::list_identity_and_profile_events;
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventHint, VerificationClaimBundle};
@@ -150,6 +151,24 @@ pub(crate) mod claim_bundles {
             targets: live(fetched.targets, hydration),
             verifies: live(fetched.verifies, hydration),
         })
+    }
+
+    /// Drop claims carrying a label in `omit_labels`.
+    pub(crate) fn drop_omitted(
+        mut fetched: FetchedClaims,
+        hydration: &HydrationState,
+        omit_labels: &[String],
+    ) -> FetchedClaims {
+        let omit_label_set: HashSet<&str> =
+            omit_labels.iter().map(String::as_str).collect();
+        fetched.claims.retain(|row| {
+            !has_matching_label(
+                &hydration.label_events,
+                &row.event_key(),
+                &omit_label_set,
+            )
+        });
+        fetched
     }
 
     /// The claim bundles plus identity/profile/label hints.
@@ -320,6 +339,77 @@ pub(crate) mod tests {
         VerificationTarget, VerificationVerify,
     };
     use crate::service::verifications::rpc::common::claim_bundles;
+
+    #[test]
+    fn drop_omitted_drops_claims_with_an_omitted_label() {
+        let (alice_event, alice_content) = claim_row(1, "alice");
+        let (bob_event, bob_content) = claim_row(2, "bob");
+        let fetched = claim_bundles::FetchedClaims {
+            claims: vec![
+                (alice_event, Some(alice_content)),
+                (bob_event, Some(bob_content)),
+            ],
+            targets: Vec::new(),
+            verifies: Vec::new(),
+        };
+        let hydration = HydrationState {
+            label_events: vec![label_row(3, "alice", "violence")],
+            ..Default::default()
+        };
+
+        let kept = claim_bundles::drop_omitted(
+            fetched,
+            &hydration,
+            &["violence".to_string()],
+        );
+
+        let kept_owners: Vec<_> = kept
+            .claims
+            .iter()
+            .map(|(event, _)| event.identity.as_str())
+            .collect();
+        assert_eq!(kept_owners, vec!["bob"]);
+    }
+
+    #[test]
+    fn drop_omitted_keeps_claims_whose_labels_are_not_omitted() {
+        let (alice_event, alice_content) = claim_row(1, "alice");
+        let fetched = claim_bundles::FetchedClaims {
+            claims: vec![(alice_event, Some(alice_content))],
+            targets: Vec::new(),
+            verifies: Vec::new(),
+        };
+        let hydration = HydrationState {
+            label_events: vec![label_row(3, "alice", "violence")],
+            ..Default::default()
+        };
+
+        let kept = claim_bundles::drop_omitted(
+            fetched,
+            &hydration,
+            &["hate".to_string()],
+        );
+
+        assert_eq!(kept.claims.len(), 1);
+    }
+
+    /// A moderator label event on `owner`'s claim.
+    fn label_row(
+        id: i64,
+        owner: &str,
+        label_value: &str,
+    ) -> (event::Model, Option<content::Model>) {
+        let label_content = Content {
+            content_body: Some(ContentBody::Labels(Labels {
+                event_key: Some(claim_event_key(owner)),
+                label_values: vec![label_value.to_string()],
+            })),
+        };
+        (
+            event_row(id, "moderator"),
+            Some(content_row(id, label_content)),
+        )
+    }
 
     #[tokio::test]
     async fn claim_bundles_view_ships_label_hints() {

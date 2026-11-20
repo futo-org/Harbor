@@ -21,6 +21,8 @@ message VerificationClaimBundle {
 
 message ListVerificationClaimsRequest {
   string claimed_by_identity = 1;
+  // Label values for which the requester does not want to see claims
+  repeated string omit_labels = 2;
 }
 
 message ListVerificationClaimsResponse {
@@ -68,6 +70,8 @@ message ListVerificationVerifiesResponse {
 
 message ListTargetedVerificationClaimsRequest {
   string target_identity = 1;
+  // Label values for which the requester does not want to see claims
+  repeated string omit_labels = 2;
 }
 
 message ListTargetedVerificationClaimsResponse {

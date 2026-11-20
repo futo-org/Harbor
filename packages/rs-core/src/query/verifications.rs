@@ -27,6 +27,7 @@ use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationClaimsArgs {
     pub claimed_by_identity: String,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -49,6 +50,7 @@ pub struct ListVerificationVerifiesArgs {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListTargetedVerificationClaimsArgs {
     pub target_identity: String,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -211,6 +213,7 @@ pub fn list_verification_claims(
 ) -> Arc<dyn QueryObservable> {
     let request = ListVerificationClaimsRequest {
         claimed_by_identity: args.claimed_by_identity,
+        omit_labels: args.omit_labels,
     };
 
     let client = query_client.client().clone();
@@ -390,6 +393,7 @@ pub fn list_targeted_verification_claims(
 ) -> Arc<dyn QueryObservable> {
     let request = ListTargetedVerificationClaimsRequest {
         target_identity: args.target_identity,
+        omit_labels: args.omit_labels,
     };
 
     let client = query_client.client().clone();
