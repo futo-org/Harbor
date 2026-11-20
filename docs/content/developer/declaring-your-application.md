@@ -1,4 +1,5 @@
 ---
+
 title: Declaring Your Application
 sidebar_label: Declaring Your Application
 sidebar_position: 4
@@ -16,13 +17,7 @@ own software. Servers do not fill it in, and it cannot be changed once signed.
 
 ## What to put in each field
 
-```protobuf
-message Application {
-  string name = 1;
-  string id = 2;
-  string version = 3;
-  string url = 4;
-}
+```protobuf file=protos/polycentric/v2/events.proto#Application
 ```
 
 **`name`** is the product name people recognise, such as `Harbor`. Keep it the same
@@ -55,36 +50,12 @@ construction time.
 
 ### JavaScript
 
-```ts
-import { PolycentricClient } from '@polycentric/js-core';
-
-const client = await PolycentricClient.create({
-  core,
-  storageDriver,
-  filestoreDriver,
-  application: {
-    name: 'My App',
-    id: 'com.example.myapp',
-    version: '1.2.0',
-    url: 'https://myapp.example.com',
-  },
-});
+```ts file=docs/examples/src/application.ts#js-application
 ```
 
 ### React Native
 
-```ts
-import { createPolycentricClient } from '@polycentric/react-native';
-import * as Application from 'expo-application';
-
-const client = await createPolycentricClient({
-  application: {
-    name: 'My App',
-    id: Application.applicationId ?? 'com.example.myapp.web',
-    version: Application.nativeApplicationVersion ?? '',
-    url: 'https://myapp.example.com',
-  },
-});
+```ts file=docs/examples/src/react-native/application.ts#rn-application
 ```
 
 `expo-application` reports no id or version on the web, so fall back to values you
@@ -93,18 +64,7 @@ web id from an `EXPO_PUBLIC_APP_VARIANT` runtime variable.
 
 ### Kotlin
 
-```kotlin
-val client = PolycentricClient(
-    core = core,
-    storageDriver = storageDriver,
-    filestore = filestore,
-    application = Application(
-        name = "My App",
-        id = "com.example.myapp",
-        version = BuildConfig.VERSION_NAME,
-        url = "https://myapp.example.com",
-    ),
-)
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#application
 ```
 
 ### Building events yourself
@@ -117,12 +77,12 @@ submitting events.
 
 ## What Harbor sends
 
-| Build | `id` |
-|---|---|
-| Android APK | `org.futo.polycentric` |
+| Build              | `id`                         |
+| ------------------ | ---------------------------- |
+| Android APK        | `org.futo.polycentric`       |
 | Android Play Store | `org.futo.polycentric.store` |
-| iOS | `org.futo.polycentric` |
-| Web | `org.futo.polycentric.web` |
+| iOS                | `org.futo.polycentric`       |
+| Web                | `org.futo.polycentric.web`   |
 
 Dev and staging builds insert `.dev` or `.staging` before any `.store` or `.web`
 suffix. The name is always `Harbor` and the url is `https://harbor.social`. Release

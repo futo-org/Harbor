@@ -23,14 +23,7 @@ publish if they wish to advertise the app they were created with; see
 `@polycentric/js-node` stores events in SQLite (or Postgres, with `databaseUrl`) and blobs in a
 directory.
 
-```ts
-import { createPolycentricNodeClient } from '@polycentric/js-node';
-
-const client = await createPolycentricNodeClient({
-  databasePath: './polycentric.db',
-  blobDirectory: './polycentric-blobs',
-  seedServers: ['http://localhost:3000'],
-});
+```ts file=docs/examples/src/client.ts#node-client
 ```
 
 ### React Native and web
@@ -38,37 +31,14 @@ const client = await createPolycentricNodeClient({
 `@polycentric/react-native` provides a native-compiled core, with SQLite for storage, iOS and
 Android; or a wasm core, with IndexedDB and OPFS for storage, on the web.
 
-```ts
-import { createPolycentricClient } from '@polycentric/react-native';
-
-const client = await createPolycentricClient({
-  seedServers: ['http://localhost:3000'],
-});
+```ts file=docs/examples/src/react-native/client.ts#rn-client
 ```
 
 ### Browser, without React Native
 
 Load the wasm core yourself and pass in the `@polycentric/js-browser` storage implementations.
 
-```ts
-import { PolycentricClient } from '@polycentric/js-core';
-import {
-  IndexedDBStorageDriver,
-  OpfsFileStoreDriver,
-} from '@polycentric/js-browser';
-import {
-  PolycentricCore,
-  uniffiInitAsync,
-} from '@polycentric/rs-core-wasm/web';
-
-await uniffiInitAsync();
-
-const client = await PolycentricClient.create({
-  core: new PolycentricCore(),
-  storageDriver: await IndexedDBStorageDriver.create('polycentric'),
-  filestoreDriver: await OpfsFileStoreDriver.create('polycentric-blobs'),
-  seedServers: ['http://localhost:3000'],
-});
+```ts file=docs/examples/src/browser-client.ts#browser-client
 ```
 
 ### Kotlin
@@ -76,19 +46,7 @@ const client = await PolycentricClient.create({
 Kotlin/Android uses the Maven package, which provides a file store and SQLite storage
 implementation.
 
-```kotlin
-import org.futo.polycentric.core.AndroidFileStoreDriver
-import org.futo.polycentric.core.PolycentricClient
-import org.futo.polycentric.core.SqliteStorageDriver
-import org.futo.polycentric.ffi.PolycentricCore
-import java.io.File
-
-val client = PolycentricClient.create(
-    core = PolycentricCore(),
-    storageDriver = SqliteStorageDriver(context),
-    filestore = AndroidFileStoreDriver(File(context.filesDir, "blobs")),
-    seedServers = listOf("http://localhost:3000"),
-)
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#client
 ```
 
 ## Creating an identity
@@ -100,34 +58,12 @@ when `activeIdentityKey` is empty.
 
 `@polycentric/react-native` provides an easy helper:
 
-```ts
-import { createIdentity } from '@polycentric/react-native';
-
-if (!client.activeIdentityKey) {
-  await createIdentity(client, 'http://localhost:3000');
-}
+```ts file=docs/examples/src/react-native/client.ts#rn-identity
 ```
 
 If not using React Native, run through the following steps with the login manager:
 
-```ts
-import { SyncStrategy } from '@polycentric/js-core';
-
-if (!client.activeIdentityKey) {
-  const { login, genesisEvent, identityContent, serializedContent } =
-    await client.loginManager.beginSignup();
-  await client.commitEvent({
-    owner: login.identity,
-    signedEvent: genesisEvent,
-    content: identityContent,
-    contentBytes: serializedContent.contentBytes,
-  });
-  await client.loginManager.finishSignup(login);
-  await client.loginAs(login);
-  await client.sync(SyncStrategy.PARTIAL_PUSH);
-}
-
-console.log('identity:', client.activeIdentityKey);
+```ts file=docs/examples/src/identity.ts#create-identity
 ```
 
 ### Kotlin
@@ -135,15 +71,7 @@ console.log('identity:', client.activeIdentityKey);
 The Kotlin client will have a ready key pair after creating the client. Publish an identity
 whose only rotation key is that key pair:
 
-```kotlin
-if (client.activeIdentityKey == null) {
-    client.identityManager.publish(
-        identityKey = null,
-        rotationKeys = listOf(client.currentSystem),
-        signingKeys = emptyList(),
-        servers = listOf("http://localhost:3000"),
-    )
-}
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#identity
 ```
 
 ## Publishing content
@@ -160,18 +88,7 @@ Each kind of content goes in its own collection. Build the `Content`, call
 
 ### Posting
 
-```ts
-import { COLLECTION, v2 } from '@polycentric/js-core';
-
-const content = client.contentManager.build({
-  oneofKind: 'post',
-  post: v2.Post.create({ text: 'Hello, Polycentric!' }),
-});
-const { eventKey } = await client.createEvent({
-  collection: COLLECTION.FEED,
-  content,
-});
-await client.sync();
+```ts file=docs/examples/src/publishing.ts#post
 ```
 
 `eventKey` identifies the new post. Keep it to reply to the post, react to it or
@@ -179,51 +96,19 @@ delete it.
 
 ### Setting a profile
 
-```ts
-const content = client.contentManager.build({
-  oneofKind: 'profileUpdate',
-  profileUpdate: { name: 'Ada', description: 'Writing about engines.' },
-});
-await client.createEvent({ collection: COLLECTION.PROFILE, content });
-await client.sync();
+```ts file=docs/examples/src/publishing.ts#profile
 ```
 
 ### Following and reacting
 
-```ts
-await client.createEvent({
-  collection: COLLECTION.GRAPH,
-  content: client.contentManager.build({
-    oneofKind: 'follow',
-    follow: { identity: otherIdentityKey },
-  }),
-});
-
-await client.createEvent({
-  collection: COLLECTION.INTERACTIONS,
-  content: client.contentManager.build({
-    oneofKind: 'reaction',
-    reaction: { eventKey: postKey, emoji: '👍', positive: true },
-  }),
-});
-
-await client.sync();
+```ts file=docs/examples/src/publishing.ts#follow-react
 ```
 
 ### Replying
 
 A reply is a post whose `reply` points at the post it answers.
 
-```ts
-const content = client.contentManager.build({
-  oneofKind: 'post',
-  post: v2.Post.create({
-    text: 'Agreed.',
-    reply: { parent: postKey, root: postKey },
-  }),
-});
-await client.createEvent({ collection: COLLECTION.FEED, content });
-await client.sync();
+```ts file=docs/examples/src/publishing.ts#reply
 ```
 
 ### Attaching an image
@@ -232,22 +117,7 @@ Images are blobs, uploaded separately and referenced from the post by digest.
 `commitBlob` stores the bytes locally and returns the `Blob` that describes
 them; `uploadBlob` sends them to your servers.
 
-```ts
-import { readFile } from 'node:fs/promises';
-
-const bytes = new Uint8Array(await readFile('./photo.jpg'));
-const blob = await client.commitBlob(bytes, 'image/jpeg');
-await client.uploadBlob(blob, bytes);
-
-const content = client.contentManager.build({
-  oneofKind: 'post',
-  post: v2.Post.create({
-    text: 'Look at this',
-    images: [{ images: [{ blob, width: 1024, height: 768 }] }],
-  }),
-});
-await client.createEvent({ collection: COLLECTION.FEED, content });
-await client.sync();
+```ts file=docs/examples/src/publishing.ts#image
 ```
 
 An `ImageSet` can hold several sizes of the same image; readers pick the one
@@ -259,23 +129,7 @@ the image from.
 The Kotlin client will need to build an event, then sign it, and then commit it to local storage
 before finally syncing.
 
-```kotlin
-import org.futo.polycentric.core.Collections
-import polycentric.v2.Content
-import polycentric.v2.Post
-import polycentric.v2.ProfileUpdate
-
-suspend fun PolycentricClient.publish(content: Content, collection: Int) {
-    val signed = signEvent(buildEvent(content, collection))
-    commitEvent(signed, content)
-    sync()
-}
-
-client.publish(Content(post = Post(text = "Hello, Polycentric!")), Collections.FEED)
-client.publish(
-    Content(profile_update = ProfileUpdate(name = "Ada")),
-    Collections.PROFILE,
-)
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#publish
 ```
 
 ## Reading
@@ -293,72 +147,18 @@ that errors or takes longer than 5 seconds is left out. The same queries are ava
 
 ### Getting a profile
 
-```ts
-import { v2 } from '@polycentric/js-core';
-import { Query } from '@polycentric/rs-core-wasm';
-
-const bytes = await client.core.awaitQuery(
-  new Query.GetProfile({ identity: identityKey }),
-  undefined,
-  undefined,
-);
-if (bytes) {
-  const profile = v2.GetProfileResponse.fromBinary(new Uint8Array(bytes));
-  console.log(profile.followersCount, 'followers');
-
-  for (const bundle of profile.eventBundles) {
-    const contentBytes = bundle.serializedContent?.contentBytes;
-    if (!contentBytes) continue;
-    const content = v2.Content.fromBinary(contentBytes);
-    if (content.contentBody.oneofKind === 'profileUpdate') {
-      console.log(content.contentBody.profileUpdate.name);
-    }
-  }
-}
+```ts file=docs/examples/src/reading.ts#profile
 ```
 
-```kotlin
-val profile = client.getProfile(identityKey)
-if (profile != null) {
-    println("${profile.followers_count} followers")
-    profile.event_bundles.forEach { bundle ->
-        val bytes = bundle.serialized_content?.content_bytes ?: return@forEach
-        Content.ADAPTER.decode(bytes).profile_update?.let { println(it.name) }
-    }
-}
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-profile
 ```
 
 ### Listing an identity's posts
 
-```ts
-const bytes = await client.core.awaitQuery(
-  new Query.GetIdentityFeed({
-    identity: identityKey,
-    limit: 20,
-    omitLabels: [],
-  }),
-  undefined,
-  undefined,
-);
-if (bytes) {
-  const feed = v2.GetFeedResponse.fromBinary(new Uint8Array(bytes));
-  for (const bundle of feed.eventBundles) {
-    const contentBytes = bundle.serializedContent?.contentBytes;
-    if (!contentBytes) continue;
-    const content = v2.Content.fromBinary(contentBytes);
-    if (content.contentBody.oneofKind === 'post') {
-      console.log(content.contentBody.post.text);
-    }
-  }
-}
+```ts file=docs/examples/src/reading.ts#identity-feed
 ```
 
-```kotlin
-val feed = client.getIdentityFeed(identityKey, limit = 20)
-feed?.event_bundles?.forEach { bundle ->
-    val bytes = bundle.serialized_content?.content_bytes ?: return@forEach
-    Content.ADAPTER.decode(bytes).post?.let { println(it.text) }
-}
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-feed
 ```
 
 The response's `page_info` carries the cursors for loading further pages; see
@@ -369,25 +169,10 @@ The response's `page_info` carries the cursors for loading further pages; see
 Look up an event by its identity, collection and sequence, for example a post
 you have an `EventKey` for.
 
-```ts
-const bytes = await client.core.awaitQuery(
-  new Query.GetEvent({
-    identity: postKey.identity,
-    collection: postKey.collection,
-    sequence: postKey.sequence,
-  }),
-  undefined,
-  undefined,
-);
-const bundle = bytes && v2.EventBundle.fromBinary(new Uint8Array(bytes));
+```ts file=docs/examples/src/reading.ts#single-event
 ```
 
-```kotlin
-val bundle = client.getEvent(
-    identity = postKey.identity,
-    collection = postKey.collection,
-    sequence = postKey.sequence,
-)
+```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-event
 ```
 
 ### Other queries
@@ -406,22 +191,12 @@ active identity created on other devices. Call it after writing, and on startup.
 To pull as soon as another device publishes, start live sync and listen for
 pulls:
 
-```ts
-client.events.onPulled((identity) => {
-  console.log('new events for', identity);
-});
-const stopLiveSync = client.startLiveSync();
-
-// later
-stopLiveSync();
+```ts file=docs/examples/src/sync.ts#live-sync
 ```
 
 Push failures do not throw. Listen for them to surface errors:
 
-```ts
-client.events.onPushResults((results) => {
-  for (const result of results) console.log(result);
-});
+```ts file=docs/examples/src/sync.ts#push-results
 ```
 
 For a complete program, see the Node.js example server in

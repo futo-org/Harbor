@@ -637,6 +637,8 @@ jobs:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
       - uses: ./.forgejo/actions/kt-core-build
+        with:
+          task: ":core:assembleRelease :core:compileDebugUnitTestKotlin"
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -1086,6 +1088,24 @@ jobs:
           path: docs/build
           retention-days: 7
 
+  # Check the code examples written for the docs site, to make sure they stay up
+  # to date with the codebase
+  docs-examples:
+    name: Typecheck docs examples
+    needs: [ changes, sdks ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.docs_examples && needs.sdks.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/sdk-artifacts
+      - uses: ./.forgejo/actions/setup-pnpm
+        with:
+          install-args: --filter polycentric-docs-examples...
+      - name: Typecheck
+        run: pnpm --filter polycentric-docs-examples typecheck
+
   # Preview at https://pr-<n>.polycentric-docs-cs8.pages.dev
   docs-preview:
     name: Deploy docs preview
@@ -1160,6 +1180,7 @@ jobs:
       - verifier-bot
       - web-e2e
       - docs
+      - docs-examples
       - docs-preview
     if: always()
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}

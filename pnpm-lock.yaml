@@ -622,6 +622,34 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
+  docs/examples:
+    dependencies:
+      '@polycentric/js-browser':
+        specifier: workspace:*
+        version: link:../../packages/js-browser
+      '@polycentric/js-core':
+        specifier: workspace:*
+        version: link:../../packages/js-core
+      '@polycentric/js-node':
+        specifier: workspace:*
+        version: link:../../packages/js-node
+      '@polycentric/react-native':
+        specifier: workspace:*
+        version: link:../../packages/react-native
+      '@polycentric/rs-core-wasm':
+        specifier: workspace:*
+        version: link:../../packages/rs-core-wasm
+      expo-application:
+        specifier: ~58.1.2
+        version: 58.1.2(@expo/dom-webview@58.0.2)(@expo/log-box@58.0.14)(@expo/metro-runtime@58.0.16)(expo@58.0.22)(react-native-webview@14.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.6
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   e2e:
     devDependencies:
       '@polycentric/js-core':
@@ -22369,6 +22397,17 @@ snapshots:
       jest-message-util: 30.5.1
       jest-mock: 30.5.2
       jest-util: 30.5.1
+
+  expo-application@58.1.2(@expo/dom-webview@58.0.2)(@expo/log-box@58.0.14)(@expo/metro-runtime@58.0.16)(expo@58.0.22)(react-native-webview@14.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(typescript@5.9.3):
+    dependencies:
+      expo: 58.0.22(@babel/core@7.29.13(supports-color@8.1.1))(@expo/dom-webview@58.0.2)(@expo/log-box@58.0.14)(@expo/metro-runtime@58.0.16)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(encoding@0.1.13)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-webview@14.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@expo/dom-webview'
+      - '@expo/log-box'
+      - '@expo/metro-runtime'
+      - react-native
+      - react-native-webview
+      - typescript
 
   expo-application@58.1.2(f4cb0030e0603a5a4a40396ad71a2c44):
     dependencies:
