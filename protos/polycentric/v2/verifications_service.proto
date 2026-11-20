@@ -29,6 +29,20 @@ message ListVerificationClaimsResponse {
   repeated EventHint event_hints = 2;
 }
 
+message GetVerificationClaimRequest {
+  string identity = 1;
+  uint64 sequence = 2;
+}
+
+message GetVerificationClaimResponse {
+  // Every live VerificationClaim event of `identity` at `sequence`, one per
+  // signer.
+  repeated EventBundle candidates = 1;
+  // Additional events that may be helpful, like relevant identity, profiles
+  // and labels
+  repeated EventHint event_hints = 2;
+}
+
 message ListVerificationTargetsRequest {
   EventKey claim_event_key = 1;
 }
@@ -96,6 +110,8 @@ service VerificationsService {
   // VerificationClaim events published by an identity, with each claim's
   // targets and verifies.
   rpc ListVerificationClaims(ListVerificationClaimsRequest) returns (ListVerificationClaimsResponse);
+  // The claim of an identity at a sequence, for opening a single claim.
+  rpc GetVerificationClaim(GetVerificationClaimRequest) returns (GetVerificationClaimResponse);
   // VerificationTarget events for a claim: who has been asked to verify.
   rpc ListVerificationTargets(ListVerificationTargetsRequest) returns (ListVerificationTargetsResponse);
   // VerificationVerify events for a claim: who has verified it.
