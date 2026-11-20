@@ -5,7 +5,7 @@ use crate::context::Context;
 use crate::manager::PushService;
 use polycentric_common::jwt::verify_jwt;
 use polycentric_common::models::protos_v2::{
-    AuthenticatedPushSource, KeyType, PublicKey, SetDevicePushSubscriptionsRequest,
+    AuthenticatedPushSource, PublicKey, SetDevicePushSubscriptionsRequest,
     SetDevicePushSubscriptionsResponse,
 };
 use std::collections::HashSet;
@@ -87,13 +87,7 @@ fn authenticate_source(
         .validate(allowed_audiences, now)
         .map_err(unauthenticated)?;
 
-    // Extract and return fields
-    let signer = PublicKey {
-        key_type: KeyType::Ed25519.into(),
-        key: verified.signed_by,
-    };
-
-    Ok((signer, verified.claims.iss))
+    Ok((verified.signed_by, verified.claims.iss))
 }
 
 fn now_secs() -> u64 {

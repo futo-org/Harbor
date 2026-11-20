@@ -6,6 +6,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::{Deserialize, Serialize};
 
+use crate::models::protos_v2::{KeyType, PublicKey};
 use crate::signing::verify_ed25519_signature;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -45,8 +46,8 @@ pub struct ServerJwtClaims {
 /// [`validate`]: VerifiedJwt::validate
 pub struct VerifiedJwt {
     pub claims: ServerJwtClaims,
-    /// The ed25519 public key (the header's `kid`) that signed the token.
-    pub signed_by: Vec<u8>,
+    /// The public key (the header's `kid` and `alg`) that signed the token.
+    pub signed_by: PublicKey,
 }
 
 impl VerifiedJwt {
@@ -76,21 +77,24 @@ pub fn verify_jwt(token: &str) -> Result<VerifiedJwt, JwtError> {
     };
 
     let header: Header = decode_segment(header_b64)?;
+    // NOTE: update the key_type of the returned public key if we ever support
+    // different an algorithm.
     if header.alg != "EdDSA" {
         return Err(JwtError::UnsupportedAlgorithm);
     }
-    let signed_by = hex::decode(&header.kid).map_err(|_| JwtError::Malformed)?;
+    let key_type = KeyType::Ed25519 as i32;
+    let key = hex::decode(&header.kid).map_err(|_| JwtError::Malformed)?;
 
     let signature = URL_SAFE_NO_PAD
         .decode(signature_b64)
         .map_err(|_| JwtError::Malformed)?;
     let signing_input = format!("{header_b64}.{claims_b64}");
-    verify_ed25519_signature(&signed_by, &signature, signing_input.as_bytes())
+    verify_ed25519_signature(&key, &signature, signing_input.as_bytes())
         .map_err(|_| JwtError::Signature)?;
 
     Ok(VerifiedJwt {
         claims: decode_segment(claims_b64)?,
-        signed_by,
+        signed_by: PublicKey { key_type, key },
     })
 }
 
@@ -140,7 +144,11 @@ mod tests {
         let verified = mint_and_verify().expect("token should verify");
         assert_eq!(verified.claims.iss, IDENTITY);
         assert_eq!(verified.claims.aud, SERVER);
-        assert_eq!(verified.signed_by, signing_key().verifying_key().to_bytes());
+        assert_eq!(verified.signed_by.key_type, KeyType::Ed25519 as i32);
+        assert_eq!(
+            verified.signed_by.key,
+            signing_key().verifying_key().to_bytes()
+        );
         assert!(verified.validate(&[SERVER.to_string()], 1500).is_ok());
     }
 

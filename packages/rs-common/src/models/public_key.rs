@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -89,6 +90,29 @@ impl Serializable for PublicKey {
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
     }
 }
+
+impl fmt::Display for PublicKey {
+    /// Encode this public key into its string representation.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}_{}", self.key_type, hex::encode(self.key.as_slice()))
+    }
+}
+
+impl FromStr for PublicKey {
+    type Err = ParsePublicKeyError;
+
+    /// Decode a public key from its string representation.
+    fn from_str(input: &str) -> Result<PublicKey, ParsePublicKeyError> {
+        let (type_str, hex_str) = input.split_once('_').ok_or(ParsePublicKeyError)?;
+        let key_type = type_str.parse::<i32>().map_err(|_| ParsePublicKeyError)?;
+        let key = hex::decode(hex_str).map_err(|_| ParsePublicKeyError)?;
+        Ok(PublicKey { key_type, key })
+    }
+}
+
+/// Error parsing a [`PublicKey`] from its string representation.
+#[derive(Debug)]
+pub struct ParsePublicKeyError;
 
 impl fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
