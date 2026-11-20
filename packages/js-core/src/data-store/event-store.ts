@@ -105,6 +105,11 @@ export class EventStore {
     return this.repository.getAll(owner);
   }
 
+  async deleteAll(owner: string): Promise<void> {
+    assertIdentity(owner, invalidOwner);
+    await this.repository.deleteAll(owner);
+  }
+
   async getHeads(owner: string): Promise<EventKey[]> {
     assertIdentity(owner, invalidOwner);
     return this.repository.getHeads(owner);

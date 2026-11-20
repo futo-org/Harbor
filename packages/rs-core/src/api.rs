@@ -5,9 +5,9 @@ use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
-    GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
-    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest,
+    AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, DeleteIdentityRequest,
+    Event, GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity,
+    ListEventsResponse, PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest,
     SetDevicePushSubscriptionsRequest, SignedEvent, UploadBlobRequest, UrlInfoRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
@@ -775,6 +775,17 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// `IdentityService.DeleteIdentity` on one server. Deletes the identity
+    /// authenticated by the bearer JWT.
+    pub async fn delete_identity(&self, server_url: String) -> Result<(), CoreError> {
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
+        client
+            .delete_identity(tonic::Request::new(DeleteIdentityRequest {}))
+            .await
+            .map_err(|e| CoreError::Network(format!("delete_identity: {e}")))?;
+        Ok(())
     }
 
     /// `ModerationService.ResolveReport` on one server. `request_bytes` is a

@@ -155,6 +155,18 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
+  async deleteAll(owner: string): Promise<void> {
+    try {
+      const store = this.store('readwrite');
+      await IndexedDBDatabase.requestAsPromise(
+        store.delete(IDBKeyRange.bound([owner], [owner, []])),
+      );
+      store.transaction.commit();
+    } catch (error) {
+      throw toEventRepositoryError('delete all events', error);
+    }
+  }
+
   async getHeads(owner: string): Promise<EventKey[]> {
     try {
       const store = this.store('readonly');

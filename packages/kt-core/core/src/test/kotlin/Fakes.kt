@@ -471,6 +471,8 @@ class FakeCore(
 
     override fun setActiveIdentity(identity: String?) = error("not used by sync tests")
 
+    override suspend fun deleteIdentity(serverUrl: String) = error("not used by sync tests")
+
     override suspend fun setBanStatus(
         serverUrl: String,
         requestBytes: ByteArray,

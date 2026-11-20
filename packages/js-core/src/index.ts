@@ -45,6 +45,7 @@ export type {
   CreateEventArgs,
   NewBlob,
   CreatedEvent,
+  IdentityDeletionResult,
 } from './polycentric-client';
 export { FileStore } from './file-store';
 export { MemoryStorageDriver, MemoryFileStoreDriver } from './memory-storage';
