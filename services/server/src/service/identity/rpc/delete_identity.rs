@@ -45,5 +45,7 @@ pub async fn handle(
         Status::internal("internal server error")
     })?;
 
+    ctx.proof_cache.invalidate_identity(&identity).await;
+
     Ok(DeleteIdentityResponse {})
 }
