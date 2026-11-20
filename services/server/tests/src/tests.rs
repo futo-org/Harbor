@@ -30,6 +30,7 @@ use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
 mod blobs;
+mod deleting;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -588,6 +589,20 @@ impl TestClient {
     ) -> Vec<u8> {
         let claim = github_verification_claim(login);
         self.verification_claim(claim, created_at)
+    }
+
+    pub async fn delete_self(&self) {
+        let auth_token = self.create_auth_token();
+        let mut request = tonic::Request::new(DeleteIdentityRequest {});
+        request
+            .metadata_mut()
+            .insert("authorization", auth_token.try_into().unwrap());
+
+        identity_service()
+            .await
+            .delete_identity(request)
+            .await
+            .unwrap();
     }
 
     #[track_caller]

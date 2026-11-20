@@ -23,6 +23,13 @@ pub struct AuthenticatedIdentity {
 /// The identity the request is authenticated as, or `None` when it
 /// arrived without a verified auth token. Populated by [`auth_middleware`]
 /// from the bearer JWT and carried through as a request extension.
+pub fn authenticated<T>(
+    request: &tonic::Request<T>,
+) -> Option<AuthenticatedIdentity> {
+    request.extensions().get::<AuthenticatedIdentity>().cloned()
+}
+
+/// Same as [`authenticated`], but only returns the identity.
 pub fn authenticated_identity<T>(
     request: &tonic::Request<T>,
 ) -> Option<String> {
