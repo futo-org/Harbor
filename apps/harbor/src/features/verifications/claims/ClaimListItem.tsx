@@ -11,6 +11,8 @@ import { resolveClaimTitle } from '../utils/render';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
+import { labelNames } from '@/src/features/moderation/LabelPill';
+import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
 import { StatusChip } from './toolbar/StatusChip';
 import Icon from '@/src/common/components/Icon';
 
@@ -26,6 +28,7 @@ export function ClaimListItem({
   const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
   // Platform claims chip as their platform (brand logo + name).
   const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
+  const { hasWarnContent, warnLabels } = usePostModeration(claim.labels);
 
   // TODO: Make this more sophisticated
   const isVerified = (claim.status?.verifiedCount || 0) > 0;
@@ -82,6 +85,12 @@ export function ClaimListItem({
           </View>
           <ClaimMenu claim={claim} icon="more" iconSize={16} />
         </View>
+        {/* Temporary warning until the final claim warning UI */}
+        {hasWarnContent && (
+          <Text variant="small" color="danger">
+            Content warning: {labelNames(warnLabels)}
+          </Text>
+        )}
         <Text variant="body" selectable={false}>
           {title}
         </Text>

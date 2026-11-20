@@ -1,8 +1,16 @@
-import { Query, v2 } from '@polycentric/react-native';
+import { labelMapFromSets } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  Query,
+  labelsFromVerificationClaimsResponse,
+  v2,
+} from '@polycentric/react-native';
 import { useClaimBundleList } from './useClaimBundleList';
 
-const parse = (bytes: Uint8Array) =>
-  v2.ListVerificationClaimsResponse.fromBinary(bytes).claimBundles;
+const parse = (data: ArrayBuffer) => ({
+  bundles: v2.ListVerificationClaimsResponse.fromBinary(new Uint8Array(data))
+    .claimBundles,
+  labelMap: labelMapFromSets(labelsFromVerificationClaimsResponse(data)),
+});
 
 /**
  * List the verification claims created by an identity, newest first, each

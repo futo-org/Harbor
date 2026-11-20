@@ -130,6 +130,13 @@ jest.mock('./ClaimAuthorLine', () => ({
 }));
 
 jest.mock('./ClaimMenu', () => ({ ClaimMenu: () => null }));
+// Their import chains load the wasm module, which Jest can't parse.
+jest.mock('@/src/features/post/hooks/usePostModeration', () => ({
+  usePostModeration: () => ({ hasWarnContent: false, warnLabels: [] }),
+}));
+jest.mock('@/src/features/moderation/LabelPill', () => ({
+  labelNames: () => '',
+}));
 // Its import chain loads the Polycentric client, which kills the Jest worker
 jest.mock('./ClaimImageViewerScreen', () => ({
   openClaimImage: () => undefined,

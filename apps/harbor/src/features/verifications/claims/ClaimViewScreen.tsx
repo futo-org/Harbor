@@ -20,6 +20,8 @@ import { resolveClaimTitle } from '../utils/render';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
+import { labelNames } from '@/src/features/moderation/LabelPill';
+import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
 import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,6 +58,8 @@ export default function ViewClaimScreen() {
     isRefreshing: verifiersRefreshing,
     refresh: refreshVerifiers,
   } = useClaimVerifiers(claim?.id, claim?.schemaName);
+
+  const { hasWarnContent, warnLabels } = usePostModeration(claim?.labels);
 
   const claimType = CLAIM_TYPES.find((t) => t.name === claim?.schemaName);
   // Platform claims chip as their platform (brand logo + name).
@@ -127,6 +131,13 @@ export default function ViewClaimScreen() {
                   createdAt={claim.createdAt}
                   avatarSize="md"
                 />
+
+                {/* Temporary warning until the final claim warning UI */}
+                {hasWarnContent && (
+                  <Text variant="small" color="danger">
+                    Content warning: {labelNames(warnLabels)}
+                  </Text>
+                )}
 
                 <View
                   style={[

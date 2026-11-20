@@ -1,9 +1,16 @@
 import {
   eventKeyId,
   getKeyFingerprint,
+  labelMapFromSets,
+  type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  Query,
+  labelsFromGetVerificationClaimResponse,
+  v2,
+} from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeFieldValue } from '../utils/schemas';
 
@@ -23,6 +30,7 @@ export interface DecodedClaim {
   keyFingerprint: string;
   sequence: bigint;
   createdAt: bigint;
+  labels?: PostLabel[];
 }
 
 /**
@@ -110,7 +118,12 @@ export function useClaimById(
       const response = v2.GetVerificationClaimResponse.fromBinary(
         new Uint8Array(query.data),
       );
-      return pickClaim(response, keyFingerprint, sequence);
+      const claim = pickClaim(response, keyFingerprint, sequence);
+      if (!claim) return null;
+      const labelMap = labelMapFromSets(
+        labelsFromGetVerificationClaimResponse(query.data),
+      );
+      return { ...claim, labels: labelMap.get(claim.id) };
     } catch {
       return null;
     }

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useSettings } from './index';
 import { getModerationLabels } from './moderationLabels';
 
@@ -7,5 +8,8 @@ import { getModerationLabels } from './moderationLabels';
  */
 export function useOmitLabels(): string[] {
   const moderation = useSettings((s) => s.moderation);
-  return getModerationLabels().filter((label) => moderation[label] === 'hide');
+  return useMemo(
+    () => getModerationLabels().filter((label) => moderation[label] === 'hide'),
+    [moderation],
+  );
 }
