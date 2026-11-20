@@ -1,0 +1,73 @@
+name: Publish crates
+
+# Publishes Rust crates to crates.io through trusted publishing on Harbor's Github mirror.
+#
+# Note on config for crates.io trusted publisher config for each crate:
+#   repository: futo-org/harbor
+#   workflow:   publish-crates.yml
+#   environment: crates-io
+
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions: {}
+
+concurrency:
+  group: publish-crates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write # crates.io trusted publishing
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Set the release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
+          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\" }#" Cargo.toml
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Verify packaging succeeds
+        run: cargo package -p polycentric-common -p polycentric-core --allow-dirty
+
+      - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+        id: auth
+
+      - name: Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          for crate in polycentric-common polycentric-core; do
+            status=$(curl --max-time 10 -s -o /dev/null -w '%{http_code}' \
+              -A "harbor-release-ci" "https://crates.io/api/v1/crates/${crate}/${VERSION}")
+            if [ "$status" = 200 ]; then
+              echo "==> ${crate} ${VERSION} is already on crates.io; skipping."
+              continue
+            fi
+            cargo publish -p "${crate}" --allow-dirty --no-verify
+          done

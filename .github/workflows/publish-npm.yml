@@ -1,0 +1,110 @@
+name: Publish npm packages
+
+# Publishes JS/TS packages to npm with trusted publishing on Harbor's Github mirror.
+#
+# Note on config required for npmjs.org trusted publisher for each package:
+#   repository: futo-org/harbor
+#   workflow:   publish-npm.yml
+#   environment: npm
+
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions: {}
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # For npm trusted publishing
+    env:
+      CARGO_INCREMENTAL: "0"
+      # Note wasm-bindgen-cli version must match `wasm-bindgen` version in Cargo.lock.
+      WASM_BINDGEN_CLI_VERSION: 0.2.130
+      BINARYEN_VERSION: "133"
+      BINARYEN_SHA256: 2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler just
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+          rustup default stable
+          cargo install --locked "wasm-bindgen-cli@${WASM_BINDGEN_CLI_VERSION}"
+
+      - name: Install wasm-opt
+        run: |
+          curl --max-time 60 -fsSL -o binaryen.tar.gz "https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN_VERSION}/binaryen-version_${BINARYEN_VERSION}-x86_64-linux.tar.gz"
+          echo "${BINARYEN_SHA256}  binaryen.tar.gz" | sha256sum -c
+          sudo tar xzf binaryen.tar.gz --strip-components=2 -C /usr/local/bin "binaryen-version_${BINARYEN_VERSION}/bin/wasm-opt"
+          rm binaryen.tar.gz
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Install pnpm and check npm
+        run: | # zizmor: ignore[adhoc-packages] exact version from packageManager
+          npm install -g "$(node -p "require('./package.json').packageManager")"
+          pnpm --version
+          node -e '
+            const [a, b, c] = process.argv[1].split(".").map(Number);
+            if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) {
+              console.error(`npm ${process.argv[1]} is too old for trusted publishing`);
+              process.exit(1);
+            }' "$(npm --version)"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter './packages/js-*...' --filter @polycentric/rs-core-wasm
+
+      - name: Build rs-core-wasm
+        run: |
+          pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
+          wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+          before=$(stat -c%s "$wasm")
+          wasm-opt -Oz -g "$wasm" -o "$wasm"
+          echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
+
+      - name: Build JS packages
+        run: pnpm --filter './packages/js-*' run build
+
+      - name: Set the release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-version --allow-same-version
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          # Packages in topological order by dependency relations.
+          # Note react-native is left out: it needs the Android and iOS native builds.
+          out_dir="$(mktemp -d)"
+          for pkg in rs-core-wasm js-core js-storage-sqlite js-storage-postgres js-browser js-node; do
+            name="@polycentric/${pkg}"
+            if npm view "${name}@${VERSION}" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+              echo "Found ${name}@${VERSION} already on npmjs.org, skipping."
+              continue
+            fi
+            packed=$(cd "packages/${pkg}" && pnpm pack --pack-destination "$out_dir" | tail -n1)
+            echo "Publishing ${name}@${VERSION} from ${packed}"
+            npm publish "$packed" --access public --tag latest --registry https://registry.npmjs.org
+          done
