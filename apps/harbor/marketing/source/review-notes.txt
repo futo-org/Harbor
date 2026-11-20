@@ -1,0 +1,33 @@
+PURPOSE AND AUDIENCE
+Harbor is an open-source, distributed social network from FUTO. People create an identity, publish posts and images, follow others, reply, repost, react, and verify claims about themselves.
+It solves dependence on a single provider. On most social networks one company holds your account and can remove it or go offline. In Harbor an identity is a cryptographic key pair kept on the device, and posts are published to several independent servers at once. If one server is unavailable or removes the account, the content stays reachable from the others and the user keeps their identity and followers.
+It is for general social media users who want to own their identity and choose where their content is hosted, and for open-source and privacy-minded users.
+
+SETUP AND MAIN FEATURES
+An identity is required to use the app. It is created on the device, with no email, phone or password. No demo account, credentials or sample files are needed.
+1. On the welcome screen tap "Create new identity", enter a display name and tap "Continue". ("I already have an identity" is for pairing with another device or recovering from a backup.)
+2. Tap the "+" button to publish a post, with optional photos.
+3. Use the icons under any post to react, reply, repost or quote.
+4. Explore shows public posts and people, with search at the top. Feed shows posts from the people you follow.
+5. The "..." menu on a post reports it. The "..." menu on a profile reports or blocks the user.
+6. Notifications lists follows, replies, reactions and verifications.
+7. Verifications: tap "+" to create a claim and request verification from another user.
+8. The gear icon opens Settings: pair another device, back up the identity, choose servers, set moderation preferences and manage blocked users.
+9. Account deletion: Settings > Identity > Delete Identity. It erases the identity from the device and asks every server the identity has used to delete it.
+Content policy: https://join.harbor.social/docs/content-policy-app-stores
+
+EXTERNAL SERVICES
+- Harbor servers (srv.harbor.social, srv.polycentric.io), run by FUTO, store and serve posts, profiles and images. Users can add or remove servers, including ones run by others.
+- Harbor push service (push.harbor.social), run by FUTO, delivers notifications through Expo Push Notifications and Apple Push Notification service.
+- Harbor verifier (verifier-bot.harbor.social), run by FUTO, checks that a user controls an account on another platform when they ask for it.
+- Microsoft Azure AI Content Safety and Microsoft PhotoDNA are used on FUTO servers for automated content review and detection of child sexual abuse material.
+- Harbor diagnostics (otlp.harbor.social), run by FUTO, receives error reports only if the user turns them on in Settings. They are off by default.
+The app uses no third-party authentication, payment, advertising or analytics service, and no generative AI service.
+
+REGIONAL DIFFERENCES
+Harbor functions consistently across all regions. There are no region-specific features, content or restrictions.
+
+REGULATED INDUSTRY AND THIRD-PARTY MATERIAL
+Harbor does not operate in a regulated industry and does not distribute licensed or protected third-party material. All content is user-generated. Users can report content and block other users, and server operators moderate reported content and can ban accounts.
+
+The app does not use non-exempt encryption.
