@@ -16,6 +16,8 @@ export {
   labelsFromThreadResponse,
   labelsFromGetPostResponse,
   labelsFromGetProfileResponse,
+  labelsFromVerificationClaimsResponse,
+  labelsFromTargetedVerificationClaimsResponse,
   moderationLabels,
   PolycentricCore,
   Query,

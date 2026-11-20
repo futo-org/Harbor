@@ -18,6 +18,8 @@ export {
   labelsFromThreadResponse,
   labelsFromGetPostResponse,
   labelsFromGetProfileResponse,
+  labelsFromVerificationClaimsResponse,
+  labelsFromTargetedVerificationClaimsResponse,
   PolycentricCore,
   Query,
   QueryStatus,
