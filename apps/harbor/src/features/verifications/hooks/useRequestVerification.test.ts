@@ -92,9 +92,13 @@ describe('useRequestVerification', () => {
 
   it('still resolves when the push to servers fails', async () => {
     mockClient.sync.mockRejectedValueOnce(new Error('offline'));
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(submit()).resolves.toBeUndefined();
     expect(mockClient.createEvent).toHaveBeenCalledTimes(1);
     expect(invalidateQuery).toHaveBeenCalled();
+
+    error.mockRestore();
   });
 });

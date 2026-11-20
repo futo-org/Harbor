@@ -1,4 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useErrorQueue } from '../hooks/useErrorQueue';
+import { persistLogs } from '../hooks/useLogStore';
 import { useTelemetrySettings } from '../hooks/useTelemetrySettings';
 import { installErrorReporter, reportError } from './error-reporter';
 
@@ -22,6 +24,15 @@ beforeEach(() => {
   mockConfigured.value = true;
   mockRecordErrorSpan.mockReset();
   mockFlushTraces.mockReset().mockResolvedValue(true);
+});
+
+// The log store code automatically schedules `persistLogs()` to be called after
+// a delay to debounce storage writes.
+// For testing, we should just force it to write and then clear right after each
+// test so that jest doesn't wait on it.
+afterEach(async () => {
+  await persistLogs();
+  await AsyncStorage.clear();
 });
 
 test('fatal errors are sent and flushed before the previous handler runs', async () => {
