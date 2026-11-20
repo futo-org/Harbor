@@ -23,6 +23,7 @@ pub(crate) mod claim_bundles {
     use crate::service::context::RequestContext;
     use crate::service::events::TargetEventKey;
     use crate::service::events::tombstone::{self, HasEventKey};
+    use crate::service::feeds::repository::Query as FeedsRepository;
     use crate::service::identity::service::list_identity_and_profile_events;
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventHint, VerificationClaimBundle};
@@ -102,10 +103,26 @@ pub(crate) mod claim_bundles {
         let (identity_events, profile_events) =
             list_identity_and_profile_events(ctx, identities).await?;
 
+        // Labels on the claims and on the profiles, so clients can warn
+        // about a labeled claim or cover a labeled name.
+        let label_keys: Vec<TargetEventKey> = fetched
+            .claims
+            .iter()
+            .map(HasEventKey::event_key)
+            .chain(profile_events.iter().map(|row| TargetEventKey::of(&row.0)))
+            .collect();
+        let label_events = FeedsRepository::list_labels_for_event_keys(
+            &mut ctx.db,
+            &label_keys,
+        )
+        .await
+        .map_err(map_db_err)?;
+
         Ok(HydrationState {
             deletes_by_target,
             identity_events,
             profile_events,
+            label_events,
             ..Default::default()
         })
     }
@@ -135,14 +152,14 @@ pub(crate) mod claim_bundles {
         })
     }
 
-    /// The claim bundles plus identity/profile hints.
+    /// The claim bundles plus identity/profile/label hints.
     pub(crate) struct View {
         pub claim_bundles: Vec<VerificationClaimBundle>,
         pub event_hints: Vec<EventHint>,
     }
 
     /// Group targets and verifies under their claim, attach proofs, and
-    /// ship the hydrated identity/profile events as hints.
+    /// ship the hydrated identity/profile/label events as hints.
     pub(crate) async fn view<P, A>(
         ctx: &mut RequestContext<A>,
         _: &P,
@@ -195,7 +212,7 @@ pub(crate) mod claim_bundles {
         }
         Ok(View {
             claim_bundles,
-            event_hints: hydration.identity_profile_hints(),
+            event_hints: hydration.into_hints(),
         })
     }
 }
@@ -290,16 +307,70 @@ pub(crate) mod tests {
     use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
-        DatabaseConnection, EntityTrait, IdenStatic, IntoMockRow, Iterable,
-        MockRow, ModelTrait, SelectA, SelectB, SelectC, Value,
+        DatabaseConnection, DbBackend, EntityTrait, IdenStatic, IntoMockRow,
+        Iterable, MockDatabase, MockRow, ModelTrait, SelectA, SelectB, SelectC,
+        Value,
     };
 
+    use crate::data::hydration::HydrationState;
     use crate::service::context::ServiceContext;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
-        Content, EventKey, PublicKey, VerificationClaim, VerificationTarget,
-        VerificationVerify,
+        Content, EventKey, Labels, PublicKey, VerificationClaim,
+        VerificationTarget, VerificationVerify,
     };
+    use crate::service::verifications::rpc::common::claim_bundles;
+
+    #[tokio::test]
+    async fn claim_bundles_view_ships_label_hints() {
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let mut ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
+        let (claim_event, claim_content) = claim_row(1, "alice");
+        let label_content = Content {
+            content_body: Some(ContentBody::Labels(Labels {
+                event_key: Some(claim_event_key("alice")),
+                label_values: vec!["violence".to_string()],
+            })),
+        };
+        let label_row = (
+            event_row(2, "moderator"),
+            Some(content_row(2, label_content)),
+        );
+        let fetched = claim_bundles::FetchedClaims {
+            claims: vec![(claim_event, Some(claim_content))],
+            targets: Vec::new(),
+            verifies: Vec::new(),
+        };
+        let hydration = HydrationState {
+            label_events: vec![label_row],
+            ..Default::default()
+        };
+
+        let view = claim_bundles::view(&mut ctx, &(), fetched, hydration)
+            .await
+            .unwrap();
+
+        assert_eq!(view.claim_bundles.len(), 1);
+        let hint_event_bytes: Vec<_> = view
+            .event_hints
+            .iter()
+            .map(|hint| {
+                hint.event_bundle
+                    .as_ref()
+                    .unwrap()
+                    .signed_event
+                    .as_ref()
+                    .unwrap()
+                    .event_bytes
+                    .clone()
+            })
+            .collect();
+        assert_eq!(hint_event_bytes, vec![vec![2]]);
+    }
 
     pub(crate) async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
