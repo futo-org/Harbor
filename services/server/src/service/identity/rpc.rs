@@ -13,7 +13,7 @@ use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
 use crate::service::proto::{
-    DeleteAccountRequest, DeleteAccountResponse, IsBannedRequest,
+    DeleteIdentityRequest, DeleteIdentityResponse, IsBannedRequest,
     IsBannedResponse, IsModeratorRequest, IsModeratorResponse, ListBansRequest,
     ListBansResponse, SetBanStatusRequest, SetBanStatusResponse,
 };
@@ -70,12 +70,12 @@ impl IdentityService for IdentityServiceImpl {
         ))
     }
 
-    async fn delete_account(
+    async fn delete_identity(
         &self,
-        _: Request<DeleteAccountRequest>,
-    ) -> Result<Response<DeleteAccountResponse>, Status> {
+        _: Request<DeleteIdentityRequest>,
+    ) -> Result<Response<DeleteIdentityResponse>, Status> {
         Err(Status::unimplemented(
-            "account deletion is not yet implemented",
+            "identity deletion is not yet implemented",
         ))
     }
 }

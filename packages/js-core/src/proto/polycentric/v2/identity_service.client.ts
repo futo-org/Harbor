@@ -4,8 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { IdentityService } from "./identity_service";
-import type { DeleteAccountResponse } from "./identity_service";
-import type { DeleteAccountRequest } from "./identity_service";
+import type { DeleteIdentityResponse } from "./identity_service";
+import type { DeleteIdentityRequest } from "./identity_service";
 import type { ListBansResponse } from "./identity_service";
 import type { ListBansRequest } from "./identity_service";
 import type { IsBannedResponse } from "./identity_service";
@@ -50,13 +50,13 @@ export interface IIdentityServiceClient {
      */
     listBans(input: ListBansRequest, options?: RpcOptions): UnaryCall<ListBansRequest, ListBansResponse>;
     /**
-     * Deletes the currently authenticated account.
+     * Deletes the currently authenticated identity.
      *
-     * This account can not be undone, use with caution.
+     * This identity can not be undone, use with caution.
      *
-     * @generated from protobuf rpc: DeleteAccount
+     * @generated from protobuf rpc: DeleteIdentity
      */
-    deleteAccount(input: DeleteAccountRequest, options?: RpcOptions): UnaryCall<DeleteAccountRequest, DeleteAccountResponse>;
+    deleteIdentity(input: DeleteIdentityRequest, options?: RpcOptions): UnaryCall<DeleteIdentityRequest, DeleteIdentityResponse>;
 }
 /**
  * *
@@ -108,14 +108,14 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
         return stackIntercept<ListBansRequest, ListBansResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Deletes the currently authenticated account.
+     * Deletes the currently authenticated identity.
      *
-     * This account can not be undone, use with caution.
+     * This identity can not be undone, use with caution.
      *
-     * @generated from protobuf rpc: DeleteAccount
+     * @generated from protobuf rpc: DeleteIdentity
      */
-    deleteAccount(input: DeleteAccountRequest, options?: RpcOptions): UnaryCall<DeleteAccountRequest, DeleteAccountResponse> {
+    deleteIdentity(input: DeleteIdentityRequest, options?: RpcOptions): UnaryCall<DeleteIdentityRequest, DeleteIdentityResponse> {
         const method = this.methods[4], opt = this._transport.mergeOptions(options);
-        return stackIntercept<DeleteAccountRequest, DeleteAccountResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<DeleteIdentityRequest, DeleteIdentityResponse>("unary", this._transport, method, opt, input);
     }
 }

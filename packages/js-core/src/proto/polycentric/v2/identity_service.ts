@@ -120,14 +120,14 @@ export interface ListBansResponse {
     pageInfo?: PageInfo;
 }
 /**
- * @generated from protobuf message polycentric.v2.DeleteAccountRequest
+ * @generated from protobuf message polycentric.v2.DeleteIdentityRequest
  */
-export interface DeleteAccountRequest {
+export interface DeleteIdentityRequest {
 }
 /**
- * @generated from protobuf message polycentric.v2.DeleteAccountResponse
+ * @generated from protobuf message polycentric.v2.DeleteIdentityResponse
  */
-export interface DeleteAccountResponse {
+export interface DeleteIdentityResponse {
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class IsModeratorRequest$Type extends MessageType<IsModeratorRequest> {
@@ -516,17 +516,17 @@ class ListBansResponse$Type extends MessageType<ListBansResponse> {
  */
 export const ListBansResponse = new ListBansResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class DeleteAccountRequest$Type extends MessageType<DeleteAccountRequest> {
+class DeleteIdentityRequest$Type extends MessageType<DeleteIdentityRequest> {
     constructor() {
-        super("polycentric.v2.DeleteAccountRequest", []);
+        super("polycentric.v2.DeleteIdentityRequest", []);
     }
-    create(value?: PartialMessage<DeleteAccountRequest>): DeleteAccountRequest {
+    create(value?: PartialMessage<DeleteIdentityRequest>): DeleteIdentityRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         if (value !== undefined)
-            reflectionMergePartial<DeleteAccountRequest>(this, message, value);
+            reflectionMergePartial<DeleteIdentityRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteAccountRequest): DeleteAccountRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteIdentityRequest): DeleteIdentityRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -542,7 +542,7 @@ class DeleteAccountRequest$Type extends MessageType<DeleteAccountRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: DeleteAccountRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: DeleteIdentityRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -550,21 +550,21 @@ class DeleteAccountRequest$Type extends MessageType<DeleteAccountRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.DeleteAccountRequest
+ * @generated MessageType for protobuf message polycentric.v2.DeleteIdentityRequest
  */
-export const DeleteAccountRequest = new DeleteAccountRequest$Type();
+export const DeleteIdentityRequest = new DeleteIdentityRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class DeleteAccountResponse$Type extends MessageType<DeleteAccountResponse> {
+class DeleteIdentityResponse$Type extends MessageType<DeleteIdentityResponse> {
     constructor() {
-        super("polycentric.v2.DeleteAccountResponse", []);
+        super("polycentric.v2.DeleteIdentityResponse", []);
     }
-    create(value?: PartialMessage<DeleteAccountResponse>): DeleteAccountResponse {
+    create(value?: PartialMessage<DeleteIdentityResponse>): DeleteIdentityResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         if (value !== undefined)
-            reflectionMergePartial<DeleteAccountResponse>(this, message, value);
+            reflectionMergePartial<DeleteIdentityResponse>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteAccountResponse): DeleteAccountResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteIdentityResponse): DeleteIdentityResponse {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -580,7 +580,7 @@ class DeleteAccountResponse$Type extends MessageType<DeleteAccountResponse> {
         }
         return message;
     }
-    internalBinaryWrite(message: DeleteAccountResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: DeleteIdentityResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -588,9 +588,9 @@ class DeleteAccountResponse$Type extends MessageType<DeleteAccountResponse> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.DeleteAccountResponse
+ * @generated MessageType for protobuf message polycentric.v2.DeleteIdentityResponse
  */
-export const DeleteAccountResponse = new DeleteAccountResponse$Type();
+export const DeleteIdentityResponse = new DeleteIdentityResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.IdentityService
  */
@@ -599,5 +599,5 @@ export const IdentityService = new ServiceType("polycentric.v2.IdentityService",
     { name: "SetBanStatus", options: {}, I: SetBanStatusRequest, O: SetBanStatusResponse },
     { name: "IsBanned", options: {}, I: IsBannedRequest, O: IsBannedResponse },
     { name: "ListBans", options: {}, I: ListBansRequest, O: ListBansResponse },
-    { name: "DeleteAccount", options: {}, I: DeleteAccountRequest, O: DeleteAccountResponse }
+    { name: "DeleteIdentity", options: {}, I: DeleteIdentityRequest, O: DeleteIdentityResponse }
 ]);

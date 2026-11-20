@@ -55,9 +55,9 @@ message ListBansResponse {
   PageInfo page_info = 2;
 }
 
-message DeleteAccountRequest {}
+message DeleteIdentityRequest {}
 
-message DeleteAccountResponse {}
+message DeleteIdentityResponse {}
 
 /**
  * Identity moderation APIs. The caller is authenticated by its bearer JWT
@@ -72,8 +72,8 @@ service IdentityService {
   rpc IsBanned(IsBannedRequest) returns (IsBannedResponse);
   // Lists the identities banned on this server.
   rpc ListBans(ListBansRequest) returns (ListBansResponse);
-  // Deletes the currently authenticated account.
+  // Deletes the currently authenticated identity.
   //
-  // This account can not be undone, use with caution.
-  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse);
+  // This identity can not be undone, use with caution.
+  rpc DeleteIdentity(DeleteIdentityRequest) returns (DeleteIdentityResponse);
 }
