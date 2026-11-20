@@ -1,4 +1,4 @@
-# @polycentric/js-browser
+# @polycentric/js-storage-browser
 
 Browser implementations of the `@polycentric/js-core` platform interfaces:
 

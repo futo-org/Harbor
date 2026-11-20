@@ -621,9 +621,9 @@ importers:
 
   docs/examples:
     dependencies:
-      '@polycentric/js-browser':
+      '@polycentric/js-storage-browser':
         specifier: workspace:*
-        version: link:../../packages/js-browser
+        version: link:../../packages/js-storage-browser
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
@@ -662,7 +662,7 @@ importers:
         specifier: ^1.1.25
         version: 1.1.31
 
-  packages/js-browser:
+  packages/js-storage-browser:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
@@ -877,9 +877,9 @@ importers:
       '@noble/curves':
         specifier: 'catalog:'
         version: 2.4.0
-      '@polycentric/js-browser':
+      '@polycentric/js-storage-browser':
         specifier: workspace:*
-        version: link:../js-browser
+        version: link:../js-storage-browser
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../js-core

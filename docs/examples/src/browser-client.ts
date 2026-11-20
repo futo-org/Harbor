@@ -5,7 +5,7 @@ import { PolycentricClient } from '@polycentric/js-core';
 import {
   IndexedDBStorageDriver,
   OpfsFileStoreDriver,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-storage-browser';
 import {
   PolycentricCore,
   uniffiInitAsync,

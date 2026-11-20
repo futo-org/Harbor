@@ -46,7 +46,7 @@ flowchart TD
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
   wasm --> jscore[js-core]
-  jscore --> browser[js-browser]
+  jscore --> browser[js-storage-browser]
   jscore --> node[js-node]
   jscore --> rn
   sqlite[js-storage-sqlite] --> node
@@ -66,7 +66,7 @@ Arrows point from a dependency to its dependants.
 | `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
 | `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
 | `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |
-| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                          |
+| `packages/js-storage-browser`  | Browser storage drivers: IndexedDB for events and logins, OPFS for blobs.                                                          |
 | `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                              |
 | `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                      |
 | `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                 |

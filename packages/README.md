@@ -12,7 +12,7 @@ flowchart TD
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
   wasm --> jscore[js-core]
-  jscore --> browser[js-browser]
+  jscore --> browser[js-storage-browser]
   jscore --> node[js-node]
   jscore --> rn
   sqlite[js-storage-sqlite] --> node
@@ -41,11 +41,11 @@ summarizes the function of each package.
     - Kotlin directly uses the UniFFI-generated Kotlin bindings of `rs-core`.
 2. **`storageDriver`**: a database for persisting events and login/identity state.
     - React Native uses SQLite through `js-storage-sqlite`
-    - Web uses IndexedDB from `js-browser`
+    - Web uses IndexedDB from `js-storage-browser`
     - Node uses either SQLite or Postgres through `js-storage-sqlite` or `js-storage-postgres`
     - Kotlin uses SQLite included in `kt-core`.
 3. **`filestoreDriver`**: stores content blobs.
-    - Web uses OPFS in `js-browser`.
+    - Web uses OPFS in `js-storage-browser`.
     - Node uses the file system provided by `js-node`.
     - React Native uses the file system provided by `react-native`.
     - Kotlin uses the file system provided by `kt-core`.

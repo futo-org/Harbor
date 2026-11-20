@@ -6,7 +6,7 @@ import {
 import {
   IndexedDBStorageDriver,
   OpfsFileStoreDriver,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-storage-browser';
 import {
   PolycentricCore,
   setLogger,

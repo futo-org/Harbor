@@ -103,7 +103,7 @@
   "dependencies": {
     "@babel/runtime": "^7.28.6",
     "@noble/curves": "catalog:",
-    "@polycentric/js-browser": "workspace:*",
+    "@polycentric/js-storage-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-wasm": "workspace:*",

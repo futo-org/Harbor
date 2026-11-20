@@ -5,7 +5,7 @@ TypeScript client for the Polycentric protocol. This wraps around the Rust core
 queries, gRPC transport, etc.) On top of the `rs-core` responsibilities, this package manages
 login/identity and pairing sessions, and delegates platform storage and file access to external
 packages under the `@polycentric` namespace:
-- `@polycentric/js-browser`
+- `@polycentric/js-storage-browser`
 - `@polycentric/js-node`
 - `@polycentric/react-native`
 - `@polycentric/js-storage-sqlite`

@@ -36,7 +36,7 @@ Android; or a wasm core, with IndexedDB and OPFS for storage, on the web.
 
 ### Browser, without React Native
 
-Load the wasm core yourself and pass in the `@polycentric/js-browser` storage implementations.
+Load the wasm core yourself and pass in the `@polycentric/js-storage-browser` storage implementations.
 
 ```ts file=docs/examples/src/browser-client.ts#browser-client
 ```

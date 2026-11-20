@@ -1,5 +1,5 @@
 {
-  "name": "@polycentric/js-browser",
+  "name": "@polycentric/js-storage-browser",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.es.js",
