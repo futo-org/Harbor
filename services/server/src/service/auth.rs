@@ -158,6 +158,7 @@ mod tests {
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use ed25519_dalek::{Signer, SigningKey};
+    use polycentric_common::models::protos_v2::KeyType;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase};
     use tower::ServiceExt;
 

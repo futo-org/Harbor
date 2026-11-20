@@ -115,9 +115,10 @@ mod tests {
 
     fn authed<T>(message: T, identity: &str) -> Request<T> {
         let mut request = Request::new(message);
-        request
-            .extensions_mut()
-            .insert(AuthenticatedIdentity(identity.to_string()));
+        request.extensions_mut().insert(AuthenticatedIdentity {
+            identity: identity.to_string(),
+            public_key: Default::default(),
+        });
         request
     }
 
