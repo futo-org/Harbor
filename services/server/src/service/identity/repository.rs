@@ -1,4 +1,4 @@
-use ::entity::{ban, content, event, moderator};
+use ::entity::{ban, content, event, identity_audit_log, moderator};
 use polycentric_common::models::collections;
 use sea_orm::*;
 
@@ -353,6 +353,62 @@ impl Mutation {
             ))
             .await?;
         }
+        Ok(())
+    }
+
+    /// Moves all events of `identity` to the [`deleted_event`] table.
+    #[tracing::instrument(skip_all)]
+    pub async fn delete_identity<C: Connection>(
+        db: &mut C,
+        identity: &str,
+    ) -> Result<(), DbErr> {
+        // NOTE: SeaORM's `InsertStatement` type at the time of writing doesn't
+        // support getting the columns from a delete statement, only from a
+        // select one, so this has to be written manually.
+
+        let query = "WITH
+        deleted_events AS (
+          DELETE FROM events
+          WHERE identity = $1
+          RETURNING *
+        )
+        INSERT INTO deleted_event
+        SELECT *
+        FROM deleted_events";
+
+        let stmt = Statement {
+            sql: query.to_owned(),
+            values: Some(Values(vec![identity.into()])),
+            db_backend: DbBackend::Postgres,
+        };
+
+        db.execute_raw(stmt).await?;
+        Ok(())
+    }
+
+    /// Record an audit action.
+    ///
+    /// Either `caller_identity` or `caller_public_key` must be not `None`.
+    #[tracing::instrument(skip_all)]
+    pub async fn audit_action<C: Connection>(
+        db: &mut C,
+        identity: String,
+        action: identity_audit_log::Action,
+        caller_identity: Option<String>,
+        caller_public_key: Option<String>,
+    ) -> Result<(), DbErr> {
+        debug_assert!(caller_identity.is_some() || caller_public_key.is_some());
+        let model = identity_audit_log::ActiveModel {
+            id: ActiveValue::NotSet,
+            identity: ActiveValue::Set(identity),
+            action: ActiveValue::Set(action),
+            by_identity: ActiveValue::Set(caller_identity),
+            by_public_key: ActiveValue::Set(caller_public_key),
+            timestamp: ActiveValue::NotSet,
+        };
+        identity_audit_log::Entity::insert(model)
+            .exec_without_returning(db)
+            .await?;
         Ok(())
     }
 }

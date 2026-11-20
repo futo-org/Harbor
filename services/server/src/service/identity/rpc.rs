@@ -19,6 +19,7 @@ use crate::service::proto::{
 };
 
 pub mod common;
+pub mod delete_identity;
 pub mod is_banned;
 pub mod is_moderator;
 pub mod list_bans;
@@ -72,10 +73,11 @@ impl IdentityService for IdentityServiceImpl {
 
     async fn delete_identity(
         &self,
-        _: Request<DeleteIdentityRequest>,
+        request: Request<DeleteIdentityRequest>,
     ) -> Result<Response<DeleteIdentityResponse>, Status> {
-        Err(Status::unimplemented(
-            "identity deletion is not yet implemented",
+        let ctx = self.ctx.authenticted_rw2(&request).await?;
+        Ok(Response::new(
+            delete_identity::handle(ctx, request.into_inner()).await?,
         ))
     }
 }
