@@ -591,10 +591,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
-  kt-core-lint:
+  kt-sdk-lint:
     name: Lint Kotlin
     needs: [ changes, setup-images ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_lint && needs.setup-images.result != 'failure' }}
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_sdk_lint && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
@@ -607,7 +607,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kt-sdk-build
         with:
           task: ":core:ktlintCheck"
           upload-artifact: "false"
@@ -620,10 +620,10 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
-  kt-core:
+  kt-sdk:
     name: Build Kotlin
-    needs: [ changes, setup-images, kt-core-lint ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_build && needs.kt-core-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
+    needs: [ changes, setup-images, kt-sdk-lint ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_sdk_build && needs.kt-sdk-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
     container:
@@ -636,7 +636,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kt-sdk-build
         with:
           task: ":core:assembleRelease :core:compileDebugUnitTestKotlin"
       - uses: ./.forgejo/actions/r2-cache
@@ -1162,8 +1162,8 @@ jobs:
       - wasm
       - android
       - ios
-      - kt-core
-      - kt-core-lint
+      - kt-sdk
+      - kt-sdk-lint
       - sdks
       - service-binaries
       - service-images

@@ -5,7 +5,7 @@ import {
   encodeStatusByServer,
   FetchMode,
   Query,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import { useMemo } from 'react';
 import useModerationStatus from './useModerationStatus';
 

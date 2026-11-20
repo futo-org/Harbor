@@ -43,12 +43,12 @@ runs:
       uses: forgejo/download-artifact@v4
       with:
         name: rn-android-build
-        path: packages/react-native/android/src/main/jniLibs
+        path: packages/js-rn-sdk/android/src/main/jniLibs
     - if: inputs.ios-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
         name: rn-ios-build
-        path: packages/react-native
+        path: packages/js-rn-sdk
     - uses: ./.forgejo/actions/registry-login
       with:
         registry: ${{ inputs.registry }}
@@ -74,27 +74,27 @@ runs:
         path: |
           packages/rs-core-wasm/src/generated/wasm
           packages/rs-core-wasm/dist
-          packages/react-native/src/generated
-          packages/react-native/src/NativeReactNative.ts
-          packages/react-native/src/uniffi-init.tsx
-          packages/react-native/cpp
-          packages/react-native/ios/ReactNative.h
-          packages/react-native/ios/ReactNative.mm
-          packages/react-native/ReactNative.podspec
-          packages/react-native/android/CMakeLists.txt
-          packages/react-native/android/build.gradle
-          packages/react-native/android/cpp-adapter.cpp
-          packages/react-native/android/src/main/AndroidManifest.xml
-          packages/react-native/android/src/main/java
-          packages/react-native/android/src/main/jniLibs
-          packages/react-native/ios
-          packages/react-native/PolycentricReactNativeFramework.xcframework
+          packages/js-rn-sdk/src/generated
+          packages/js-rn-sdk/src/NativeJsRnSdk.ts
+          packages/js-rn-sdk/src/uniffi-init.tsx
+          packages/js-rn-sdk/cpp
+          packages/js-rn-sdk/ios/JsRnSdk.h
+          packages/js-rn-sdk/ios/JsRnSdk.mm
+          packages/js-rn-sdk/JsRnSdk.podspec
+          packages/js-rn-sdk/android/CMakeLists.txt
+          packages/js-rn-sdk/android/build.gradle
+          packages/js-rn-sdk/android/cpp-adapter.cpp
+          packages/js-rn-sdk/android/src/main/AndroidManifest.xml
+          packages/js-rn-sdk/android/src/main/java
+          packages/js-rn-sdk/android/src/main/jniLibs
+          packages/js-rn-sdk/ios
+          packages/js-rn-sdk/PolycentricJsRnSdkFramework.xcframework
         retention-days: 7
     - uses: ./.forgejo/actions/setup-pnpm
       with:
-        install-args: --filter ./packages/js-*... --filter @polycentric/react-native...
+        install-args: --filter ./packages/js-*... --filter @polycentric/js-rn-sdk...
     - shell: bash
-      run: pnpm --filter='./packages/js-*' run build
+      run: pnpm --filter='./packages/js-*' --filter='!@polycentric/js-rn-sdk' run build
     - uses: forgejo/upload-artifact@v4
       with:
         name: js-sdks-dist
@@ -102,12 +102,12 @@ runs:
         retention-days: 7
     - if: inputs.rn-sdk == 'true'
       shell: bash
-      run: pnpm --filter @polycentric/react-native build
+      run: pnpm --filter @polycentric/js-rn-sdk build
     - if: inputs.rn-sdk == 'true'
       uses: forgejo/upload-artifact@v4
       with:
         name: rn-sdk
         path: |
-          packages/react-native
-          !packages/react-native/node_modules
+          packages/js-rn-sdk
+          !packages/js-rn-sdk/node_modules
         retention-days: 7

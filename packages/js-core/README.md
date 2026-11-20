@@ -6,8 +6,8 @@ queries, gRPC transport, etc.) On top of the `rs-core` responsibilities, this pa
 login/identity and pairing sessions, and delegates platform storage and file access to external
 packages under the `@polycentric` namespace:
 - `@polycentric/js-browser`
-- `@polycentric/js-node`
-- `@polycentric/react-native`
+- `@polycentric/js-node-sdk`
+- `@polycentric/js-rn-sdk`
 - `@polycentric/js-storage-sqlite`
 - `@polycentric/js-storage-postgres`
 

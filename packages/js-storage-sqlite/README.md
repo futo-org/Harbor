@@ -3,8 +3,8 @@
 A SQLite implementation of `@polycentric/js-core`'s `IStorageDriver`, written
 against Drizzle ORM so it works with any Drizzle SQLite backend. It is shared by:
 
-- `@polycentric/js-node`, using better-sqlite3.
-- `@polycentric/react-native`, using expo-sqlite (native builds).
+- `@polycentric/js-node-sdk`, using better-sqlite3.
+- `@polycentric/js-rn-sdk`, using expo-sqlite (native builds).
 
 ## Exports
 

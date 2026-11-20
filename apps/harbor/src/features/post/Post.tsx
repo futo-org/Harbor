@@ -4,7 +4,7 @@ import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/js-rn-sdk';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';

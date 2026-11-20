@@ -10,10 +10,7 @@ import {
 } from '@/src/features/identity-backup/backup';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
 import { saveBackupFile } from '@/src/features/identity-backup/saveBackupFile';
-import {
-  SyncStrategy,
-  type PolycentricClient,
-} from '@polycentric/react-native';
+import { SyncStrategy, type PolycentricClient } from '@polycentric/js-rn-sdk';
 import { router } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';

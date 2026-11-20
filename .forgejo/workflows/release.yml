@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
-  kt-core:
+  kt-sdk:
     name: Build Kotlin
     needs: [ changes, setup-images ]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
@@ -134,14 +134,14 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
           environment: prod
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kt-sdk-build
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
         env:
           HARBOR_CI_TOKEN: ${{ env.HARBOR_CI_TOKEN }}
         run: |
-          cd packages/kt-core
-          ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
+          cd packages/kt-sdk
+          ./gradlew :core:publishReleasePublicationToForgejoRepository -PktSdkVersion="${GITHUB_REF_NAME#v}"
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -532,7 +532,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [ notes, npm, crates, tag-images, apk, kt-core ]
+    needs: [ notes, npm, crates, tag-images, apk, kt-sdk ]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
@@ -551,8 +551,8 @@ jobs:
           path: apps/harbor
       - uses: forgejo/download-artifact@v4
         with:
-          name: kt-core-build
-          path: packages/kt-core/core/build
+          name: kt-sdk-build
+          path: packages/kt-sdk/core/build
       - uses: forgejo/download-artifact@v4
         with:
           name: rs-core-crates
@@ -563,7 +563,7 @@ jobs:
         run: |
           node .forgejo/scripts/release.mjs release_notes.md \
             "harbor-${GITHUB_REF_NAME}.apk=apps/harbor/harbor.apk" \
-            "polycentric-core-${GITHUB_REF_NAME#v}.aar=packages/kt-core/core/build/outputs/aar/core-release.aar" \
+            "polycentric-sdk-${GITHUB_REF_NAME#v}.aar=packages/kt-sdk/core/build/outputs/aar/core-release.aar" \
             crates/*.crate
       - name: Announce on Zulip
         env:

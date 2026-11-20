@@ -1,4 +1,4 @@
-import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
+import { Query, QueryStatus, UpdateMode } from '@polycentric/js-rn-sdk';
 import {
   extractFeedToken,
   useCurrentIdentity,

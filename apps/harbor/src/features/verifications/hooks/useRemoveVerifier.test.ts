@@ -1,6 +1,6 @@
 // The barrel pulls in native uniffi init at import time — expose just what
 // the hook needs.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/js-rn-sdk', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
   COLLECTION: { VERIFICATIONS: 8 },
   SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
@@ -36,14 +36,14 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import type { v2 as V2 } from '@polycentric/react-native';
+import type { v2 as V2 } from '@polycentric/js-rn-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import type { DecodedClaim } from './useClaimById';
 import useRemoveVerifier, { removeVerifier } from './useRemoveVerifier';
 
-const { v2 } = jest.requireMock('@polycentric/react-native') as {
+const { v2 } = jest.requireMock('@polycentric/js-rn-sdk') as {
   v2: typeof V2;
 };
 

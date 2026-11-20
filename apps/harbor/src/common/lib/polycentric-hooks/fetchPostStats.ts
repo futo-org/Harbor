@@ -1,5 +1,5 @@
-import { types } from '@polycentric/react-native';
-import type { PolycentricClient } from '@polycentric/react-native';
+import { types } from '@polycentric/js-rn-sdk';
+import type { PolycentricClient } from '@polycentric/js-rn-sdk';
 
 export type PostStats = {
   likes: number;

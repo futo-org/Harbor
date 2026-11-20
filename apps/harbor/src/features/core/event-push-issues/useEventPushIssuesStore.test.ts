@@ -1,6 +1,6 @@
-import type { EventKey, ServerPushResult } from '@polycentric/react-native';
+import type { EventKey, ServerPushResult } from '@polycentric/js-rn-sdk';
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/js-rn-sdk', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
 }));
 

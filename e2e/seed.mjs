@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { COLLECTION, KEY_TYPE, v2 } from '@polycentric/js-core';
-import { createPolycentricNodeClient } from '@polycentric/js-node';
+import { createPolycentricNodeClient } from '@polycentric/js-node-sdk';
 
 // Passed to the flows as -e variables. Avoid English stop words in names: the
 // server's full-text search would drop "A" and match both users.

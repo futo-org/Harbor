@@ -1,7 +1,4 @@
-import type {
-  IdentityState,
-  PolycentricClient,
-} from '@polycentric/react-native';
+import type { IdentityState, PolycentricClient } from '@polycentric/js-rn-sdk';
 import { createContext, useContext } from 'react';
 
 export interface PolycentricContextValue {

@@ -14,7 +14,7 @@ import {
   SyncStrategy,
   v2,
 } from '@polycentric/js-core';
-import { createPolycentricNodeClient } from '@polycentric/js-node';
+import { createPolycentricNodeClient } from '@polycentric/js-node-sdk';
 import { parseClaimId, SCHEMA_NAME } from './claims.js';
 import { createIdentity } from './identity.js';
 import type { ClaimField } from './models.js';

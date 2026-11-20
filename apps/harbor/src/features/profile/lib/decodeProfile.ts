@@ -3,7 +3,7 @@ import {
   labelsFromGetProfileResponse,
   type PostLabel,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import {
   eventKeyId,
   labelMapFromSets,

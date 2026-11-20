@@ -9,7 +9,7 @@ import {
   UpdateMode,
   v2,
   type FetchMode,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import { useMemo } from 'react';
 
 export interface FollowSuggestionEntry {

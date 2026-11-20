@@ -4,11 +4,7 @@ import {
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import {
-  COLLECTION,
-  v2,
-  type PolycentricClient,
-} from '@polycentric/react-native';
+import { COLLECTION, v2, type PolycentricClient } from '@polycentric/js-rn-sdk';
 import { create } from 'zustand';
 import {
   feedQueryKeys,

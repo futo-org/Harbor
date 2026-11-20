@@ -16,7 +16,7 @@
   "dependencies": {
     "@noble/hashes": "catalog:",
     "@polycentric/js-core": "workspace:*",
-    "@polycentric/js-node": "workspace:*",
+    "@polycentric/js-node-sdk": "workspace:*",
     "axios": "^1.18.1",
     "body-parser": "^2.3.0",
     "bson": "^7.3.1",

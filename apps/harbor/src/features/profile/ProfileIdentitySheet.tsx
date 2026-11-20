@@ -18,7 +18,7 @@ import {
   FetchMode,
   IdentityManager,
   type v2,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';

@@ -35,7 +35,7 @@ The packages layer around a Rust core, called `rs-core`. It does the protocol wo
 (event assembly and validation, the query engine, sync, and gRPC transport), and is
 exposed through [uniffi](https://mozilla.github.io/uniffi-rs/) as
 `PolycentricCore`. The client libraries, `js-core` and its Kotlin port
-`kt-core`, own identities, keys, logins, and persistence, and hand protocol work to
+`kt-sdk`, own identities, keys, logins, and persistence, and hand protocol work to
 that core. The SDK packages build a client for one platform by supplying a
 core, a storage driver, and a blob store.
 
@@ -43,11 +43,11 @@ core, a storage driver, and a blob store.
 flowchart TD
   common[rs-common] --> core[rs-core]
   core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
-  core -- "uniffi (JSI)" --> rn[react-native]
-  core -- "uniffi (Kotlin)" --> kt[kt-core]
+  core -- "uniffi (JSI)" --> rn[js-rn-sdk]
+  core -- "uniffi (Kotlin)" --> kt[kt-sdk]
   wasm --> jscore[js-core]
   jscore --> browser[js-browser]
-  jscore --> node[js-node]
+  jscore --> node[js-node-sdk]
   jscore --> rn
   sqlite[js-storage-sqlite] --> node
   sqlite --> rn
@@ -59,18 +59,18 @@ flowchart TD
 
 Arrows point from a dependency to its dependants.
 
-| Package                        | Description                                                                                                                        |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |
-| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
-| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
-| `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
-| `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |
-| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                          |
-| `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                              |
-| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                      |
-| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                 |
-| `packages/kt-core`             | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
+| Package                        | Description                                                                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.                   |
+| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                                           |
+| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                                 |
+| `packages/js-rn-sdk`           | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.                     |
+| `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                                    |
+| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                                           |
+| `packages/js-node-sdk`         | Node.js SDK. A ready-to-use client over `rs-core-wasm`, storing data in SQLite or Postgres and blobs on the file system.                            |
+| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                                       |
+| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                                  |
+| `packages/kt-sdk`              | Kotlin SDK for Android, a port of `js-core` over the uniffi Kotlin bindings, with its own SQLite storage, file store, and generated protobuf types. |
 
 ## Services
 
@@ -92,9 +92,9 @@ cause confusing build failures:
 - **Protobuf types** are generated from `protos/` at build time (`prost` and
   `tonic` for Rust, `protobuf-ts` for TypeScript).
 - **uniffi bindings** expose `rs-core` to TypeScript. None are committed. The
-  React Native bindings are generated into `packages/react-native`
+  React Native bindings are generated into `packages/js-rn-sdk`
   (`src/generated/rn/`, `cpp/`, `ios/`, the `android/` module sources and
-  `ReactNative.podspec`; see the `.gitignore`) by `pnpm generate`, which
+  `JsRnSdk.podspec`; see the `.gitignore`) by `pnpm generate`, which
   `pnpm build` also runs. The wasm bindings are built into
   `packages/rs-core-wasm/src/generated/wasm/`. In CI the wasm job generates
   the React Native ones and passes them on with the wasm build. To regenerate

@@ -21,7 +21,7 @@ build_ios_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
     - source "$CARGO_HOME/env"
     - brew install just protobuf cmake ninja clang-format pnpm
-    - cd packages/react-native
+    - cd packages/js-rn-sdk
     - |
       rustup target add \
         aarch64-apple-ios \
@@ -30,6 +30,6 @@ build_ios_task:
     - pnpm i
     - pnpm ubrn:ios
   binary_artifacts:
-    path: 'packages/react-native/ios/**/*'
+    path: "packages/js-rn-sdk/ios/**/*"
   xcframework_artifacts:
-    path: 'packages/react-native/PolycentricReactNativeFramework.xcframework/**/*'
+    path: "packages/js-rn-sdk/PolycentricJsRnSdkFramework.xcframework/**/*"

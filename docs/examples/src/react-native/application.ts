@@ -1,7 +1,7 @@
 // Shown on docs/content/developer/declaring-your-application.md.
 
 // #region rn-application
-import { createPolycentricClient } from '@polycentric/react-native';
+import { createPolycentricClient } from '@polycentric/js-rn-sdk';
 import * as Application from 'expo-application';
 
 // #endregion rn-application

@@ -20,23 +20,23 @@ runs:
         wasm-opt -Oz -g "$wasm" -o "$wasm"
         echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
     - shell: bash
-      run: pnpm --filter @polycentric/react-native generate
+      run: pnpm --filter @polycentric/js-rn-sdk generate
     - uses: forgejo/upload-artifact@v4
       with:
         name: rs-core-wasm-build
         path: |
           packages/rs-core-wasm/src/generated/wasm
           packages/rs-core-wasm/dist
-          packages/react-native/src/generated
-          packages/react-native/src/NativeReactNative.ts
-          packages/react-native/src/uniffi-init.tsx
-          packages/react-native/cpp
-          packages/react-native/ios/ReactNative.h
-          packages/react-native/ios/ReactNative.mm
-          packages/react-native/ReactNative.podspec
-          packages/react-native/android/CMakeLists.txt
-          packages/react-native/android/build.gradle
-          packages/react-native/android/cpp-adapter.cpp
-          packages/react-native/android/src/main/AndroidManifest.xml
-          packages/react-native/android/src/main/java
+          packages/js-rn-sdk/src/generated
+          packages/js-rn-sdk/src/NativeJsRnSdk.ts
+          packages/js-rn-sdk/src/uniffi-init.tsx
+          packages/js-rn-sdk/cpp
+          packages/js-rn-sdk/ios/JsRnSdk.h
+          packages/js-rn-sdk/ios/JsRnSdk.mm
+          packages/js-rn-sdk/JsRnSdk.podspec
+          packages/js-rn-sdk/android/CMakeLists.txt
+          packages/js-rn-sdk/android/build.gradle
+          packages/js-rn-sdk/android/cpp-adapter.cpp
+          packages/js-rn-sdk/android/src/main/AndroidManifest.xml
+          packages/js-rn-sdk/android/src/main/java
         retention-days: 7

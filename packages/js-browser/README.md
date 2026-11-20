@@ -7,7 +7,7 @@ Browser implementations of the `@polycentric/js-core` platform interfaces:
   File System (OPFS).
 - `IndexedDBDatabase`: used by the storage driver to manage the DB connection.
 
-The main consumer is `@polycentric/react-native`'s web build
+The main consumer is `@polycentric/js-rn-sdk`'s web build
 (`src/create-polycentric-client.web.ts`), which passes both drivers to
 `PolycentricClient.create`.
 

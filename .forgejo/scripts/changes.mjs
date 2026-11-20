@@ -72,11 +72,12 @@ const SERVER_STACK = [
 ];
 
 const rsCore = touches(CARGO, /^packages\/rs-[^/]+\//);
-const jsSdk = touches(LOCK, /^packages\/js-[^/]+\//);
-const rnSdk = touches(LOCK, 'packages/react-native/');
-const ktCore = touches(
+// js-rn-sdk has its own flag (rnSdk) and native build.
+const jsSdk = touches(LOCK, /^packages\/js-(?!rn-sdk\/)[^/]+\//);
+const rnSdk = touches(LOCK, 'packages/js-rn-sdk/');
+const ktSdk = touches(
   /^Cargo\.lock$/,
-  'packages/kt-core/',
+  'packages/kt-sdk/',
   'packages/rs-core/',
   'packages/rs-common/',
   'protos/',
@@ -112,7 +113,7 @@ const grayjayMigrator = touches(
 const scraper = touches(NODE_ROOT, 'services/scraper/', CHARTS);
 const verifierBot = touches(
   NODE_ROOT,
-  /^packages\/js-[^/]+\//,
+  /^packages\/js-(?!rn-sdk\/)[^/]+\//,
   'packages/rs-core-wasm/',
   'services/verifier-bot/',
   CHARTS,
@@ -125,7 +126,7 @@ const web = app || jsSdk || rnSdk || rsCore;
 const docs = touches(
   'docs/',
   'protos/polycentric/v2/',
-  'packages/kt-core/core/src/test/kotlin/examples/',
+  'packages/kt-sdk/core/src/test/kotlin/examples/',
   /^buf\.yaml$/,
 );
 const charts = touches(
@@ -208,8 +209,8 @@ const flags = {
     app_typecheck: app || jsSdk || rnSdk || rsCore,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
     build_rn_sdk: rnSdk || rsCore || app,
-    kt_core_lint: ktCore,
-    kt_core_build: ktCore,
+    kt_sdk_lint: ktSdk,
+    kt_sdk_build: ktSdk,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
     web_image: web,

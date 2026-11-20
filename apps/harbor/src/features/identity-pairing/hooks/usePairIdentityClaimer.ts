@@ -1,11 +1,7 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type {
-  PairingSession,
-  PendingLogin,
-  v2,
-} from '@polycentric/react-native';
+import type { PairingSession, PendingLogin, v2 } from '@polycentric/js-rn-sdk';
 import { useCallback, useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {

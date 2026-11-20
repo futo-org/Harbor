@@ -1,7 +1,7 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
+// `@polycentric/js-rn-sdk`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest. We only need the pure `v2` protobuf-ts
 // namespace, so expose just that (sourced from js-core's generated protos).
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/js-rn-sdk', () => ({
   v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
 }));
 
@@ -26,7 +26,7 @@ jest.mock('@noble/hashes/sha2.js', () => ({
   sha256: (bytes: Uint8Array) => bytes,
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/js-rn-sdk';
 import { eventKeyId, type PostLabel } from '@/src/common/lib/polycentric-hooks';
 import { decodeNotifications } from './utils';
 

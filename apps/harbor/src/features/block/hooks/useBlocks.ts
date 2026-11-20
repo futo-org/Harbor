@@ -1,8 +1,4 @@
-import {
-  COLLECTION,
-  v2,
-  type PolycentricClient,
-} from '@polycentric/react-native';
+import { COLLECTION, v2, type PolycentricClient } from '@polycentric/js-rn-sdk';
 import {
   decodeBundle,
   type DecodedBundle,

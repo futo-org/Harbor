@@ -33,7 +33,7 @@ WIRING = {
     'harbor-verifier-bot': {
         'image': {
             'dockerfile': 'services/verifier-bot/Dockerfile.dev',
-            'only': RUST_SOURCES + JS_SOURCES + ['packages/rs-core-wasm', 'packages/js-core', 'packages/js-storage-sqlite', 'packages/js-storage-postgres', 'packages/js-node'],
+            'only': RUST_SOURCES + JS_SOURCES + ['packages/rs-core-wasm', 'packages/js-core', 'packages/js-storage-sqlite', 'packages/js-storage-postgres', 'packages/js-node-sdk'],
             'ignore': ['services/scraper'],
         },
         'ports': ['3002:3002'],

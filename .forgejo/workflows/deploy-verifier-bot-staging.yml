@@ -11,6 +11,7 @@ on:
       - tools/**
       - patches/**
       - packages/js-*/**
+      - "!packages/js-rn-sdk/**"
       - packages/rs-core-wasm/**
       - services/verifier-bot/**
       - deploy/charts/harbor-verifier-bot/**

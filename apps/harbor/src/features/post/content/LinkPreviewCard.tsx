@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { memo, useMemo } from 'react';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/js-rn-sdk';
 import { Image } from '@/src/common/components/Image';
 import { urlHost } from '@/src/common/util/anywhere-url';
 import { Linking, Pressable, View } from 'react-native';

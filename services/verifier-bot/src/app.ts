@@ -34,7 +34,7 @@ import {
   SyncStrategy,
   v2,
 } from '@polycentric/js-core';
-import { createPolycentricNodeClient } from '@polycentric/js-node';
+import { createPolycentricNodeClient } from '@polycentric/js-node-sdk';
 
 const oauthSecrets = new Map<
   string,

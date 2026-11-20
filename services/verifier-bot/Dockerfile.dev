@@ -51,7 +51,7 @@ COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
 COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
+COPY packages/js-node-sdk packages/js-node-sdk
 
 # allowUnusedPatches: patchedDependencies target frontend packages absent here.
 RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
@@ -63,7 +63,7 @@ RUN pnpm --filter @polycentric/rs-core-wasm build
 RUN pnpm --filter @polycentric/js-core \
          --filter @polycentric/js-storage-sqlite \
          --filter @polycentric/js-storage-postgres \
-         --filter @polycentric/js-node build
+         --filter @polycentric/js-node-sdk build
 RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
 RUN pnpm --filter @polycentric/verifier-bot build
 

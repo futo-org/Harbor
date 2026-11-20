@@ -45,7 +45,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-jest.mock('@polycentric/react-native', () => {
+jest.mock('@polycentric/js-rn-sdk', () => {
   const actual = jest.requireActual(
     '../../../../../../packages/js-core/src/proto/v2',
   );

@@ -13,7 +13,7 @@ import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/js-rn-sdk';
 import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';

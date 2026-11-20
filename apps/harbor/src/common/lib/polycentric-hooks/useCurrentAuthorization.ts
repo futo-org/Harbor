@@ -2,7 +2,7 @@ import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import {
   IdentityManager,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import { useMemo, useState } from 'react';
 
 export interface CurrentAuthorization {

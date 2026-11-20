@@ -109,7 +109,7 @@ export type CreatedEvent = {
 export interface PolycentricClientConfig {
   /**
    * The uniffi-generated `PolycentricCore` instance from
-   * `@polycentric/react-native`. Owns crypto, local stores, image
+   * `@polycentric/js-rn-sdk`. Owns crypto, local stores, image
    * processing, and gRPC client transport.
    */
   core: CoreType;

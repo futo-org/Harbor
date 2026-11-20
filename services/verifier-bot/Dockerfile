@@ -1,7 +1,7 @@
 # Production image (built in CI). Build context is the repo root (see
 # build_services.yml — buildkit `context=.`).
 #
-# The js SDKs (js-core, js-node, js-storage-sqlite) and rs-core-wasm are
+# The js SDKs (js-core, js-node-sdk, js-storage-sqlite) and rs-core-wasm are
 # built by CI and their `dist/` is pulled into the context as artifacts (the
 # verifier-bot image job `needs: [js-sdks-build, rs-core-wasm-wasm-build]`), so
 # this image does NOT build them. For a self-contained local build that builds
@@ -35,7 +35,7 @@ COPY tools tools
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
 COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
+COPY packages/js-node-sdk packages/js-node-sdk
 COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY services/verifier-bot services/verifier-bot
 

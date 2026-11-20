@@ -301,9 +301,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.43.0
         version: 1.45.0
-      '@polycentric/react-native':
+      '@polycentric/js-rn-sdk':
         specifier: workspace:*
-        version: link:../../packages/react-native
+        version: link:../../packages/js-rn-sdk
       '@polycentric/video-transcoding':
         specifier: workspace:*
         version: link:../../packages/video-transcoding
@@ -627,12 +627,12 @@ importers:
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
-      '@polycentric/js-node':
+      '@polycentric/js-node-sdk':
         specifier: workspace:*
-        version: link:../../packages/js-node
-      '@polycentric/react-native':
+        version: link:../../packages/js-node-sdk
+      '@polycentric/js-rn-sdk':
         specifier: workspace:*
-        version: link:../../packages/react-native
+        version: link:../../packages/js-rn-sdk
       '@polycentric/rs-core-wasm':
         specifier: workspace:*
         version: link:../../packages/rs-core-wasm
@@ -652,9 +652,9 @@ importers:
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../packages/js-core
-      '@polycentric/js-node':
+      '@polycentric/js-node-sdk':
         specifier: workspace:*
-        version: link:../packages/js-node
+        version: link:../packages/js-node-sdk
       '@polycentric/rs-core-wasm':
         specifier: workspace:*
         version: link:../packages/rs-core-wasm
@@ -763,7 +763,7 @@ importers:
         specifier: ^7.0.0
         version: 7.3.1(js-yaml@4.3.1)(json5@2.2.3)(webpack-bundle-analyzer@4.10.2)(webpack-dev-server@5.2.4)(webpack@5.112.2)
 
-  packages/js-node:
+  packages/js-node-sdk:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
@@ -806,9 +806,9 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/js-node/examples/server:
+  packages/js-node-sdk/examples/server:
     dependencies:
-      '@polycentric/js-node':
+      '@polycentric/js-node-sdk':
         specifier: workspace:*
         version: link:../..
       drizzle-orm:
@@ -831,45 +831,7 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/js-storage-postgres:
-    dependencies:
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
-      pg:
-        specifier: ^8.16.0
-        version: 8.23.1
-    devDependencies:
-      '@polycentric/js-core':
-        specifier: workspace:*
-        version: link:../js-core
-      '@polycentric/tsconfig':
-        specifier: workspace:*
-        version: link:../../tools/tsconfig
-      '@types/pg':
-        specifier: ^8.15.0
-        version: 8.23.1
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  packages/js-storage-sqlite:
-    dependencies:
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
-    devDependencies:
-      '@polycentric/js-core':
-        specifier: workspace:*
-        version: link:../js-core
-      '@polycentric/tsconfig':
-        specifier: workspace:*
-        version: link:../../tools/tsconfig
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  packages/react-native:
+  packages/js-rn-sdk:
     dependencies:
       '@babel/runtime':
         specifier: ^7.28.6
@@ -935,6 +897,44 @@ importers:
       react-native-builder-bob:
         specifier: ^0.44.0
         version: 0.44.1(supports-color@8.1.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/js-storage-postgres:
+    dependencies:
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+      pg:
+        specifier: ^8.16.0
+        version: 8.23.1
+    devDependencies:
+      '@polycentric/js-core':
+        specifier: workspace:*
+        version: link:../js-core
+      '@polycentric/tsconfig':
+        specifier: workspace:*
+        version: link:../../tools/tsconfig
+      '@types/pg':
+        specifier: ^8.15.0
+        version: 8.23.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/js-storage-sqlite:
+    dependencies:
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+    devDependencies:
+      '@polycentric/js-core':
+        specifier: workspace:*
+        version: link:../js-core
+      '@polycentric/tsconfig':
+        specifier: workspace:*
+        version: link:../../tools/tsconfig
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -1018,9 +1018,9 @@ importers:
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../../packages/js-core
-      '@polycentric/js-node':
+      '@polycentric/js-node-sdk':
         specifier: workspace:*
-        version: link:../../packages/js-node
+        version: link:../../packages/js-node-sdk
       axios:
         specifier: ^1.18.1
         version: 1.21.1(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)

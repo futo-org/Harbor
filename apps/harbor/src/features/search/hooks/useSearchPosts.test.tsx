@@ -1,8 +1,8 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
+// `@polycentric/js-rn-sdk`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest — expose just what the hook needs. The
 // Query stub keeps the args it was constructed with so the tests can assert
 // on what the hook passed in.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/js-rn-sdk', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
   Query: {
     SearchPosts: class SearchPosts {
@@ -63,7 +63,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/js-rn-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';

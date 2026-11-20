@@ -1,5 +1,5 @@
 // We need some js-core functionality but not any of the native/wasm code.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/js-rn-sdk', () => ({
   v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
   ...jest.requireActual('../../../../../packages/js-core/src/utils/hex'),
 }));
@@ -8,7 +8,7 @@ jest.mock('@/src/common/constants', () => ({
   HARBOR_APP_URL: 'https://harbor.example',
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/js-rn-sdk';
 import {
   EncodingMode,
   encodePairingCode,

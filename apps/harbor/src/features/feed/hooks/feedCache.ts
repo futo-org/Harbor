@@ -21,7 +21,7 @@ import {
   labelsFromFeedResponse,
   labelsFromThreadResponse,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/js-rn-sdk';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import {

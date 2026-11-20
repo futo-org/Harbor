@@ -3,8 +3,8 @@ import {
   stringToPublicKey,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import type { PairingSession, v2 } from '@polycentric/react-native';
-import { IdentityManager, SyncStrategy } from '@polycentric/react-native';
+import type { PairingSession, v2 } from '@polycentric/js-rn-sdk';
+import { IdentityManager, SyncStrategy } from '@polycentric/js-rn-sdk';
 import { useEffect, useRef, useState } from 'react';
 
 /** Pairing session state that we expose to the caller. */

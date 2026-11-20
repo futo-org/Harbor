@@ -36,12 +36,12 @@
     // uniffi/wasm output the platform needs before Expo starts: Android and
     // iOS compile rs-core to native libraries via ubrn; web builds the wasm.
     "android": {
-      "dependsOn": ["@polycentric/react-native#ubrn:android"],
+      "dependsOn": ["@polycentric/js-rn-sdk#ubrn:android"],
       "cache": false,
       "persistent": true,
     },
     "ios": {
-      "dependsOn": ["@polycentric/react-native#ubrn:ios"],
+      "dependsOn": ["@polycentric/js-rn-sdk#ubrn:ios"],
       "cache": false,
       "persistent": true,
     },

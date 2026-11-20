@@ -10,11 +10,7 @@ import {
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
 import type { Reaction } from '@/src/features/feed/hooks/overlayTypes';
-import {
-  COLLECTION,
-  v2,
-  type PolycentricClient,
-} from '@polycentric/react-native';
+import { COLLECTION, v2, type PolycentricClient } from '@polycentric/js-rn-sdk';
 import { create } from 'zustand';
 
 type ReactionChoice = {

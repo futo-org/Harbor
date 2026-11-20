@@ -2,7 +2,7 @@ import {
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { COLLECTION, type IdentityState } from '@polycentric/react-native';
+import { COLLECTION, type IdentityState } from '@polycentric/js-rn-sdk';
 import { useEffect, useState } from 'react';
 
 export interface IdentityStateHookResult {
