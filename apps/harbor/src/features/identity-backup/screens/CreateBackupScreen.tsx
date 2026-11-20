@@ -41,10 +41,6 @@ async function createNewBackup(client: PolycentricClient) {
 
   await client.sync(SyncStrategy.PARTIAL_PULL);
 
-  if (identity !== client.activeIdentityKey) {
-    throw new Error('Unexpected identity switch');
-  }
-
   const privateKey = await client.identityManager.rotateRecoveryKey();
   const backup = assembleIdentityBackup(client, privateKey);
 
