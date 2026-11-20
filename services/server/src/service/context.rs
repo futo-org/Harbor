@@ -8,7 +8,9 @@ use sea_orm::DatabaseConnection;
 use tonic::Status;
 
 use crate::db::DbConn;
-use crate::service::auth::authenticated_identity;
+use crate::service::auth::{
+    AuthenticatedIdentity, authenticated, authenticated_identity,
+};
 use crate::service::proofs::cache::ProofCache;
 
 pub struct ServiceContext {
@@ -90,6 +92,21 @@ impl ServiceContext {
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
             Identity(auth),
+        )
+        .await
+    }
+
+    /// Create an authenticated request context with read-write database access.
+    pub(crate) async fn authenticted_rw2<T>(
+        &self,
+        request: &tonic::Request<T>,
+    ) -> Result<RequestContext<AuthenticatedIdentity>, Status> {
+        let auth = authenticated(request).ok_or_else(auth_error)?;
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            auth,
         )
         .await
     }
@@ -197,15 +214,25 @@ pub(crate) trait Auth {
     fn identity(&self) -> Option<&str>;
 }
 
-impl Auth for Option<Identity> {
+impl<T: Auth> Auth for Option<T> {
     fn identity(&self) -> Option<&str> {
-        self.as_deref()
+        if let Some(auth) = self {
+            auth.identity()
+        } else {
+            None
+        }
     }
 }
 
 impl Auth for Identity {
     fn identity(&self) -> Option<&str> {
         Some(self.0.as_str())
+    }
+}
+
+impl Auth for AuthenticatedIdentity {
+    fn identity(&self) -> Option<&str> {
+        Some(self.identity.as_str())
     }
 }
 

@@ -43,6 +43,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'developer/setup',
         'developer/project-structure',
+        'developer/examples',
         'developer/feed-paging',
         'developer/declaring-your-application',
         'developer/submitting-events',

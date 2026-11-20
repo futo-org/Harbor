@@ -9,6 +9,7 @@ on:
     paths:
       - docs/**
       - protos/polycentric/v2/**
+      - packages/kt-core/core/src/test/kotlin/examples/**
       - buf.yaml
       - .forgejo/workflows/deploy-docs-production.yml
       - .forgejo/actions/setup-pnpm/**

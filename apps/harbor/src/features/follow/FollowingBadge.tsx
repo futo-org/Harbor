@@ -24,7 +24,7 @@ export function FollowingBadge({
   const glyphSize = Math.round(size * 0.7);
 
   return (
-    <Tooltip text="Following" style={style}>
+    <Tooltip text="Following" containerStyle={style}>
       <View
         style={[
           Atoms.align_center,

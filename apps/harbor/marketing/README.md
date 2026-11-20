@@ -4,6 +4,7 @@ Copy, screenshots and graphics for the App Store and Google Play. Everything is 
 
 ```
 source/listing.mjs      Text, URLs, categories, declarations
+source/review-notes.txt App Review notes
 source/data.mjs         Fictional people, posts, slide headlines
 source/screens.mjs      App screen mockups
 source/render.mjs       Screenshots, feature graphic, icons
@@ -38,7 +39,7 @@ Not available through either API, kept in `listing.mjs` and set in the consoles:
 | Secret | Item |
 | --- | --- |
 | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (.p8), `ASC_REVIEW_*` | `APPLE_ASC`, one field per secret |
-| `PLAY_SERVICE_ACCOUNT_JSON` | `PLAY_SERVICE_ACCOUNT_JSON`, key of `play-console-service-account@futo-polycentric.iam.gserviceaccount.com` |
+| `GOOGLE_APIS_SERVICE_ACCOUNT_JSON` | `PLAY_SERVICE_ACCOUNT_JSON`, key of `play-console-service-account@futo-polycentric.iam.gserviceaccount.com` |
 
 ## Screenshots
 

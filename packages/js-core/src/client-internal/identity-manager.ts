@@ -128,15 +128,11 @@ export class IdentityManager {
     args: PublishArgs & { identityKey: string },
   ): Promise<IdentityUpdate> {
     const { identityKey } = args;
-
-    // Require an active login
     const keyPair = this.client.currentKeyPair;
-    if (!this.client.activeIdentityKey || !keyPair) {
-      throw new Error('Must be logged in to publish identity updates.');
-    }
 
-    if (this.client.activeIdentityKey !== identityKey) {
-      throw new Error('Identity update does not match the active identity.');
+    // Require the active login to match what we expect
+    if (this.client.activeIdentityKey !== identityKey || !keyPair) {
+      throw new Error('Active login does not match update request');
     }
 
     // Check authorization
@@ -203,7 +199,7 @@ export class IdentityManager {
     if (!state) throw new Error('No active identity');
 
     const signingKeys = state.signingKeys.filter(
-      (k) => !bytesEqual(k.key, publicKey.key),
+      (k) => !IdentityManager.keysEqual(k, publicKey),
     );
     const { signedEvent } = await this.publishUpdate({ ...state, signingKeys });
     return signedEvent;

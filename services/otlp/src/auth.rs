@@ -6,7 +6,6 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use polycentric_common::jwt;
-use polycentric_common::models::protos_v2::{KeyType, PublicKey};
 
 use crate::routes::AppState;
 
@@ -14,7 +13,7 @@ use crate::routes::AppState;
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuthenticatedIdentity {
     pub identity: String,
-    /// Hex of the Ed25519 public key that signed the token.
+    /// String representation of a `PublicKey`.
     pub signing_key: String,
 }
 
@@ -60,13 +59,9 @@ pub async fn authenticate(
         .validate(&state.config.allow_hosts, now)
         .map_err(|e| AuthError::Invalid(e.to_string()))?;
 
-    let signer = PublicKey {
-        key_type: KeyType::Ed25519 as i32,
-        key: verified.signed_by.clone(),
-    };
     let authorized = state
         .identities
-        .authorizes(&verified.claims.iss, &signer)
+        .authorizes(&verified.claims.iss, &verified.signed_by)
         .await
         .map_err(AuthError::Unavailable)?;
     if !authorized {
@@ -75,7 +70,7 @@ pub async fn authenticate(
 
     Ok(AuthenticatedIdentity {
         identity: verified.claims.iss,
-        signing_key: hex::encode(verified.signed_by),
+        signing_key: verified.signed_by.to_string(),
     })
 }
 

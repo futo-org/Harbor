@@ -2,6 +2,7 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import tailwindPostcss from '@tailwindcss/postcss';
+import codeRegion from './plugins/code-region/index';
 import grpcApiPlugin from './plugins/grpc-api/index';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -73,6 +74,8 @@ const config: Config = {
           // docs are served under /docs.
           routeBasePath: 'docs',
           sidebarPath: './src/sidebars.ts',
+          // See plugins/code-region.
+          remarkPlugins: [codeRegion],
           editUrl: 'https://code.futo.org/harbor/harbor/_edit/develop/docs/',
         },
         // No blog.

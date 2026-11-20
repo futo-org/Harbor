@@ -13,12 +13,13 @@ use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
 use crate::service::proto::{
-    IsBannedRequest, IsBannedResponse, IsModeratorRequest, IsModeratorResponse,
-    ListBansRequest, ListBansResponse, SetBanStatusRequest,
-    SetBanStatusResponse,
+    DeleteIdentityRequest, DeleteIdentityResponse, IsBannedRequest,
+    IsBannedResponse, IsModeratorRequest, IsModeratorResponse, ListBansRequest,
+    ListBansResponse, SetBanStatusRequest, SetBanStatusResponse,
 };
 
 pub mod common;
+pub mod delete_identity;
 pub mod is_banned;
 pub mod is_moderator;
 pub mod list_bans;
@@ -67,6 +68,16 @@ impl IdentityService for IdentityServiceImpl {
         let ctx = self.ctx.authenticted_ro(&request).await?;
         Ok(Response::new(
             list_bans::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn delete_identity(
+        &self,
+        request: Request<DeleteIdentityRequest>,
+    ) -> Result<Response<DeleteIdentityResponse>, Status> {
+        let ctx = self.ctx.authenticted_rw2(&request).await?;
+        Ok(Response::new(
+            delete_identity::handle(ctx, request.into_inner()).await?,
         ))
     }
 }
