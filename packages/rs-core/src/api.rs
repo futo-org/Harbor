@@ -121,6 +121,7 @@ pub enum Query {
     SubscribeHeads(crate::query::heads::SubscribeHeadsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
     ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
+    GetVerificationClaim(crate::query::verifications::GetVerificationClaimArgs),
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
     ListVerificationVerifies(crate::query::verifications::ListVerificationVerifiesArgs),
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
@@ -527,6 +528,14 @@ impl PolycentricCore {
             }
             Query::ListVerificationClaims(args) => {
                 crate::query::verifications::list_verification_claims(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::GetVerificationClaim(args) => {
+                crate::query::verifications::get_verification_claim(
                     &self.query_client,
                     query_key,
                     args,

@@ -7,8 +7,9 @@ use polycentric_common::models::moderation_label::ModerationLabel;
 use polycentric_common::models::protos_v2::GetPostResponse;
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, EventHint, GetFeedResponse, GetPostThreadResponse,
-    GetProfileResponse, ListNotificationsResponse, ListTargetedVerificationClaimsResponse,
-    ListVerificationClaimsResponse, SearchPostsResponse, content::ContentBody,
+    GetProfileResponse, GetVerificationClaimResponse, ListNotificationsResponse,
+    ListTargetedVerificationClaimsResponse, ListVerificationClaimsResponse, SearchPostsResponse,
+    content::ContentBody,
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -197,6 +198,15 @@ pub fn labels_from_verification_claims_response(response: Vec<u8>) -> Vec<LabelS
 #[uniffi::export]
 pub fn labels_from_targeted_verification_claims_response(response: Vec<u8>) -> Vec<LabelSet> {
     ListTargetedVerificationClaimsResponse::decode(response.as_slice())
+        .map(|r| build_label_sets(&r.event_hints))
+        .unwrap_or_default()
+}
+
+/// Return the labels from the `event_hints` field of a get verification claim
+/// response. These target the claims and their authors' profile events.
+#[uniffi::export]
+pub fn labels_from_get_verification_claim_response(response: Vec<u8>) -> Vec<LabelSet> {
+    GetVerificationClaimResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
         .unwrap_or_default()
 }
@@ -574,6 +584,28 @@ mod tests {
         assert_eq!(sets.len(), 1);
         assert_eq!(sets[0].target, EventKey::from_proto(claim_key).unwrap());
         assert_eq!(sets[0].labels, vec![label("hate", MODERATOR)]);
+    }
+
+    #[test]
+    fn labels_from_get_verification_claim_response_reads_the_hints() {
+        let claim_key = ProtoEventKey {
+            collection: collections::VERIFICATIONS,
+            ..proto_key(AUTHOR, 4)
+        };
+        let response = GetVerificationClaimResponse {
+            candidates: Vec::new(),
+            event_hints: hints(vec![labels_bundle(
+                MODERATOR,
+                claim_key.clone(),
+                &["self-harm"],
+            )]),
+        }
+        .encode_to_vec();
+
+        let sets = labels_from_get_verification_claim_response(response);
+        assert_eq!(sets.len(), 1);
+        assert_eq!(sets[0].target, EventKey::from_proto(claim_key).unwrap());
+        assert_eq!(sets[0].labels, vec![label("self-harm", MODERATOR)]);
     }
 
     #[test]

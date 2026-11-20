@@ -20,6 +20,7 @@ export {
   labelsFromGetProfileResponse,
   labelsFromVerificationClaimsResponse,
   labelsFromTargetedVerificationClaimsResponse,
+  labelsFromGetVerificationClaimResponse,
   PolycentricCore,
   Query,
   QueryStatus,
