@@ -17,7 +17,7 @@ pub async fn handle(
 
     let mut tx = ctx.db.begin().await.map_err(|error| {
         tracing::error!(%error, %identity, "failed to begin transaction to delete identity");
-        return Status::internal("internal server error");
+        Status::internal("internal server error")
     })?;
 
     repository::Mutation::delete_identity(&mut tx, &identity)
