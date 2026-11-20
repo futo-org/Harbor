@@ -779,7 +779,7 @@ async fn query_parsing() {
     }
 }
 
-async fn expect_searched_users(
+pub(crate) async fn expect_searched_users(
     request: SearchUsersRequest,
     expected: Vec<ProfileUpdate>,
 ) {
