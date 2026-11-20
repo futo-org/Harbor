@@ -1,5 +1,4 @@
 import { BackButton } from '@/src/common/components/composites';
-import HoverCard from '@/src/common/components/HoverCard';
 import Icon from '@/src/common/components/Icon';
 import { openProfilePhoto } from '@/src/features/profile/ProfilePhotoScreen';
 import {
@@ -175,7 +174,7 @@ function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
         </Pressable>
         {/* The full key is right above, so no hash fallback here. */}
         {handle.kind === 'alias' || handle.kind === 'alias-pending' ? (
-          <AliasLabel identity={identityKey} alias={handle.text} />
+          <AliasLabel identity={identityKey} />
         ) : null}
         {identityKey ? (
           <ProfileVerifiedPlatforms identityKey={identityKey} />
@@ -289,52 +288,17 @@ function FollowCounts({
   );
 }
 
-/**
- * The claimed alias, greyed until verified, truncated to one line. Built on the shared HoverCard
- * (hover on web, tap on native), which portals + positions the reveal bubble correctly here.
- */
-function AliasLabel({
-  identity,
-  alias,
-}: {
-  identity: string | null;
-  alias: string;
-}) {
-  const { theme } = useTheme();
-
+function AliasLabel({ identity }: { identity: string | null }) {
   return (
-    <HoverCard openDelay={0}>
-      {/* `asChild` so the style array lands on an RN Pressable (which RN-Web
-          resolves) rather than being forwarded as-is to a DOM element. */}
-      <HoverCard.Trigger asChild>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={alias}
-          style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
-        >
-          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="muted" />
-          <IdentityHandle identity={identity} style={{ flexShrink: 1 }} />
-        </Pressable>
-      </HoverCard.Trigger>
-      <HoverCard.Content side="bottom" align="start" animated={false}>
-        <View
-          style={[
-            Atoms.p_sm,
-            {
-              maxWidth: 320,
-              borderRadius: 8,
-            },
-            theme.atoms.box.secondary.bg,
-            theme.atoms.box.secondary.border,
-            Atoms.border,
-          ]}
-        >
-          <Text variant="secondary" color="primary">
-            {alias}
-          </Text>
-        </View>
-      </HoverCard.Content>
-    </HoverCard>
+    <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
+      <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="muted" />
+      <IdentityHandle
+        identity={identity}
+        // No line limit, so a long alias shows in full
+        numberOfLines={0}
+        style={{ flexShrink: 1 }}
+      />
+    </View>
   );
 }
 

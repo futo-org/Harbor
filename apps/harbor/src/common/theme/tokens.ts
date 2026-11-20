@@ -78,12 +78,10 @@ export const Breakpoints = {
 export const ZIndex = {
   // Above static siblings within a screen (sticky headers, etc).
   raised: 1,
-  // Inline (native) tooltip bubble.
-  tooltip: 1000,
   // Modal overlays (the Sheet's web overlay). Above expo-router's
   // transparentModal drawer, which vaul mounts to document.body.
   modal: 9999,
-  // Web tooltip portal — tooltips can open from inside modals.
+  // Web tooltips and popovers, which can open from inside modals.
   tooltipOverlay: 10000,
   // Toasts sit above everything in the app.
   toast: 10100,

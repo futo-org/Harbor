@@ -8,7 +8,7 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
-import { Portal } from '@rn-primitives/portal';
+import { Portal, PortalHost } from '@rn-primitives/portal';
 import { router, useNavigation, usePreventRemove } from 'expo-router';
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -27,6 +28,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewInstance,
   type ViewProps,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -34,6 +36,7 @@ import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Icon, { type IconProps } from '../Icon';
 import Topbar from '../layout/Topbar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SheetPortalHostContext } from './useSheetPortalHost';
 
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 120;
@@ -341,6 +344,12 @@ function NativeSheet({
 
   const [detentIndex, setDetentIndex] = useState(0);
   const [sheetWidth, setSheetWidth] = useState(0);
+  const portalHostName = `sheet-content-${useId()}`;
+  const portalHostRef = useRef<ViewInstance>(null);
+  const portalHost = useMemo(
+    () => ({ name: portalHostName, ref: portalHostRef }),
+    [portalHostName],
+  );
   const { width: windowWidth } = useWindowDimensions();
 
   const sizesToContent = detents.includes('auto');
@@ -399,8 +408,17 @@ function NativeSheet({
         ]}
       >
         <SheetSizesToContentContext.Provider value={sizesToContent}>
-          {children}
+          <SheetPortalHostContext.Provider value={portalHost}>
+            {children}
+          </SheetPortalHostContext.Provider>
         </SheetSizesToContentContext.Provider>
+        <View
+          ref={portalHostRef}
+          pointerEvents="box-none"
+          style={StyleSheet.absoluteFill}
+        >
+          <PortalHost name={portalHostName} />
+        </View>
       </View>
     </TrueSheet>
   );

@@ -1,12 +1,13 @@
 import { Button, CharCount, Text, TextInput } from '@/src/common/components';
-import { InfoTooltip } from '@/src/common/components/InfoTooltip';
+import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
+import { Tooltip } from '@/src/common/components/Tooltip';
 import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
 import {
   useCurrentIdentity,
   useProfileEdit,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, ZIndex } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
   MAX_BIO_LENGTH,
@@ -96,18 +97,13 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
           </View>
 
           <View style={Atoms.gap_xs}>
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.items_center,
-                Atoms.gap_xs,
-                { zIndex: ZIndex.raised },
-              ]}
-            >
+            <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
               <Text variant="small" color="muted">
                 ALIAS
               </Text>
-              <InfoTooltip text="An alias like you@yourdomain.com (or just yourdomain.com) that points to this profile. Your domain must be set up to link back here before it can be saved." />
+              <Tooltip text="An alias like you@yourdomain.com (or just yourdomain.com) that points to this profile. Your domain must be set up to link back here before it can be saved.">
+                <Icon name="infoOutline" size={15} color="muted" />
+              </Tooltip>
             </View>
             <TextInput
               value={edit.aliasDraft}
