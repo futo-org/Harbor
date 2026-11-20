@@ -5,7 +5,11 @@ import type {
   EventRow,
   IEventRepository,
 } from '@polycentric/js-core';
-import { EventRepositoryError, v2 as Proto } from '@polycentric/js-core';
+import {
+  COLLECTION,
+  EventRepositoryError,
+  v2 as Proto,
+} from '@polycentric/js-core';
 import type { SqliteDb } from '../database.js';
 
 interface EventKeyColumns {
@@ -143,6 +147,22 @@ export class EventRepository implements IEventRepository {
       return rows.map(eventKeyFrom);
     } catch (error) {
       throw toEventRepositoryError('get heads', error);
+    }
+  }
+
+  async getProfiles(): Promise<EventRow[]> {
+    try {
+      const rows = await this.db.all<PersistedEvent>(sql`
+        SELECT * FROM events
+        WHERE event_key_collection IN (
+            ${COLLECTION.IDENTITY}, ${COLLECTION.PROFILE}
+          )
+          AND owner = event_key_identity
+      `);
+
+      return rows.map(toEventRow);
+    } catch (error) {
+      throw toEventRepositoryError('get profiles', error);
     }
   }
 }

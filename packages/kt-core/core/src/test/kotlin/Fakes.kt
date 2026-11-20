@@ -281,6 +281,8 @@ class FakeCore(
     fun decodeUpload(pair: Pair<String, ByteArray>): Pair<String, UploadBlobRequest> =
         pair.first to UploadBlobRequest.ADAPTER.decode(pair.second)
 
+    override fun setTraceparent(traceparent: String?) {}
+
     override fun copyEvents(signedEvents: List<ByteArray>) {
         options.copyEventsError?.let { throw it }
         copyEventsCalls.add(signedEvents)
@@ -460,11 +462,6 @@ class FakeCore(
         eventBundlesBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
 
-    override suspend fun registerPushNotifications(
-        serverUrl: String,
-        signedMessageBytes: ByteArray,
-    ) = error("not used by sync tests")
-
     override fun resolveIdentityChain(identity: String): ByteArray = error("not used by sync tests")
 
     override suspend fun resolveReport(
@@ -478,6 +475,11 @@ class FakeCore(
         serverUrl: String,
         requestBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
+
+    override suspend fun setDevicePushSubscriptions(
+        serverUrl: String,
+        requestBytes: ByteArray,
+    ) = error("not used by sync tests")
 
     override suspend fun urlInfo(
         serverUrl: String,

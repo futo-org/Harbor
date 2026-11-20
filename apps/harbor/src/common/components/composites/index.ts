@@ -7,6 +7,7 @@ export * from './CopyButton';
 export * from './EditButton';
 export * from './Fab';
 export * from './FormField';
+export * from './ImageDropOverlay';
 export * from './ImageGrid';
 export * from '../layout/ScreenHeader';
 export * from './SocialButton';

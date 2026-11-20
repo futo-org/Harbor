@@ -57,7 +57,7 @@ jobs:
         with:
           registry: ${{ needs.changes.outputs.registry }}
           tag: ${{ needs.changes.outputs.images_tag }}
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -103,7 +103,7 @@ jobs:
         with:
           registry: ${{ needs.changes.outputs.registry }}
           wasm-artifact: ${{ needs.wasm.result == 'success' }}
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
 
   e2e:

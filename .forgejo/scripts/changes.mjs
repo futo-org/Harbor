@@ -122,7 +122,12 @@ const app = touches(LOCK, 'apps/harbor/', CHARTS);
 const browserExtension = touches(LOCK, 'apps/harbor-browser-extension/');
 // What the web image is built from.
 const web = app || jsSdk || rnSdk || rsCore;
-const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
+const docs = touches(
+  'docs/',
+  'protos/polycentric/v2/',
+  'packages/kt-core/core/src/test/kotlin/examples/',
+  /^buf\.yaml$/,
+);
 const charts = touches(
   CHARTS,
   NODE_ROOT,
@@ -216,6 +221,7 @@ const flags = {
     // Every PR, on staging's web and server images where it builds none.
     web_e2e: pr,
     docs,
+    docs_examples: docs || jsSdk || rnSdk || rsCore,
     docs_preview: docs && pr,
   }),
 };
@@ -298,6 +304,7 @@ flags.build_sdks ||=
   flags.web_image ||
   flags.browser_extension ||
   flags.app_typecheck ||
+  flags.docs_examples ||
   flags.js_sdk;
 flags.build_rn_sdk ||= flags.web_image || flags.browser_extension;
 

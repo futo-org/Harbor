@@ -71,7 +71,7 @@ jobs:
         with:
           registry: ${{ needs.changes.outputs.registry }}
           tag: ${{ needs.changes.outputs.images_tag }}
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
@@ -157,7 +157,7 @@ jobs:
           android-artifact: ${{ needs.android.result == 'success' }}
           ios-artifact: ${{ needs.ios.result == 'success' }}
           rn-sdk: "true"
-          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-user: ${{ env.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
 
   # Store builds only queue on EAS, so their submit jobs follow right away

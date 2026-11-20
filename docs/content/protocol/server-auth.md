@@ -1,4 +1,5 @@
 ---
+
 title: Server Auth
 sidebar_label: Server Auth
 sidebar_position: 4
@@ -49,14 +50,7 @@ authorization: Bearer <jwt>
 
 `createServerJwt` in js-core mints tokens:
 
-```ts
-import { createServerJwt } from '@polycentric/js-core';
-
-const jwt = await createServerJwt({
-  keyPair: client.currentKeyPair,
-  iss: client.activeIdentityKey,
-  aud: 'https://serv1.posts.futo.org',
-});
+```ts file=docs/examples/src/server-auth.ts#create-jwt
 ```
 
 The app does not call this directly. `PolycentricClient` registers a token
