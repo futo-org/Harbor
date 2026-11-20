@@ -91,10 +91,10 @@ impl Serializable for PublicKey {
     }
 }
 
-impl ToString for PublicKey {
+impl fmt::Display for PublicKey {
     /// Encode this public key into its string representation.
-    fn to_string(&self) -> String {
-        format!("{}_{}", self.key_type, hex::encode(self.key.as_slice()))
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}_{}", self.key_type, hex::encode(self.key.as_slice()))
     }
 }
 
