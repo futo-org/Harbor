@@ -2,6 +2,7 @@ import { Text } from '@/src/common/components';
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import type { ClaimVerificationStatus } from '../utils/claim-status';
@@ -11,8 +12,9 @@ import { resolveClaimTitle } from '../utils/render';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
-import { labelNames } from '@/src/features/moderation/LabelPill';
+import { LabelPill } from '@/src/features/moderation/LabelPill';
 import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
+import { PostWarnOverlay } from '@/src/features/post/PostWarnOverlay';
 import { StatusChip } from './toolbar/StatusChip';
 import Icon from '@/src/common/components/Icon';
 
@@ -29,6 +31,10 @@ export function ClaimListItem({
   // Platform claims chip as their platform (brand logo + name).
   const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
   const { hasWarnContent, warnLabels } = usePostModeration(claim.labels);
+  const [warnDismissed, setWarnDismissed] = useState(false);
+  const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
+  const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
+  const isHidden = hasWarnContent && !warnDismissed;
 
   // TODO: Make this more sophisticated
   const isVerified = (claim.status?.verifiedCount || 0) > 0;
@@ -85,15 +91,26 @@ export function ClaimListItem({
           </View>
           <ClaimMenu claim={claim} icon="more" iconSize={16} />
         </View>
-        {/* Temporary warning until the final claim warning UI */}
-        {hasWarnContent && (
-          <Text variant="small" color="danger">
-            Content warning: {labelNames(warnLabels)}
-          </Text>
+        {isHidden ? (
+          <PostWarnOverlay
+            labels={warnLabels}
+            authorIdentity={claim.identity}
+            onDismiss={handleWarnDismiss}
+          />
+        ) : (
+          <>
+            <Text variant="body" selectable={false}>
+              {title}
+            </Text>
+            {claim.labels && claim.labels.length > 0 ? (
+              <LabelPill
+                labels={claim.labels}
+                action={hasWarnContent ? 'Hide' : undefined}
+                onPress={handleWarnRestore}
+              />
+            ) : null}
+          </>
         )}
-        <Text variant="body" selectable={false}>
-          {title}
-        </Text>
         <View
           style={[
             Atoms.flex_row,
@@ -102,12 +119,15 @@ export function ClaimListItem({
             Atoms.flex_wrap,
           ]}
         >
-          <ClaimTypeChip
-            name={platform?.name ?? claim.schemaName}
-            icon={claimType?.icon ?? 'verify'}
-            logo={platform?.logo}
-            tint={platform?.tint ?? claimType?.tint}
-          />
+          {/* A custom schema's name is claim text, hidden with the rest. */}
+          {isHidden ? null : (
+            <ClaimTypeChip
+              name={platform?.name ?? claim.schemaName}
+              icon={claimType?.icon ?? 'verify'}
+              logo={platform?.logo}
+              tint={platform?.tint ?? claimType?.tint}
+            />
+          )}
           <StatusChip
             verifiedCount={claim.status?.verifiedCount}
             totalCount={claim.status?.totalCount}

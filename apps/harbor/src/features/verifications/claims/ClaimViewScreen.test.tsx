@@ -135,7 +135,10 @@ jest.mock('@/src/features/post/hooks/usePostModeration', () => ({
   usePostModeration: () => ({ hasWarnContent: false, warnLabels: [] }),
 }));
 jest.mock('@/src/features/moderation/LabelPill', () => ({
-  labelNames: () => '',
+  LabelPill: () => null,
+}));
+jest.mock('@/src/features/post/PostWarnOverlay', () => ({
+  PostWarnOverlay: () => null,
 }));
 // Its import chain loads the Polycentric client, which kills the Jest worker
 jest.mock('./ClaimImageViewerScreen', () => ({
