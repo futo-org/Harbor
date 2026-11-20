@@ -491,6 +491,30 @@ CREATE TABLE public.default_follow_suggestion (
 
 
 --
+-- Name: deleted_event; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deleted_event (
+    id bigint NOT NULL,
+    collection smallint NOT NULL,
+    identity character varying NOT NULL,
+    public_key_type smallint NOT NULL,
+    public_key bytea NOT NULL,
+    sequence bigint NOT NULL,
+    content_digest_type integer,
+    content_digest_bytes bytea,
+    signature bytea NOT NULL,
+    previous_signature bytea NOT NULL,
+    previous_root bytea NOT NULL,
+    event_bytes bytea NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    synced_at timestamp with time zone NOT NULL,
+    application_id integer,
+    content_type smallint
+);
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -934,6 +958,14 @@ ALTER TABLE ONLY public.content_verification_verify
 
 ALTER TABLE ONLY public.default_follow_suggestion
     ADD CONSTRAINT default_follow_suggestion_pkey PRIMARY KEY (identity);
+
+
+--
+-- Name: deleted_event deleted_event_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deleted_event
+    ADD CONSTRAINT deleted_event_pkey PRIMARY KEY (id);
 
 
 --

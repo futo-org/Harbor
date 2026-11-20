@@ -81,6 +81,7 @@ pub mod content_verification_claim;
 pub mod content_verification_target;
 pub mod content_verification_verify;
 pub mod default_follow_suggestion;
+pub mod deleted_event;
 pub mod event;
 pub mod follow;
 pub mod gravity;
