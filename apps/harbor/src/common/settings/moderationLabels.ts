@@ -4,11 +4,11 @@ import {
 } from '@polycentric/react-native';
 
 /**
- * The moderation label vocabulary, mirroring `ModerationLabel` in rs-common.
+ * The moderation label vocabulary, mirroring `ModerationLabel` in rs-primitives.
  *
  * The uniffi bindings flatten that enum to plain strings, so the union is
  * spelled out here to give the client compile-time keys (see
- * `ModerationPreferences`). Match `rs-common` if it is ever updated.
+ * `ModerationPreferences`). Match `rs-primitives` if it is ever updated.
  */
 export type ModerationLabel =
   | 'hate'

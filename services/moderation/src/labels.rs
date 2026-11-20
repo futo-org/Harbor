@@ -1,7 +1,7 @@
 //! Map an Azure Content Safety response into label events
 
-use polycentric_common::models::moderation_label::ModerationLabel;
-use polycentric_common::models::protos_v2::ReportCategory;
+use polycentric_primitives::models::moderation_label::ModerationLabel;
+use polycentric_primitives::models::protos_v2::ReportCategory;
 use serde_json::Value;
 
 /// Top of Azure's default (FourSeverityLevels) severity scale.

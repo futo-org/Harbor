@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse,
     ListNotificationsRequest, ListNotificationsResponse,
     SetDevicePushSubscriptionsRequest, SetDevicePushSubscriptionsResponse,

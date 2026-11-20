@@ -63,7 +63,7 @@ run(
     '--config',
     `${pkg}ubrn.config.yaml`,
     'polycentric_core',
-    'polycentric_common',
+    'polycentric_primitives',
   ],
   { cwd: pkg },
 );

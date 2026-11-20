@@ -1,5 +1,5 @@
 [package]
-name = "polycentric-common"
+name = "polycentric-primitives"
 version = "0.0.0"
 edition = "2024"
 description = "Common rust code for the Polycentric protocol"

@@ -11,7 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 entity = { path = "../entity" }
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 prost.workspace = true
 sea-orm = { workspace = true, features = ["macros", "with-chrono", "with-json"] }
 sea-orm-migration = { workspace = true, features = ["cli", "sqlx-postgres", "runtime-tokio" ] }

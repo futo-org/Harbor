@@ -14,7 +14,7 @@
 //! # writes the result to `suggest_follow_response.txt`.
 //! ```
 
-use polycentric_common::models::protos_v2::*;
+use polycentric_primitives::models::protos_v2::*;
 use prost::Message;
 
 fn main() {

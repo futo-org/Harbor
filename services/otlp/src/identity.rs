@@ -4,13 +4,13 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
+use polycentric_core::query::channel;
+use polycentric_core::query::transport::GrpcChannel;
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::{
     Content, EventBundle, Identity, ListEventsFilters, ListEventsRequest, PublicKey,
     content::ContentBody, event_sync_service_client::EventSyncServiceClient,
 };
-use polycentric_core::query::channel;
-use polycentric_core::query::transport::GrpcChannel;
 use prost::Message;
 use tracing::warn;
 
@@ -117,7 +117,7 @@ pub fn first_content(bundles: Vec<EventBundle>) -> Option<Content> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::SerializedContent;
+    use polycentric_primitives::models::protos_v2::SerializedContent;
 
     fn bundle(marker: u8) -> EventBundle {
         let content = Content {

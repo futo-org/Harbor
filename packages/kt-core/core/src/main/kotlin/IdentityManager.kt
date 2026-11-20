@@ -203,10 +203,10 @@ class IdentityManager(
      * Fetches and validates the identity state of any identity from one
      * server (intended for polling while pairing). Hydrates the identity's
      * full event chain from the server into the core, then resolves it via
-     * the core's rs-common chain logic — which validates content-digest
+     * the core's rs-primitives chain logic — which validates content-digest
      * match, vector-clock/collection integrity, and signer authorization
      * across the whole chain, rather than trusting a single event
-     * (js-core #200: "always use rs-common for identity chain logic").
+     * (js-core #200: "always use rs-primitives for identity chain logic").
      */
     suspend fun fetchIdentityState(
         identityKey: String,
@@ -250,7 +250,7 @@ class IdentityManager(
 
     /**
      * Resolve an identity's latest validated state from the core's LOCAL
-     * store via rs-common chain validation (js-core #200). Returns null when
+     * store via rs-primitives chain validation (js-core #200). Returns null when
      * no valid chain is known locally — callers hydrate the events first
      * (e.g. [fetchIdentityState] or a sync).
      */

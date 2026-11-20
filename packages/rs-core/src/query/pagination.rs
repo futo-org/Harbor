@@ -4,8 +4,8 @@
 use std::collections::BTreeMap;
 
 use base64::prelude::*;
-use polycentric_common::error::CoreError;
-use polycentric_common::models::protos_v2::PageInfo;
+use polycentric_primitives::error::CoreError;
+use polycentric_primitives::models::protos_v2::PageInfo;
 use serde::{Deserialize, Serialize};
 
 use crate::logging::log_warn;

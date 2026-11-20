@@ -23,8 +23,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Result};
-use polycentric_common::models::collections::{IDENTITY, PROFILE};
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections::{IDENTITY, PROFILE};
+use polycentric_primitives::models::protos_v2::{
     content::ContentBody, Content, Event, Identity, ProfileUpdate, PublicKey, RevocationBound,
     SignedEvent,
 };

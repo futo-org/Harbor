@@ -4,7 +4,7 @@ use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     AttributedTo, AttributedToFeedItem, EventBundle, EventHint, GetAttributedToFeedRequest,
     GetAttributedToFeedResponse, GetAttributedToStatsRequest, GetAttributedToStatsResponse,
     GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
@@ -895,7 +895,7 @@ mod tests {
     use crate::query::event::merge::{bundle_created_at, event_dedup_key};
 
     use super::*;
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         Event, EventBundle, EventHint, EventKey, EventMetadata, GetFeedResponse, Link, PageInfo,
         PublicKey, SignedEvent,
     };

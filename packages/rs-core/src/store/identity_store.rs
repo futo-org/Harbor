@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use polycentric_common::{error::CoreError, models::identity::IdentityChain};
+use polycentric_primitives::{error::CoreError, models::identity::IdentityChain};
 
 use super::{content_store::ContentStore, event_store::EventStore};
 use crate::identity::resolve_identity_chain;

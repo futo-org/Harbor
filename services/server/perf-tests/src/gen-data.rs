@@ -16,7 +16,7 @@ use perf_tests::{
     Client, current_timestamp, optional_random_string, public_key_of,
     random_string, random_strings,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     EventKey, Identity, Post, PostReply, ProfileUpdate, ReportCategory,
 };
 use tokio::task::JoinSet;

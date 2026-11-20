@@ -382,7 +382,7 @@ export class LoginManager {
 
     const contentBytes = Proto.Content.toBinary(content);
 
-    // TODO: standardize this with an rs-common API
+    // TODO: standardize this with an rs-primitives API
     const identityKey = bytesToHex(
       sha256(Proto.Identity.toBinary(identity)),
       32,

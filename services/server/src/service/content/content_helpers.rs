@@ -1,4 +1,4 @@
-use polycentric_common::models::validate::Validate;
+use polycentric_primitives::models::validate::Validate;
 use tonic::Status;
 
 use crate::service::proto::{Blob, ContentDigest, UploadBlobRequest};

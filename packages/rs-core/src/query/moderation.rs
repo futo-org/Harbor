@@ -23,7 +23,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use base64::prelude::*;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     IsBannedRequest, IsModeratorRequest, ListBansRequest, ListBansResponse, ListReportsRequest,
     PageParams, identity_service_client::IdentityServiceClient,
     moderation_service_client::ModerationServiceClient,

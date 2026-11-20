@@ -4,7 +4,7 @@ use crate::{
     expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
     render,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Content, ContentDigest, Event, Notification, NotificationKind, PublicKey, PushTarget,
 };
 use prost::Message;
@@ -343,7 +343,7 @@ fn ticket_errors(response: &ExpoPushResponse) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use crate::testing::*;
-    use polycentric_common::models::protos_v2::{EventBundle, Notification, NotificationKind};
+    use polycentric_primitives::models::protos_v2::{EventBundle, Notification, NotificationKind};
     use sea_orm::{DbBackend, MockDatabase, MockExecResult};
 
     /// A `Notification` of `kind` triggered by `trigger`, as the worker

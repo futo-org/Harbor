@@ -4,7 +4,7 @@
 
 // You must call this once
 uniffi::setup_scaffolding!();
-polycentric_common::uniffi_reexport_scaffolding!();
+polycentric_primitives::uniffi_reexport_scaffolding!();
 
 // Nothing here references it, but the cdylib must export its allocator and
 // panic hook for the ubrn wasm player to call into.

@@ -1,4 +1,4 @@
-use polycentric_common::{
+use polycentric_primitives::{
     error::CoreError,
     models::{
         Serializable, collections,
@@ -415,10 +415,10 @@ impl PolycentricClient {
     }
 
     /// Canonically-ordered signatures in `(identity, collection)`.
-    /// Delegates to [`polycentric_common::merkle::canonical_signatures`]
+    /// Delegates to [`polycentric_primitives::merkle::canonical_signatures`]
     /// so client and server agree on the ordering.
     fn canonical_signatures(&self, identity: &str, collection: i32) -> Vec<Vec<u8>> {
-        polycentric_common::merkle::canonical_signatures(
+        polycentric_primitives::merkle::canonical_signatures(
             self.event_store
                 .by_identity_and_collection(identity, collection)
                 .map(|(_, se)| (se.event_bytes.as_slice(), se.signature.as_slice())),
@@ -428,7 +428,7 @@ impl PolycentricClient {
     /// Merkle root over canonically-ordered signatures in `(identity, collection)`.
     pub fn previous_root(&self, identity: &str, collection: i32) -> Vec<u8> {
         let leaves = self.canonical_signatures(identity, collection);
-        polycentric_common::merkle::merkle_tree_hash(&leaves)
+        polycentric_primitives::merkle::merkle_tree_hash(&leaves)
             .map(|h| h.to_vec())
             .unwrap_or_default()
     }
@@ -686,7 +686,7 @@ impl PolycentricClient {
                             key.sequence,
                         ))
                     })?;
-                polycentric_common::merkle::verify_proof(
+                polycentric_primitives::merkle::verify_proof(
                     &signed_event.signature,
                     proof.leaf_index,
                     target,
@@ -717,7 +717,7 @@ impl PolycentricClient {
 mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         ContentDigestType, EventKey as ProtoEventKey, EventProofTarget, Identity, KeyType, Post,
         RevocationBound, content::ContentBody as Body,
     };
@@ -1009,7 +1009,7 @@ mod tests {
 
     #[test]
     fn copied_bundles_are_locally_readable_with_avatar() {
-        use polycentric_common::models::protos_v2::{
+        use polycentric_primitives::models::protos_v2::{
             Blob, Content, Image, ImageSet, ProfileUpdate, SerializedContent,
         };
 
@@ -1653,7 +1653,7 @@ mod tests {
 
     #[test]
     fn blocked_identities_follow_block_and_unblock_events() {
-        use polycentric_common::models::protos_v2::{Block, Delete, SerializedContent};
+        use polycentric_primitives::models::protos_v2::{Block, Delete, SerializedContent};
 
         fn graph_bundle(
             signer: &Keypair,
@@ -1708,7 +1708,7 @@ mod tests {
 
     #[test]
     fn blocked_identities_pick_up_content_copied_after_its_event() {
-        use polycentric_common::models::protos_v2::Block;
+        use polycentric_primitives::models::protos_v2::Block;
 
         let mut client = PolycentricClient::new();
         let a = keypair(1);

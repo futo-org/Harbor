@@ -79,7 +79,7 @@ export ANDROID_NDK_HOME=...   # NDK r26+
    `core/src/main/jniLibs/` via cargo-ndk.
 2. `cargoHostBuild` + `uniffiGenerate`: builds a host cdylib and runs `tools/uniffi-bindgen`
    into `core/build/generated/uniffi/`. Packages come from each crate's `uniffi.toml`:
-   `org.futo.polycentric.ffi` (rs-core) and `org.futo.polycentric.ffi.common` (rs-common).
+   `org.futo.polycentric.ffi` (rs-core) and `org.futo.polycentric.ffi.common` (rs-primitives).
 3. Wire proto generation, then the normal Kotlin/AAR build.
 
 To rebuild only the Kotlin side, pass `-PskipRust=true`. This reuses the existing

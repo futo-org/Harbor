@@ -1,5 +1,5 @@
 use ::entity::{ban, content, event, identity_audit_log, moderator};
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;

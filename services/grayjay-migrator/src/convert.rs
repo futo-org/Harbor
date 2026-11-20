@@ -25,9 +25,9 @@
 
 use std::collections::HashMap;
 
-use polycentric_common::models::collections;
-use polycentric_common::models::protos::Post as LegacyPost;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos::Post as LegacyPost;
+use polycentric_primitives::models::protos_v2::{
     AttributedTo, AttributedToReaction, Content, EventKey, Follow, Link, Post, PostReply,
     ProfileUpdate, Reaction, attributed_to, content::ContentBody,
 };
@@ -51,7 +51,7 @@ const OPINION_LIKE: &[u8] = &[1];
 const OPINION_DISLIKE: &[u8] = &[2];
 const OPINION_NEUTRAL: &[u8] = &[3];
 
-// Limits (bytes) from rs-common's Post and Link validators, which the server
+// Limits (bytes) from rs-primitives's Post and Link validators, which the server
 // enforces in put_events.
 const POST_TEXT_MAX: usize = 2000;
 const POST_TOPICS_MAX: usize = 10;
@@ -633,7 +633,7 @@ mod tests {
 
     #[test]
     fn finalized_post_passes_server_validation() {
-        use polycentric_common::models::validate::Validate;
+        use polycentric_primitives::models::validate::Validate;
         let plan = PostPlan {
             text: "a".repeat(3000),
             topics: vec![

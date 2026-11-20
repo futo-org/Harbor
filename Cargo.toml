@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "packages/rs-common",
+    "packages/rs-primitives",
     "packages/rs-core",
     "services/server",
     "services/server/entity",
@@ -30,7 +30,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # Internal crates
-polycentric-common = { path = "packages/rs-common", version = "0.0.0" }
+polycentric-primitives = { path = "packages/rs-primitives", version = "0.0.0" }
 
 # Async runtime / service frameworks
 tokio = { version = "1.50.0", default-features = false }

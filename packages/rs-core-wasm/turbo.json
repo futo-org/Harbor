@@ -14,9 +14,9 @@
         "$TURBO_ROOT$/packages/rs-core/src/**",
         "$TURBO_ROOT$/packages/rs-core/Cargo.toml",
         "$TURBO_ROOT$/packages/rs-core/build.rs",
-        "$TURBO_ROOT$/packages/rs-common/src/**",
-        "$TURBO_ROOT$/packages/rs-common/Cargo.toml",
-        "$TURBO_ROOT$/packages/rs-common/build.rs",
+        "$TURBO_ROOT$/packages/rs-primitives/src/**",
+        "$TURBO_ROOT$/packages/rs-primitives/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-primitives/build.rs",
         "$TURBO_ROOT$/Cargo.toml",
         "$TURBO_ROOT$/Cargo.lock"
       ],

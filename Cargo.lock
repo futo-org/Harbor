@@ -1160,7 +1160,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "futures-util",
- "polycentric-common",
+ "polycentric-primitives",
  "tracing",
 ]
 
@@ -1904,8 +1904,8 @@ dependencies = [
  "hex",
  "indicatif",
  "moderation-entity",
- "polycentric-common",
  "polycentric-core",
+ "polycentric-primitives",
  "prost",
  "reqwest",
  "sea-orm",
@@ -2348,7 +2348,7 @@ dependencies = [
  "getrandom 0.4.3",
  "hex",
  "opentelemetry-proto",
- "polycentric-common",
+ "polycentric-primitives",
  "prost",
  "rand 0.10.3",
  "reqwest",
@@ -2712,8 +2712,8 @@ dependencies = [
  "moderation-entity",
  "moderation-migration",
  "opentelemetry",
- "polycentric-common",
  "polycentric-core",
+ "polycentric-primitives",
  "prost",
  "reqwest",
  "sea-orm",
@@ -2979,8 +2979,8 @@ dependencies = [
  "mockito",
  "opentelemetry",
  "opentelemetry-proto",
- "polycentric-common",
  "polycentric-core",
+ "polycentric-primitives",
  "prost",
  "reqwest",
  "serde",
@@ -3063,7 +3063,7 @@ version = "0.0.0"
 dependencies = [
  "ed25519-dalek",
  "hex",
- "polycentric-common",
+ "polycentric-primitives",
  "prost",
  "rand 0.10.3",
  "serde_json",
@@ -3141,26 +3141,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polycentric-common"
-version = "0.0.0"
-dependencies = [
- "base64 0.23.1",
- "ed25519-dalek",
- "hex",
- "prost",
- "prost-build",
- "regex",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "thiserror",
- "tonic",
- "tonic-prost",
- "tonic-prost-build",
- "uniffi",
-]
-
-[[package]]
 name = "polycentric-core"
 version = "0.0.0"
 dependencies = [
@@ -3173,7 +3153,7 @@ dependencies = [
  "getrandom 0.4.3",
  "hex",
  "js-sys",
- "polycentric-common",
+ "polycentric-primitives",
  "prost",
  "prost-build",
  "serde",
@@ -3198,11 +3178,31 @@ dependencies = [
  "ed25519-dalek",
  "getrandom 0.4.3",
  "hex",
- "polycentric-common",
  "polycentric-core",
+ "polycentric-primitives",
  "prost",
  "sha2 0.11.1",
  "tokio",
+]
+
+[[package]]
+name = "polycentric-primitives"
+version = "0.0.0"
+dependencies = [
+ "base64 0.23.1",
+ "ed25519-dalek",
+ "hex",
+ "prost",
+ "prost-build",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "thiserror",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "uniffi",
 ]
 
 [[package]]
@@ -3418,8 +3418,8 @@ dependencies = [
  "hex",
  "mockito",
  "opentelemetry",
- "polycentric-common",
  "polycentric-core",
+ "polycentric-primitives",
  "prost",
  "push-notifications-entity",
  "push-notifications-migration",
@@ -4251,7 +4251,7 @@ dependencies = [
  "log",
  "mockito",
  "opentelemetry",
- "polycentric-common",
+ "polycentric-primitives",
  "prost",
  "prost-types",
  "rdkafka",
@@ -4279,7 +4279,7 @@ name = "server-migration"
 version = "0.1.0"
 dependencies = [
  "entity",
- "polycentric-common",
+ "polycentric-primitives",
  "prost",
  "sea-orm",
  "sea-orm-migration",

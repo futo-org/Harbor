@@ -3,9 +3,9 @@
 
 use crate::query::event::key::EventKey;
 use crate::query::event::merge::EventDedupKey;
-use polycentric_common::models::moderation_label::ModerationLabel;
-use polycentric_common::models::protos_v2::GetPostResponse;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::moderation_label::ModerationLabel;
+use polycentric_primitives::models::protos_v2::GetPostResponse;
+use polycentric_primitives::models::protos_v2::{
     Content, Event, EventBundle, EventHint, GetFeedResponse, GetPostThreadResponse,
     GetProfileResponse, ListNotificationsResponse, SearchPostsResponse, content::ContentBody,
 };
@@ -184,8 +184,8 @@ pub fn labels_from_get_profile_response(response: Vec<u8>) -> Vec<LabelSet> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::collections;
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::collections;
+    use polycentric_primitives::models::protos_v2::{
         EventKey as ProtoEventKey, Labels, Notification, PublicKey as ProtoPublicKey, SearchResult,
         SerializedContent, SignedEvent,
     };
@@ -249,7 +249,7 @@ mod tests {
     fn post_bundle(identity: &str) -> EventBundle {
         let content = Content {
             content_body: Some(ContentBody::Post(
-                polycentric_common::models::protos_v2::Post {
+                polycentric_primitives::models::protos_v2::Post {
                     text: "hello".to_string(),
                     ..Default::default()
                 },

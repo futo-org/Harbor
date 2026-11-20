@@ -1,7 +1,9 @@
-//! Wraps the rs-common identity validation code to work with database rows.
+//! Wraps the rs-primitives identity validation code to work with database rows.
 //! Use this when doing anything with identities.
 
-use polycentric_common::models::identity::{IdentityCandidate, resolve_latest};
+use polycentric_primitives::models::identity::{
+    IdentityCandidate, resolve_latest,
+};
 
 use crate::data::EventWithContentRow;
 use crate::service::proto::Identity;

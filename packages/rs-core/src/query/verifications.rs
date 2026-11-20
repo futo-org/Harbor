@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     ContentDigest, ContentDigestType, EventBundle, EventHint,
     ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse,
     ListVerificationClaimsRequest, ListVerificationClaimsResponse, ListVerificationTargetsRequest,

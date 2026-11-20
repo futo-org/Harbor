@@ -6,10 +6,10 @@ use ed25519_dalek::{Signer, SigningKey};
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::content::ContentBody;
-use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::content::ContentBody;
+use polycentric_primitives::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_primitives::models::protos_v2::{
     Application, Block, Content, ContentDigest, ContentDigestType, Delete,
     Event, EventBundle, EventKey, FieldDef, FieldKind, Follow, Identity,
     KeyType, Labels, Post, PostReply, ProfileUpdate, PublicKey,

@@ -3,7 +3,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::codegen::BoxStream;
 use tonic::{Request, Status};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     ListHeadsResponse, SubscribeHeadsRequest,
 };
 

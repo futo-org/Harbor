@@ -1,6 +1,6 @@
 //! Building the identity document, its wrapped content, and the identity string.
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     content::ContentBody, Content, ContentDigest, ContentDigestType, Identity, PublicKey,
 };
 use prost::Message;

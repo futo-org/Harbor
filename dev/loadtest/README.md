@@ -197,7 +197,7 @@ uPlot build under `internal/web/static/vendor` is excluded.
 
 Unit tests cover:
 
-- identity derivation, the genesis signature and the Merkle root, against vectors computed independently from the protocol rules in `packages/rs-common`;
+- identity derivation, the genesis signature and the Merkle root, against vectors computed independently from the protocol rules in `packages/rs-primitives`;
 - JWT minting and sequence chaining;
 - the arrival scheduler: rate accuracy, ramps, drop-on-cap and holds;
 - gRPC-Web framing and error classes;

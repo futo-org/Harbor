@@ -134,11 +134,11 @@ jobs:
         with:
           cache: packages-lint
       - name: Format
-        run: cargo fmt --check -p polycentric-core -p polycentric-common
+        run: cargo fmt --check -p polycentric-core -p polycentric-primitives
       - name: Clippy
         if: ${{ !cancelled() }}
         run: |
-          cargo clippy -p polycentric-common
+          cargo clippy -p polycentric-primitives
           cargo clippy -p polycentric-core -- -D warnings
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -392,7 +392,7 @@ jobs:
         with:
           cache: packages-tests
       - name: Tests
-        run: cargo nextest run -P ci -p polycentric-core -p polycentric-common
+        run: cargo nextest run -P ci -p polycentric-core -p polycentric-primitives
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true

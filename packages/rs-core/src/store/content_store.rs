@@ -1,4 +1,4 @@
-use polycentric_common::models::protos_v2::{Content, ContentDigest};
+use polycentric_primitives::models::protos_v2::{Content, ContentDigest};
 use prost::Message;
 use std::collections::{BTreeMap, btree_map::Entry};
 

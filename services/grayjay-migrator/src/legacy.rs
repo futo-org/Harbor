@@ -8,7 +8,7 @@
 //! we only need to enumerate systems and pull each system's raw events.
 
 use futures::TryStreamExt;
-use polycentric_common::models::protos::{
+use polycentric_primitives::models::protos::{
     Event as LegacyEventProto, Pointer as LegacyPointer, PublicKey as LegacyPublicKey,
     SignedEvent as LegacySignedEvent,
 };
@@ -622,8 +622,8 @@ fn decode_event(raw: &[u8]) -> Option<LegacyEvent> {
 /// ed25519 systems are supported; the caller skips anything else.
 pub fn to_v2_public_key(
     system: &LegacySystem,
-) -> Option<polycentric_common::models::protos_v2::PublicKey> {
-    use polycentric_common::models::protos_v2::{KeyType, PublicKey};
+) -> Option<polycentric_primitives::models::protos_v2::PublicKey> {
+    use polycentric_primitives::models::protos_v2::{KeyType, PublicKey};
     if system.key_type != 1 {
         return None;
     }

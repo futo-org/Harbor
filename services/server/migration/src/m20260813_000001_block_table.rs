@@ -1,5 +1,5 @@
 use entity::{block, content, content_block, content_delete, event};
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::sea_query::{IntoCondition, SelectStatement};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, EntityName, EntityTrait, RelationDef,

@@ -1,5 +1,5 @@
 use ::entity::{content, content_report, event, report_resolution};
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::prelude::{DateTimeUtc, DateTimeWithTimeZone};
 use sea_orm::sea_query::{
     Expr, ExprTrait, Func, InsertStatement, OnConflict, Order, PgFunc,

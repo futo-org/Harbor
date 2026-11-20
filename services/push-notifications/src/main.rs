@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use common_kafka::{BorrowedMessage, Consumer, Headers, Message, Offset};
-use polycentric_common::models::protos_v2::Notification;
+use polycentric_primitives::models::protos_v2::Notification;
 use prost::Message as _;
 use tonic::transport::Server;
 

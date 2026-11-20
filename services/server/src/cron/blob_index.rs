@@ -5,7 +5,9 @@ use std::time::Instant;
 
 use chrono::{DateTime, Utc};
 use entity::blob_index;
-use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
+use polycentric_primitives::models::protos_v2::{
+    ContentDigest, ContentDigestType,
+};
 use sea_orm::ActiveValue;
 use tokio_stream::StreamExt;
 

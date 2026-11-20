@@ -1,5 +1,5 @@
-use polycentric_common::models::protos_v2::SortPostsBy;
-use polycentric_common::models::{collections, content_types};
+use polycentric_primitives::models::protos_v2::SortPostsBy;
+use polycentric_primitives::models::{collections, content_types};
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,

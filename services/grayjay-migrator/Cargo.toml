@@ -18,7 +18,7 @@ path = "src/bin/migrate.rs"
 [dependencies]
 # Workspace
 polycentric-core = { path = "../../packages/rs-core" }
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 common-dotenv = { path = "../common/dotenv" }
 common-telemetry = { path = "../common/telemetry" }
 grayjay-migrator-entity = { path = "./entity" }

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use polycentric_common::models::protos_v2::Identity;
+use polycentric_primitives::models::protos_v2::Identity;
 use sea_orm::DbErr;
 use tokio::sync::RwLock;
 

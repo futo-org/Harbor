@@ -5,21 +5,21 @@ use std::time::SystemTime;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::jwt::ServerJwtClaims;
-use polycentric_common::merkle;
-use polycentric_common::models::protos_v2::attributed_to::To;
-use polycentric_common::models::protos_v2::content::ContentBody;
-use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
-use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
-use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
-use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
-use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
-use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
-use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
-use polycentric_common::models::protos_v2::profile_service_client::ProfileServiceClient;
-use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
-use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
-use polycentric_common::models::protos_v2::*;
+use polycentric_primitives::jwt::ServerJwtClaims;
+use polycentric_primitives::merkle;
+use polycentric_primitives::models::protos_v2::attributed_to::To;
+use polycentric_primitives::models::protos_v2::content::ContentBody;
+use polycentric_primitives::models::protos_v2::content_service_client::ContentServiceClient;
+use polycentric_primitives::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_primitives::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_primitives::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_primitives::models::protos_v2::identity_service_client::IdentityServiceClient;
+use polycentric_primitives::models::protos_v2::notification_service_client::NotificationServiceClient;
+use polycentric_primitives::models::protos_v2::pairing_service_client::PairingServiceClient;
+use polycentric_primitives::models::protos_v2::profile_service_client::ProfileServiceClient;
+use polycentric_primitives::models::protos_v2::search_service_client::SearchServiceClient;
+use polycentric_primitives::models::protos_v2::verifications_service_client::VerificationsServiceClient;
+use polycentric_primitives::models::protos_v2::*;
 use prost::Message;
 use rand::distr::Distribution;
 use rand::distr::{Alphabetic, SampleString};
@@ -1304,7 +1304,7 @@ pub fn make_verification_claim_bundle(
     bundle(sign(signing_key, event), content_bytes)
 }
 
-/// RFC 6962 leaf hash: `SHA256(0x00 || data)`. Mirrors `polycentric_common::merkle`.
+/// RFC 6962 leaf hash: `SHA256(0x00 || data)`. Mirrors `polycentric_primitives::merkle`.
 pub fn leaf_hash(data: &[u8]) -> Vec<u8> {
     let mut h = Sha256::new();
     h.update([0x00u8]);

@@ -9,7 +9,7 @@ version      = "0.1.0"
 # Workspace
 common-dotenv = { path = "../common/dotenv" }
 common-telemetry = { path = "../common/telemetry" }
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 polycentric-core = { path = "../../packages/rs-core" }
 
 # 3rd Party

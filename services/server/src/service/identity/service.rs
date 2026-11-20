@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::{DbErr, RuntimeErr};
 use tonic::Status;
 
@@ -196,7 +196,7 @@ where
 /// 49 |     async fn set_ban_status(
 ///    |     ^^^^^
 ///    |
-///    = note: could not prove `Pin<Box<{async block@services/server/src/service/identity/rpc.rs:49:5: 49:10}>>: CoerceUnsized<Pin<Box<dyn Future<Output = std::result::Result<tonic::Response<polycentric_common::models::protos_v2::SetBanStatusResponse>, tonic::Status>> + Send>>>`
+///    = note: could not prove `Pin<Box<{async block@services/server/src/service/identity/rpc.rs:49:5: 49:10}>>: CoerceUnsized<Pin<Box<dyn Future<Output = std::result::Result<tonic::Response<polycentric_primitives::models::protos_v2::SetBanStatusResponse>, tonic::Status>> + Send>>>`
 /// ```
 macro_rules! retry_deadlocks_inline {
     ($run: ident) => {{
@@ -333,7 +333,7 @@ pub async fn cached_identity_content<C: Connection>(
     db: &mut C,
     proof_cache: &ProofCache,
     identity: &str,
-) -> Result<polycentric_common::models::protos_v2::Identity, Status> {
+) -> Result<polycentric_primitives::models::protos_v2::Identity, Status> {
     if let Some(content) = proof_cache.identity_content(identity).await {
         return Ok(content);
     }

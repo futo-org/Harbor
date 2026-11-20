@@ -7,7 +7,7 @@ bindings.
 
 ```mermaid
 flowchart TD
-  common[rs-common] --> core[rs-core]
+  primitives[rs-primitives] --> core[rs-core]
   core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
@@ -25,7 +25,7 @@ flowchart TD
 
 Arrows point from a dependency to its dependants. Outside `packages/`,
 `apps/harbor` uses `react-native`, `services/verifier-bot` uses `js-node`,
-Android apps use `kt-core`, and the Rust services use `rs-common` or `rs-core`.
+Android apps use `kt-core`, and the Rust services use `rs-primitives` or `rs-core`.
 
 Each package's README covers its internals. The
 [Project Structure](../docs/content/developer/project-structure.md) page
@@ -52,7 +52,7 @@ summarizes the function of each package.
 
 ## Generated code
 
-- Protobuf types are generated from `protos/`: `prost`/`tonic` in `rs-common`,
+- Protobuf types are generated from `protos/`: `prost`/`tonic` in `rs-primitives`,
   `protobuf-ts` in `js-core`, and Wire in `kt-core`.
 - uniffi bindings for `rs-core` are generated at build time and not
   committed: into `rs-core-wasm/src/generated/` and into `react-native`

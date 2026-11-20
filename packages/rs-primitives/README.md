@@ -1,4 +1,4 @@
-# rs-common (`polycentric-common`)
+# rs-primitives (`polycentric-primitives`)
 
 Shared Rust code for the Polycentric protocol, for both clients and servers. Includes the protobuf
 data types, validation, identity chains, merkle proofs, signatures, and mention parsing.

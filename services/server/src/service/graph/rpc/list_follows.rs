@@ -155,7 +155,7 @@ mod tests {
 
     use chrono::DateTime;
     use entity::{content, event};
-    use polycentric_common::models::collections;
+    use polycentric_primitives::models::collections;
     use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockRow};

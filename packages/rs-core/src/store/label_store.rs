@@ -30,7 +30,7 @@ impl LabelStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::{collections, protos_v2::KeyType};
+    use polycentric_primitives::models::{collections, protos_v2::KeyType};
 
     /// Build a sample event key for a feed event or label event.
     fn key(identity_byte: &str, is_label: bool, signer_byte: u8, sequence: u64) -> EventKey {

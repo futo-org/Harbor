@@ -1,7 +1,7 @@
 //! Tests for the graph service.
 
 use crate::*;
-use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_primitives::models::protos_v2::graph_service_client::GraphServiceClient;
 use prost::Message;
 
 #[tokio::test]

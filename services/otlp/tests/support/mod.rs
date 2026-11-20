@@ -11,8 +11,8 @@ use ed25519_dalek::{Signer, SigningKey};
 use otlp_service::config::{Config, Zulip};
 use otlp_service::identity::PolycentricIdentities;
 use otlp_service::routes::{AppState, build_routes};
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::{
     Content, EventBundle, GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, GetReactionsRequest, GetReactionsResponse, Identity,
     KeyType, ListEventsRequest, ListEventsResponse, ListHeadsRequest, ListHeadsResponse, PublicKey,

@@ -3,8 +3,8 @@
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
-use polycentric_common::jwt;
-use polycentric_common::models::protos_v2::PublicKey;
+use polycentric_primitives::jwt;
+use polycentric_primitives::models::protos_v2::PublicKey;
 use tonic::Status;
 
 use crate::db::DbConn;
@@ -165,7 +165,7 @@ mod tests {
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use ed25519_dalek::{Signer, SigningKey};
-    use polycentric_common::models::protos_v2::KeyType;
+    use polycentric_primitives::models::protos_v2::KeyType;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase};
     use tower::ServiceExt;
 
@@ -291,14 +291,14 @@ mod tests {
         use crate::service::proto::{Content, Identity};
         use chrono::DateTime;
         use entity::{content, event};
-        use polycentric_common::models::collections;
+        use polycentric_primitives::models::collections;
         use prost::Message;
 
         // Identity document that doesn't know the minting key yet, as
         // during pairing.
         let identity_content = Identity {
             rotation_keys: vec![
-                polycentric_common::models::protos_v2::PublicKey {
+                polycentric_primitives::models::protos_v2::PublicKey {
                     key_type: KeyType::Ed25519 as i32,
                     key: vec![0xbb; 32],
                 },

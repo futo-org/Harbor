@@ -146,7 +146,7 @@ output, including Expo's QR code. The verifier bot and scraper are left out,
 since the stack already runs them.
 
 The wasm build of the Rust core is built once when `mise js` starts and is
-not watched. After changing `packages/rs-core` or `packages/rs-common`, rebuild
+not watched. After changing `packages/rs-core` or `packages/rs-primitives`, rebuild
 it with `pnpm --filter @polycentric/rs-core-wasm build` (or restart its task in
 turbo). The Android and iOS dev clients compile the Rust core into the app, so
 a Rust change reaches them through `pnpm run:android` / `pnpm run:ios`.

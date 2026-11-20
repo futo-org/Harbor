@@ -10,8 +10,8 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use common_kafka::{BorrowedMessage, FutureRecord, Message};
 use entity::notification;
-use polycentric_common::mentions::extract_mentioned_identities;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::mentions::extract_mentioned_identities;
+use polycentric_primitives::models::protos_v2::{
     Content, Event, EventBundle, EventKey, Notification, NotificationKind,
     content::ContentBody,
 };
@@ -584,7 +584,7 @@ impl From<&EventKey> for KeyColumns {
 mod tests {
     use std::collections::BTreeMap;
 
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
         VerificationTarget, VerificationVerify,
     };

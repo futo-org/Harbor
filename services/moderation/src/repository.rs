@@ -2,8 +2,8 @@ use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
 use moderation_entity::{created_content_model, created_event_model, moderator_model};
-use polycentric_common::merkle;
-use polycentric_common::models::protos_v2::{EventBundle, SerializedContent, SignedEvent};
+use polycentric_primitives::merkle;
+use polycentric_primitives::models::protos_v2::{EventBundle, SerializedContent, SignedEvent};
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::NotSet,

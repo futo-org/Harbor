@@ -8,10 +8,10 @@ use std::process::exit;
 use std::time::{Duration, Instant};
 use std::{env, panic};
 
-use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
-use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
-use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_primitives::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_primitives::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_primitives::models::protos_v2::{
     EventKey, GetExploreFeedRequest, GetFollowingFeedRequest,
     GetIdentityFeedRequest, GetPostThreadRequest, GetReactionsRequest,
     ListEventsFilters, ListEventsRequest, ListFollowersRequest,

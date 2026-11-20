@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Content, Event, EventBundle, EventHint, PageInfo, PageParams, SearchPostsRequest,
     SearchPostsResponse, SearchResult, SearchUsersRequest, SearchUsersResponse, SortPostsBy,
     SortUsersBy, content, search_service_client::SearchServiceClient,
@@ -411,7 +411,7 @@ pub fn search_users(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         Event, EventKey, ProfileUpdate, PublicKey, SerializedContent, SignedEvent,
         content::ContentBody,
     };

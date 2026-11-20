@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Event, EventBundle, GetReactionsRequest, GetReactionsResponse, PageParams,
     event_sync_service_client::EventSyncServiceClient,
 };

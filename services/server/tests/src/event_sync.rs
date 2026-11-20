@@ -2,7 +2,7 @@
 
 use crate::feeds::test_get_post;
 use crate::*;
-use polycentric_common::models::protos_v2::attributed_to::To;
+use polycentric_primitives::models::protos_v2::attributed_to::To;
 
 #[tokio::test]
 async fn put_then_list_round_trip() {

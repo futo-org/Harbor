@@ -8,7 +8,7 @@
 //! (and freezing the UI) we emit at most one aggregated line per pass rather
 //! than one per dropped item.
 
-use polycentric_common::models::protos_v2::{EventBundle, EventHint};
+use polycentric_primitives::models::protos_v2::{EventBundle, EventHint};
 
 use crate::client::PolycentricClient;
 

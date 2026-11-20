@@ -1,5 +1,5 @@
 use crate::manager::PushService;
-use polycentric_common::models::protos_v2::{PublicKey, PushTarget};
+use polycentric_primitives::models::protos_v2::{PublicKey, PushTarget};
 use push_notifications_entity::push_subscription_model as PushSubscriptionModel;
 use sea_orm::sea_query::{Expr, ExprTrait};
 use sea_orm::*;

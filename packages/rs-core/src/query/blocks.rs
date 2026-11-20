@@ -4,7 +4,7 @@
 //! a block event the client knows about.
 
 use crate::query::event::merge::{EventDedupKey, event_dedup_key};
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Content, Event, EventBundle, EventHint, EventKey, content::ContentBody,
 };
 use prost::Message;
@@ -141,7 +141,7 @@ fn log_dropped(kind: &str, count: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         Post, PostReply, PublicKey, Repost, SerializedContent, SignedEvent,
     };
 

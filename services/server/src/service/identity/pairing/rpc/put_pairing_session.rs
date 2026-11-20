@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, TimeDelta, Utc};
 use entity::pairing_session;
-use polycentric_common::error::CoreError;
+use polycentric_primitives::error::CoreError;
 use sea_orm::ActiveValue::Set;
 use sea_orm::entity::prelude::DateTimeUtc;
 use sha2::{Digest, Sha256};

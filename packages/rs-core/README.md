@@ -7,7 +7,7 @@ compiled to native libraries (iOS/Android/desktop) and to WASM (web/Node), and
 exposed to TypeScript and Kotlin through [uniffi](https://mozilla.github.io/uniffi-rs/).
 
 Protocol types (protobuf models, signing, identity chains, validation rules) live
-in `packages/rs-common` (`polycentric-common`), which is shared with the
+in `packages/rs-primitives` (`polycentric-primitives`), which is shared with the
 server/services.
 
 The bindings and the higher-level clients (`js-core`, `kt-core`) manage

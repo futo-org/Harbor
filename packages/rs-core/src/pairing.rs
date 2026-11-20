@@ -1,12 +1,12 @@
 //! Helper functions for identity pairing APIs
 
-use polycentric_common::error::CoreError as CommonError;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::error::CoreError as CommonError;
+use polycentric_primitives::models::protos_v2::{
     Content, GetPairingSessionRequest, IssuerPairingState, PairingSessionDigest,
     PairingSessionState, PublicKey, content::ContentBody,
     pairing_service_client::PairingServiceClient,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     JoinPairingSessionRequest, PutPairingSessionRequest, SignedIssuerState,
 };
 use prost::Message;

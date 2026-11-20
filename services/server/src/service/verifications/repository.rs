@@ -4,7 +4,7 @@ use ::entity::{
     content, content_verification_claim, content_verification_target,
     content_verification_verify, event,
 };
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::sea_query::extension::postgres::PgBinOper;
 use sea_orm::sea_query::{Alias, Expr, Query as SeaQuery};
 use sea_orm::*;

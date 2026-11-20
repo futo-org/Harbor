@@ -10,7 +10,8 @@
 
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::models::{
+use polycentric_core::query::channel;
+use polycentric_primitives::models::{
     collections,
     protos_v2::{
         Blob, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, Identity,
@@ -21,7 +22,6 @@ use polycentric_common::models::{
         event_sync_service_client::EventSyncServiceClient,
     },
 };
-use polycentric_core::query::channel;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use std::{

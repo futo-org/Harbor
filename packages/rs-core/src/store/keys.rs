@@ -1,5 +1,5 @@
-use polycentric_common::error::CoreError;
-use polycentric_common::models::protos_v2::{self, Event, SignedEvent};
+use polycentric_primitives::error::CoreError;
+use polycentric_primitives::models::protos_v2::{self, Event, SignedEvent};
 use prost::Message;
 
 /// A unique identifier for an event.

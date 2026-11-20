@@ -4,7 +4,7 @@ use crate::service::stats::service::{EventStats, include_stats};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use entity::{content, event};
-use polycentric_common::models::protos_v2 as proto;
+use polycentric_primitives::models::protos_v2 as proto;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tonic::Status;

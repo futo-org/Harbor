@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use polycentric_common::merkle;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::merkle;
+use polycentric_primitives::models::protos_v2::{
     ContentDigest, Event, EventKey, Identity, PublicKey, SignedEvent, VectorClock,
 };
 use prost::Message;

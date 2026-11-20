@@ -173,7 +173,7 @@ jest.mock('@polycentric/react-native', () => {
     '../../../../../packages/js-core/src/proto/v2',
   );
 
-  // Stands in for the rs-common-generated vocabulary, which is only reachable
+  // Stands in for the rs-primitives-generated vocabulary, which is only reachable
   // through native uniffi init.
   const labels = [
     'hate',

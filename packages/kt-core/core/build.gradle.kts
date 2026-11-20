@@ -70,10 +70,10 @@ android {
     packaging {
         // JNA ships per-ABI dispatch libs; keep first occurrence.
         jniLibs.pickFirsts += listOf("**/libjnidispatch.so")
-        // rs-common also builds as a cdylib and cargo-ndk copies it, but
+        // rs-primitives also builds as a cdylib and cargo-ndk copies it, but
         // its code is statically linked into libpolycentric_core.so
         // (readelf -d shows no NEEDED entry for it) — don't ship it.
-        jniLibs.excludes += listOf("**/libpolycentric_common.so")
+        jniLibs.excludes += listOf("**/libpolycentric_primitives.so")
     }
 
     publishing {
@@ -148,7 +148,7 @@ val cargoNdkBuild =
             "polycentric-core",
         )
         inputs.dir(File(repoRoot, "packages/rs-core/src"))
-        inputs.dir(File(repoRoot, "packages/rs-common/src"))
+        inputs.dir(File(repoRoot, "packages/rs-primitives/src"))
         outputs.dir(jniLibsDir)
     }
 
@@ -156,7 +156,7 @@ val cargoNdkBuild =
 // uniffi-bindgen reads exported symbols from a HOST cdylib (any target
 // works; host is fastest), then emits Kotlin into build/generated/uniffi.
 // Package/name mapping comes from the uniffi.toml in each crate's root
-// (rs-core and rs-common). Don't pass --config: it replaces every crate's
+// (rs-core and rs-primitives). Don't pass --config: it replaces every crate's
 // config, putting both crates in one package with clashing declarations.
 val cargoHostBuild =
     tasks.register<Exec>("cargoHostBuild") {

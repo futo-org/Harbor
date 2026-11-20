@@ -15,7 +15,7 @@ use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::Object;
 use futures_util::stream::Stream;
-use polycentric_common::models::protos_v2::ContentDigest;
+use polycentric_primitives::models::protos_v2::ContentDigest;
 
 // Types reexported to make the users not have to import the AWS S3 sdk.
 pub use aws_sdk_s3::primitives::DateTime;

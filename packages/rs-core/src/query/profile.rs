@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::{
     EventHint, GetProfileRequest, GetProfileResponse, profile_service_client::ProfileServiceClient,
 };
 use prost::Message;

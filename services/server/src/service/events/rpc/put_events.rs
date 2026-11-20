@@ -7,9 +7,9 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
 use entity::event;
-use polycentric_common::models::protos_v2::Blob;
-use polycentric_common::models::validate::{Validate, ValidationError};
-use polycentric_common::models::{
+use polycentric_primitives::models::protos_v2::Blob;
+use polycentric_primitives::models::validate::{Validate, ValidationError};
+use polycentric_primitives::models::{
     block, collections, content_types, delete, event_key, follow,
 };
 use prost::Message;

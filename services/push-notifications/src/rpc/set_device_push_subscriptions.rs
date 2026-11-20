@@ -3,8 +3,8 @@
 
 use crate::context::Context;
 use crate::manager::PushService;
-use polycentric_common::jwt::verify_jwt;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::jwt::verify_jwt;
+use polycentric_primitives::models::protos_v2::{
     AuthenticatedPushSource, PublicKey, SetDevicePushSubscriptionsRequest,
     SetDevicePushSubscriptionsResponse,
 };

@@ -4,7 +4,7 @@
 use crate::context::Context;
 use crate::manager::NotificationManager;
 use crate::polycentric::PolycentricClient;
-use polycentric_common::models::{
+use polycentric_primitives::models::{
     collections,
     protos_v2::{
         Content, Event, EventBundle, EventKey, GetAttributedToReactionCountsRequest,

@@ -5,8 +5,8 @@ use ::entity::{
     content_verification_claim, content_verification_target,
     content_verification_verify,
 };
-use polycentric_common::models::protos_v2::content::ContentBody;
-use polycentric_common::models::protos_v2::{Content, ImageSet};
+use polycentric_primitives::models::protos_v2::content::ContentBody;
+use polycentric_primitives::models::protos_v2::{Content, ImageSet};
 use prost::Message;
 use sea_orm::prelude::Json;
 use sea_orm::{ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};

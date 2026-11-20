@@ -1,6 +1,6 @@
 use tonic::Status;
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     EventKey, ListHeadsRequest, ListHeadsResponse,
 };
 

@@ -4,12 +4,12 @@ pub mod merge;
 
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_primitives::models::protos_v2::{
     EventBundle, EventHint, GetPostRequest, GetPostResponse, ListEventsFilters, ListEventsRequest,
     ListEventsResponse, event_sync_service_client::EventSyncServiceClient,
 };
-use polycentric_common::models::{collections, protos_v2};
+use polycentric_primitives::models::{collections, protos_v2};
 use prost::Message;
 
 use crate::client::PolycentricClient;

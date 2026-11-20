@@ -10,7 +10,7 @@ const BATCH_SIZE: i64 = 100_000;
 /// Matches the Explore feed, sorted by latest.
 const CREATE_INDEX: &str = "CREATE INDEX CONCURRENTLY IF NOT EXISTS events_feed_posts_idx ON events (created_at DESC, id DESC) WHERE collection = 2 AND content_type = 2";
 
-/// Sets `content_type` (see `content_types` in `polycentric_common`) based on
+/// Sets `content_type` (see `content_types` in `polycentric_primitives`) based on
 /// which `content_*` table has the event's content. Most common types first.
 const FILL_COLUMN: &str = "UPDATE events SET content_type = CASE
     WHEN EXISTS (SELECT 1 FROM content_reaction t WHERE t.content_id = content.id) THEN 6

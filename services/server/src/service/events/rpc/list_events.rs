@@ -2,7 +2,7 @@
 //! the query produced, **including tombstoned ones** — callers
 //! (sync clients, debug tools) need the unfiltered stream.
 
-use polycentric_common::models::protos_v2::EventBundle;
+use polycentric_primitives::models::protos_v2::EventBundle;
 use sea_orm::DbErr;
 use tonic::Status;
 

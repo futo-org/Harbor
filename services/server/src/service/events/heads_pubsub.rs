@@ -6,8 +6,8 @@ use std::hash::{BuildHasher, RandomState};
 use std::sync::{Arc, OnceLock, PoisonError, RwLock};
 
 use common_valkey::{Clients, Message as PubSubMessage};
-use polycentric_common::models::heads::Heads;
-use polycentric_common::models::protos_v2::{EventKey, ListHeadsResponse};
+use polycentric_primitives::models::heads::Heads;
+use polycentric_primitives::models::protos_v2::{EventKey, ListHeadsResponse};
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tokio::sync::broadcast::error::RecvError;

@@ -10,14 +10,14 @@
 //! update and take the account over.
 
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
+use polycentric_core::sync as core_sync;
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::{
     Application, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, Identity,
     KeyType, PublicKey, SerializedContent, ServerList, SignedEvent, VectorClock,
     content::ContentBody,
 };
-use polycentric_common::models::validate::Validate;
-use polycentric_core::sync as core_sync;
+use polycentric_primitives::models::validate::Validate;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ fn grayjay_application() -> Application {
 /// RFC 6962 Merkle tree head, maintained **incrementally** so `previous_root`
 /// is O(log n) per event instead of rebuilding the whole tree each time
 /// (which made authoring a heavy chain O(n^2)). Matches
-/// `polycentric_common::merkle::merkle_tree_hash` (verified in tests).
+/// `polycentric_primitives::merkle::merkle_tree_hash` (verified in tests).
 #[derive(Default)]
 struct IncrementalMerkle {
     /// Perfect-subtree peaks (size, hash), strictly decreasing size front→back.
@@ -447,7 +447,7 @@ fn decode_hex_32(s: &str) -> Result<[u8; 32], String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::merkle::merkle_tree_hash;
+    use polycentric_primitives::merkle::merkle_tree_hash;
 
     #[test]
     fn identity_document_carries_configured_servers() {
@@ -507,7 +507,7 @@ mod tests {
     /// server checks: per-collection sequences, `previous_signature` linking to
     /// the prior event, `previous_root` = Merkle over prior signatures, and
     /// content digests matching. Critically, it verifies our key assumption that
-    /// authoring order equals rs-common's *canonical* order.
+    /// authoring order equals rs-primitives's *canonical* order.
     #[test]
     #[allow(clippy::type_complexity)]
     fn incremental_chain_matches_protocol() {
@@ -567,11 +567,11 @@ mod tests {
                 );
                 sigs.push(sig.clone());
             }
-            // Authoring order must equal rs-common's canonical order.
+            // Authoring order must equal rs-primitives's canonical order.
             let items = events
                 .iter()
                 .map(|(bytes, sig, _)| (bytes.as_slice(), sig.as_slice()));
-            let canonical = polycentric_common::merkle::canonical_signatures(items);
+            let canonical = polycentric_primitives::merkle::canonical_signatures(items);
             assert_eq!(canonical, sigs, "authoring order must be canonical order");
         }
     }

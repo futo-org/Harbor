@@ -476,10 +476,10 @@ jobs:
           mkdir -p "$CARGO_CONFIG_DIR"
           printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > "$CARGO_CONFIG_DIR/config.toml"
           # Specify the version and registry for packaging and publishing
-          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
-          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-primitives/Cargo.toml packages/rs-core/Cargo.toml
+          sed -i "s#^polycentric-primitives = .*#polycentric-primitives = { path = \"packages/rs-primitives\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
           mkdir -p target/package
-          cargo package --registry harbor -p polycentric-common -p polycentric-core --no-verify --allow-dirty
+          cargo package --registry harbor -p polycentric-primitives -p polycentric-core --no-verify --allow-dirty
       - uses: forgejo/upload-artifact@v4
         with:
           name: rs-core-crates
@@ -495,7 +495,7 @@ jobs:
           CARGO_CONFIG_DIR="${CARGO_HOME:-$HOME/.cargo}"
           mkdir -p "$CARGO_CONFIG_DIR"
           printf '[registries.harbor]\ntoken = "Bearer %s"\n' "$HARBOR_CI_TOKEN" > "$CARGO_CONFIG_DIR/credentials.toml"
-          for crate in polycentric-common polycentric-core; do
+          for crate in polycentric-primitives polycentric-core; do
             # Skip crates already published for this version. Note that the crates.io convention is
             # to index the first few characters before the crate name.
             if curl --max-time 10 -sf "${INDEX_URL}po/ly/${crate}" | grep -q "\"vers\":\"${VERSION}\""; then

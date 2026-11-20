@@ -1,5 +1,5 @@
 use entity::{content, content_delete, content_post, content_reaction, event};
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::{ColumnTrait, EntityTrait, RelationDef};
 
 use sea_orm_migration::prelude::*;

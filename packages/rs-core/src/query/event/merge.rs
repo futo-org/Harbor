@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::{cmp, mem};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Event, EventBundle, EventHint, EventMetadata, ReactionTally,
 };
 use prost::Message;

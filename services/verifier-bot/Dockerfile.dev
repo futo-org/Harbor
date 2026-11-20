@@ -33,10 +33,10 @@ ARG WASM_BINDGEN_CLI_VERSION=0.2.130
 RUN cargo install wasm-bindgen-cli@${WASM_BINDGEN_CLI_VERSION}
 
 # Cargo workspace: every workspace member must be present for the workspace to
-# resolve, even though only rs-core (+ rs-common) is compiled to wasm here.
+# resolve, even though only rs-core (+ rs-primitives) is compiled to wasm here.
 COPY Cargo.toml Cargo.lock ./
 COPY protos protos
-COPY packages/rs-common packages/rs-common
+COPY packages/rs-primitives packages/rs-primitives
 COPY packages/rs-core packages/rs-core
 COPY services services
 COPY tools tools

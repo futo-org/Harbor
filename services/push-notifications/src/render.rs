@@ -1,7 +1,7 @@
 //! Renders a notification into the kind-specific parts of a push message.
 
-use polycentric_common::mentions::mentions_to_plain_text;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::mentions::mentions_to_plain_text;
+use polycentric_primitives::models::protos_v2::{
     Content, EventKey, NotificationKind, content::ContentBody,
 };
 
@@ -131,7 +131,7 @@ fn claim_url(claim_key: Option<&EventKey>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::{
+    use polycentric_primitives::models::protos_v2::{
         Post, PostReply, PublicKey, Reaction, Repost, VerificationTarget, VerificationVerify,
     };
 

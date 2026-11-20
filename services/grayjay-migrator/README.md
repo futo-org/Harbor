@@ -192,7 +192,7 @@ fetches from the migration host directly, and authoring reads whatever
 preview falling back to just the URL.
 
 Every event is stamped `application = Grayjay / com.futo.platformplayer / v1`
-and checked with the same `rs-common` validators the server runs in
+and checked with the same `rs-primitives` validators the server runs in
 `put_events` before it is persisted, so a rule the server would reject fails
 `re-sign` rather than `push`. To fit those rules (limits are in bytes): posts
 with empty text are skipped, text is cut at 2000, topics with a URL over 200

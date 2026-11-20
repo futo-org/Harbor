@@ -7,7 +7,7 @@ use std::time::Duration;
 use entity::{
     blob_index, content, content_blob, content_delete, content_image, event,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Blob, ContentDigest, Image, ImageSet,
 };
 use sea_orm::entity::prelude::DateTimeWithTimeZone;

@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use common_kafka::{BorrowedMessage, Message};
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     AttributedToReaction, Content, Event, EventBundle, EventKey,
     attributed_to::To, content::ContentBody,
 };

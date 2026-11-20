@@ -5,7 +5,7 @@ use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use polycentric_common::jwt;
+use polycentric_primitives::jwt;
 
 use crate::routes::AppState;
 

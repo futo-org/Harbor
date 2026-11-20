@@ -1,12 +1,12 @@
 //! End-to-end: build an identity chain with the tool, then validate every
 //! event against the real `polycentric-core` validator.
 
-use polycentric_common::models::collections::{IDENTITY, PROFILE};
-use polycentric_common::models::protos_v2::{
-    content::ContentBody, Content, EventBundle, SerializedContent,
-};
 use polycentric_core::client::PolycentricClient;
 use polycentric_identity::{IdentityStore, KeyKind};
+use polycentric_primitives::models::collections::{IDENTITY, PROFILE};
+use polycentric_primitives::models::protos_v2::{
+    content::ContentBody, Content, EventBundle, SerializedContent,
+};
 use prost::Message;
 
 #[test]
@@ -65,7 +65,10 @@ fn generated_identity_chain_validates_against_core() {
         panic!("expected a profile update");
     };
     assert_eq!(update.name.as_deref(), Some("Test User"));
-    assert_eq!(store.profile().unwrap().unwrap().name.as_deref(), Some("Test User"));
+    assert_eq!(
+        store.profile().unwrap().unwrap().name.as_deref(),
+        Some("Test User")
+    );
 
     // The revoked signing key must be gone from the current document, which
     // must also record the revocation.

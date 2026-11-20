@@ -1,7 +1,7 @@
 //! Ed25519 keypairs and the roles they play in an identity.
 
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::models::protos_v2::{KeyType, PublicKey};
+use polycentric_primitives::models::protos_v2::{KeyType, PublicKey};
 
 /// Length of an Ed25519 private key, in bytes.
 pub const PRIVATE_KEY_LEN: usize = 32;

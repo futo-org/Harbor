@@ -1,5 +1,5 @@
 use entity::{content, content_delete, content_follow, event, follow};
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use sea_orm::RelationDef;
 use sea_orm::sea_query::InsertStatement;
 use sea_orm::{ColumnTrait, EntityTrait};

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use polycentric_common::models::protos_v2::EventMetadata;
+use polycentric_primitives::models::protos_v2::EventMetadata;
 
 use super::keys::EventKey;
 

@@ -41,7 +41,7 @@ core, a storage driver, and a blob store.
 
 ```mermaid
 flowchart TD
-  common[rs-common] --> core[rs-core]
+  primitives[rs-primitives] --> core[rs-core]
   core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
   core -- "uniffi (JSI)" --> rn[react-native]
   core -- "uniffi (Kotlin)" --> kt[kt-core]
@@ -62,7 +62,7 @@ Arrows point from a dependency to its dependants.
 | Package                        | Description                                                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |
-| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
+| `packages/rs-primitives`       | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
 | `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
 | `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
 | `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |

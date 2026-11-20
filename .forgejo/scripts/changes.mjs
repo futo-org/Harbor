@@ -78,7 +78,7 @@ const ktCore = touches(
   /^Cargo\.lock$/,
   'packages/kt-core/',
   'packages/rs-core/',
-  'packages/rs-common/',
+  'packages/rs-primitives/',
   'protos/',
 );
 const server = touches(CARGO, SERVER_STACK, CHARTS);

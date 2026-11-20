@@ -1,8 +1,8 @@
 //! Build EventProofs and attach them to outgoing bundles whose signer
 //! has been revoked.
 
-use polycentric_common::merkle;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::merkle;
+use polycentric_primitives::models::protos_v2::{
     Event, EventBundle, EventProof, EventProofTarget, PublicKey,
 };
 use prost::Message;

@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
-use polycentric_common::models::protos_v2::event_sync_service_server::{
+use polycentric_primitives::models::protos_v2::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, GetReactionsRequest,
     GetReactionsResponse, ListEventsRequest, ListEventsResponse,

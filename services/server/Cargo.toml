@@ -28,7 +28,7 @@ base64.workspace = true
 chrono.workspace = true
 hex.workspace = true
 log = { version = "0.4.34", default-features = false }
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 rdkafka.workspace = true

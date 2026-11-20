@@ -14,7 +14,7 @@ name = "polycentric-identity"
 path = "src/main.rs"
 
 [dependencies]
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 polycentric-core = { path = "../../packages/rs-core" }
 ed25519-dalek.workspace = true
 prost.workspace = true

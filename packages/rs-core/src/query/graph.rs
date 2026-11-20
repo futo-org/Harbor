@@ -5,7 +5,7 @@ use std::cmp::Reverse;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     Event, FollowSuggestion, ListFollowersRequest, ListFollowingRequest, ListFollowsResponse,
     PageParams, SuggestFollowRequest, SuggestFollowResponse,
     graph_service_client::GraphServiceClient,
@@ -372,7 +372,7 @@ pub fn suggest_follow(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::{EventBundle, EventKey, PageInfo, SignedEvent};
+    use polycentric_primitives::models::protos_v2::{EventBundle, EventKey, PageInfo, SignedEvent};
 
     fn client() -> Arc<Mutex<PolycentricClient>> {
         Arc::new(Mutex::new(PolycentricClient::new()))

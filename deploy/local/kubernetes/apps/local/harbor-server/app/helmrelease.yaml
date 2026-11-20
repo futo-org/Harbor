@@ -53,7 +53,7 @@ spec:
       - name: HARBOR_TRACES_URL
         value: http://victoria-traces.o11y.svc:10428/insert/opentelemetry
       - name: RUST_LOG
-        value: info,server=debug,common_kafka=debug,common_object_store=debug,polycentric_common=debug
+        value: info,server=debug,common_kafka=debug,common_object_store=debug,polycentric_primitives=debug
     envFrom:
       - secretRef:
           name: harbor-server-valkey

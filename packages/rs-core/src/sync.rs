@@ -1,10 +1,10 @@
-use polycentric_common::models::{
+use polycentric_primitives::models::{
     collections,
     protos_v2::{PutEventsRequest, PutEventsResponse},
 };
 use std::collections::{BTreeMap, HashMap, btree_map::Entry};
 
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     EventBundle, EventKey, ListHeadsRequest, PublicKey,
     event_sync_service_client::EventSyncServiceClient,
 };
@@ -190,7 +190,7 @@ pub fn map_event_push_issues(
 mod tests {
     use super::*;
     use crate::query::event::key::PublicKey as FfiPublicKey;
-    use polycentric_common::models::protos_v2::PutEventError;
+    use polycentric_primitives::models::protos_v2::PutEventError;
 
     fn key(sequence: u64) -> FfiEventKey {
         FfiEventKey {

@@ -11,7 +11,7 @@ pnpm build   # ubrn build wasm2, then tsc + tools/finish-node-build.mjs
 pnpm clean   # delete dist/ and src/generated/wasm/
 ```
 
-Turbo caches the build on rs-core/rs-common sources and this package's own
+Turbo caches the build on rs-core/rs-primitives sources and this package's own
 inputs (`turbo.json`). `src/generated/` and `dist/` are not tracked in git.
 
 ## Docs

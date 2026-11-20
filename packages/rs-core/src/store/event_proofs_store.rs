@@ -1,5 +1,5 @@
 use super::keys::EventKey;
-use polycentric_common::models::protos_v2::EventProof;
+use polycentric_primitives::models::protos_v2::EventProof;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Default)]

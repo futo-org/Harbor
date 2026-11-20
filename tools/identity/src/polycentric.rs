@@ -1,8 +1,8 @@
 //! Publishing the identity event chain to a Polycentric server.
 
 use anyhow::{anyhow, Result};
-use polycentric_common::models::protos_v2::{EventBundle, PutEventsRequest, SerializedContent};
 use polycentric_core::api::PolycentricCore;
+use polycentric_primitives::models::protos_v2::{EventBundle, PutEventsRequest, SerializedContent};
 use prost::Message;
 
 use crate::store::ExportedEvent;

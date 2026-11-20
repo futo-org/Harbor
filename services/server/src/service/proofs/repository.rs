@@ -1,13 +1,13 @@
 //! Database access for EventProof generation.
 
 use entity::event;
-use polycentric_common::merkle;
+use polycentric_primitives::merkle;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 
 use crate::db::Connection;
 
 /// Canonically-ordered signatures in `(identity, collection)`. Delegates
-/// to [`polycentric_common::merkle::canonical_signatures`] so client and
+/// to [`polycentric_primitives::merkle::canonical_signatures`] so client and
 /// server agree on the ordering.
 #[tracing::instrument(skip_all)]
 pub async fn canonical_signatures<C: Connection>(

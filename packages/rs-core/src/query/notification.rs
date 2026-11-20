@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use futures::StreamExt;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     EventBundle, ListNotificationsRequest, ListNotificationsResponse, Notification,
     SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse,
     notification_service_client::NotificationServiceClient,

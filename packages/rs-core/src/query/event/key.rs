@@ -2,7 +2,7 @@
 //! messages in the protocol.
 
 use crate::query::event::merge::EventDedupKey;
-use polycentric_common::models::protos_v2 as proto;
+use polycentric_primitives::models::protos_v2 as proto;
 
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct PublicKey {

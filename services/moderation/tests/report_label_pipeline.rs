@@ -13,7 +13,8 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use moderation_entity::moderator_model;
-use polycentric_common::models::{
+use polycentric_core::query::channel;
+use polycentric_primitives::models::{
     collections,
     protos_v2::{
         Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, Identity, KeyType,
@@ -22,7 +23,6 @@ use polycentric_common::models::{
         content::ContentBody, event_sync_service_client::EventSyncServiceClient,
     },
 };
-use polycentric_core::query::channel;
 use prost::Message;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database};
 use sha2::{Digest, Sha256};

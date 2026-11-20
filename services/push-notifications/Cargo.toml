@@ -11,7 +11,7 @@ common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
 push-notifications-entity = { path = "./entity" }
 push-notifications-migration = { path = "./migration" }
-polycentric-common.workspace = true
+polycentric-primitives.workspace = true
 polycentric-core = { path = "../../packages/rs-core" }
 
 common-telemetry = { path = "../common/telemetry" }

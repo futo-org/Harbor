@@ -286,7 +286,7 @@ pub(crate) mod tests {
         content, content_verification_target, content_verification_verify,
         event,
     };
-    use polycentric_common::models::collections;
+    use polycentric_primitives::models::collections;
     use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{

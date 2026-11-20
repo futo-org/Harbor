@@ -3,8 +3,8 @@ use crate::lock::LockRecover;
 use crate::pairing;
 use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
-use polycentric_common::models::identity::assemble_recovery_payload;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::identity::assemble_recovery_payload;
+use polycentric_primitives::models::protos_v2::{
     AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, DeleteIdentityRequest,
     Event, GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity,
     ListEventsResponse, PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest,
@@ -16,10 +16,10 @@ use polycentric_common::models::protos_v2::{
     notification_service_client::NotificationServiceClient,
     server_service_client::ServerServiceClient,
 };
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::{
     ListHeadsRequest, ListHeadsResponse, PutEventsResponse,
 };
-use polycentric_common::models::traits::Serializable;
+use polycentric_primitives::models::traits::Serializable;
 use prost::Message;
 use std::sync::{Arc, Mutex};
 

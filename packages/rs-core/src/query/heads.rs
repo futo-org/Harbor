@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use futures::future::Either;
 use futures::{StreamExt, stream};
-use polycentric_common::models::heads::Heads;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::heads::Heads;
+use polycentric_primitives::models::protos_v2::{
     ListHeadsResponse, SubscribeHeadsRequest, event_sync_service_client::EventSyncServiceClient,
 };
 use prost::Message;

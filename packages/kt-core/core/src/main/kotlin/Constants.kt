@@ -6,7 +6,7 @@ package org.futo.polycentric.core
  * The proto field is a plain int32 — there is deliberately no enum in the
  * schema (arbitrary collections are allowed); the reserved values are
  * documented in protos/polycentric/v2/event_key.proto and mirrored in
- * js-core src/constants.ts and rs-common src/models/collections.rs.
+ * js-core src/constants.ts and rs-primitives src/models/collections.rs.
  * Keep all three in sync.
  */
 object Collections {

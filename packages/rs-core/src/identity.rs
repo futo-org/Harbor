@@ -1,4 +1,4 @@
-use polycentric_common::{
+use polycentric_primitives::{
     error::CoreError,
     models::{
         collections,

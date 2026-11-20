@@ -13,7 +13,7 @@ use common_kafka::{BorrowedMessage, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
-use polycentric_common::models::{
+use polycentric_primitives::models::{
     collections,
     protos_v2::{
         Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, Report, ReportCategory,

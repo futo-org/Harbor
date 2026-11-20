@@ -1,7 +1,7 @@
 use ::entity::{
     block, content, content_follow, default_follow_suggestion, event, follow,
 };
-use polycentric_common::models::collections;
+use polycentric_primitives::models::collections;
 use prost::Message;
 use sea_orm::*;
 use sea_query::{

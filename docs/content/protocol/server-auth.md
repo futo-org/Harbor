@@ -78,5 +78,5 @@ yet is treated as unauthenticated rather than rejected. A brand new
 identity's first sync is what delivers the document, so rejecting it would
 lock the identity out permanently.
 
-Verification lives in `polycentric-common` (`jwt::verify_jwt`) so any
+Verification lives in `polycentric-primitives` (`jwt::verify_jwt`) so any
 service can use it, with the middleware in the server's `service::auth`.

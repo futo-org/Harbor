@@ -1,5 +1,5 @@
 use super::keys::EventKey;
-use polycentric_common::{
+use polycentric_primitives::{
     error::CoreError,
     models::{protos_v2 as Proto, protos_v2::SignedEvent},
 };

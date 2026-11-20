@@ -2,8 +2,8 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::collections;
+use polycentric_primitives::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, KeyType, Labels,
     ListEventsFilters, ListEventsRequest, PublicKey, PutEventsRequest, Report, ReportCategory,
     SerializedContent, SignedEvent, content::ContentBody,

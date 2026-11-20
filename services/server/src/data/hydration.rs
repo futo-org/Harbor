@@ -11,8 +11,8 @@ use crate::service::identity::service::{
 };
 use crate::service::stats::service::{EventStats, gather_stats_for};
 use entity::{content, event};
-use polycentric_common::models::protos_v2::content::ContentBody;
-use polycentric_common::models::protos_v2::{
+use polycentric_primitives::models::protos_v2::content::ContentBody;
+use polycentric_primitives::models::protos_v2::{
     Content, EventBundle, EventHint, EventKey, PostReply,
 };
 use prost::Message;

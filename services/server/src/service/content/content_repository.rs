@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use ::entity::{blob_index, content, content_blob};
 use chrono::Utc;
-use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
+use polycentric_primitives::models::protos_v2::{
+    ContentDigest, ContentDigestType,
+};
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::{Expr, InsertStatement, OnConflict};
