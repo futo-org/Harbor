@@ -27,6 +27,19 @@ impl PublicKey {
         hex::encode(self.key())
     }
 
+    /// Encode this public key into its string representation.
+    pub fn to_str(&self) -> String {
+        format!("{}_{}", self.key_type, hex::encode(self.key.as_slice()))
+    }
+
+    /// Decode a public key from its string resperepresentation.
+    pub fn from_str(id: &str) -> Option<PublicKey> {
+        let (type_str, hex_str) = id.split_once('_')?;
+        let key_type = type_str.parse::<i32>().ok()?;
+        let key = hex::decode(hex_str).ok()?;
+        Some(PublicKey { key_type, key })
+    }
+
     /// Validates that the key has the expected length
     pub fn validate_length(&self, expected: usize) -> Result<(), Error> {
         if self.key.len() != expected {
