@@ -15,6 +15,7 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::query::blocks::retain_unblocked_bundles;
+use crate::query::client::fetch_local_first;
 use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{
     EventBundleResponse, decode_event, merge_bundle_response, merge_bundle_responses,
@@ -340,10 +341,10 @@ pub fn get_post(
     )
 }
 
-/// The candidates matching a partial event key, with label hints. When the
-/// local stores have a candidate, answers from them with no server call.
-/// Otherwise calls `fetch_response` on the servers, copies the responses into
-/// the local stores and answers from those.
+/// The candidates matching a partial event key, with label hints. Calls
+/// `fetch_response` on the servers, copies the responses into the local stores
+/// and answers from those. The local stores answer first, following
+/// `fetch_mode` (`fetch_local_first`).
 pub(crate) fn get_candidates<R, F, Fut>(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,
@@ -372,7 +373,7 @@ where
         signer_key_prefix.as_deref(),
     );
 
-    if !candidates.is_empty() {
+    let local_bytes = (!candidates.is_empty()).then(|| {
         let event_hints = {
             let client = query_client.client().lock_recover();
 
@@ -393,19 +394,8 @@ where
         let mut response = R::default();
         *response.bundles_mut() = candidates;
         *response.hints_mut() = event_hints;
-        let bytes = response.encode_to_vec();
-
-        let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
-            subscriber.next(QueryResult {
-                data: Some(bytes.clone()),
-                status: QueryStatus::Success,
-                successful_servers: 0,
-                pending_servers: 0,
-            });
-            subscriber.complete();
-        });
-        return Arc::new(observable);
-    }
+        response.encode_to_vec()
+    });
 
     let client = query_client.client().clone();
 
@@ -453,5 +443,7 @@ where
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_fn, opts))
+    fetch_local_first(local_bytes, opts, |opts| {
+        query_client.fetch(query_key, query_fn, merge_fn, opts)
+    })
 }
