@@ -209,10 +209,14 @@ describe('DeleteIdentityScreen', () => {
 
   it('still wipes the device when push removal fails', async () => {
     mockClient.clearDevicePushSubscriptions.mockRejectedValue(new Error('x'));
+    // Suppress the console warning that we expect from cluttering the output
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await pressDelete();
 
     expect(calls).toEqual(['remote', 'local', 'restart']);
+
+    warn.mockRestore();
   });
 
   it('keeps everything when a server fails and the user cancels', async () => {
@@ -243,6 +247,8 @@ describe('DeleteIdentityScreen', () => {
 
   it('reports a failed wipe and retries without asking the servers again', async () => {
     mockClient.deleteLocalIdentity.mockRejectedValueOnce(new Error('disk'));
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const screen = await pressDelete();
 
@@ -253,5 +259,7 @@ describe('DeleteIdentityScreen', () => {
 
     expect(mockClient.deleteRemoteIdentity).toHaveBeenCalledTimes(1);
     expect(calls).toEqual(['remote', 'push', 'push', 'local', 'restart']);
+
+    error.mockRestore();
   });
 });
