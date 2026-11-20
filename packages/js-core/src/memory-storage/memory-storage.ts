@@ -105,6 +105,10 @@ class MemoryEventRepository implements IEventRepository {
     return [...rows].map(copyRow);
   }
 
+  async deleteAll(owner: string): Promise<void> {
+    this.owners.delete(owner);
+  }
+
   async getHeads(owner: string): Promise<EventKey[]> {
     // One head (max sequence) per (collection, signer) stream.
     const heads = new Map<string, EventKey>();

@@ -63,6 +63,11 @@ export interface IEventRepository {
   getAll(owner: string): Promise<EventRow[]>;
 
   /**
+   * Delete every event and content owned by `owner`.
+   */
+  deleteAll(owner: string): Promise<void>;
+
+  /**
    * List all persisted event keys meeting the following criteria:
    * 1. owned by `owner`.
    * 2. identity matches the owner.

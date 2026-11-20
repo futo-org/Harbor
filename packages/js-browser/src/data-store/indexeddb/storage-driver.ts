@@ -37,17 +37,17 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     try {
       const store = this.loginStateStore('readwrite');
 
-      // TODO: remove this check once we support identity switching.
-      // For now, we should disallow changing the active identity.
-      const existingEntry = await IndexedDBDatabase.requestAsPromise<
-        ActiveLoginEntry | undefined
-      >(store.get(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY));
-
-      if (existingEntry) {
-        throw new DatabaseError('Already logged in.');
-      }
-
       if (login) {
+        // TODO: remove this check once we support identity switching.
+        // For now, we should disallow changing the active identity.
+        const existingEntry = await IndexedDBDatabase.requestAsPromise<
+          ActiveLoginEntry | undefined
+        >(store.get(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY));
+
+        if (existingEntry) {
+          throw new DatabaseError('Already logged in.');
+        }
+
         const entry: ActiveLoginEntry = {
           ...login,
           name: IndexedDBStorageDriver.ACTIVE_LOGIN_KEY,
