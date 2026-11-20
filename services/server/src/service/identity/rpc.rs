@@ -13,9 +13,9 @@ use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
 use crate::service::proto::{
-    IsBannedRequest, IsBannedResponse, IsModeratorRequest, IsModeratorResponse,
-    ListBansRequest, ListBansResponse, SetBanStatusRequest,
-    SetBanStatusResponse,
+    DeleteAccountRequest, DeleteAccountResponse, IsBannedRequest,
+    IsBannedResponse, IsModeratorRequest, IsModeratorResponse, ListBansRequest,
+    ListBansResponse, SetBanStatusRequest, SetBanStatusResponse,
 };
 
 pub mod common;
@@ -67,6 +67,15 @@ impl IdentityService for IdentityServiceImpl {
         let ctx = self.ctx.authenticted_ro(&request).await?;
         Ok(Response::new(
             list_bans::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn delete_account(
+        &self,
+        _: Request<DeleteAccountRequest>,
+    ) -> Result<Response<DeleteAccountResponse>, Status> {
+        Err(Status::unimplemented(
+            "account deletion is not yet implemented",
         ))
     }
 }

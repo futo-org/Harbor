@@ -119,6 +119,16 @@ export interface ListBansResponse {
      */
     pageInfo?: PageInfo;
 }
+/**
+ * @generated from protobuf message polycentric.v2.DeleteAccountRequest
+ */
+export interface DeleteAccountRequest {
+}
+/**
+ * @generated from protobuf message polycentric.v2.DeleteAccountResponse
+ */
+export interface DeleteAccountResponse {
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class IsModeratorRequest$Type extends MessageType<IsModeratorRequest> {
     constructor() {
@@ -505,6 +515,82 @@ class ListBansResponse$Type extends MessageType<ListBansResponse> {
  * @generated MessageType for protobuf message polycentric.v2.ListBansResponse
  */
 export const ListBansResponse = new ListBansResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DeleteAccountRequest$Type extends MessageType<DeleteAccountRequest> {
+    constructor() {
+        super("polycentric.v2.DeleteAccountRequest", []);
+    }
+    create(value?: PartialMessage<DeleteAccountRequest>): DeleteAccountRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<DeleteAccountRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteAccountRequest): DeleteAccountRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: DeleteAccountRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.DeleteAccountRequest
+ */
+export const DeleteAccountRequest = new DeleteAccountRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DeleteAccountResponse$Type extends MessageType<DeleteAccountResponse> {
+    constructor() {
+        super("polycentric.v2.DeleteAccountResponse", []);
+    }
+    create(value?: PartialMessage<DeleteAccountResponse>): DeleteAccountResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<DeleteAccountResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DeleteAccountResponse): DeleteAccountResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: DeleteAccountResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.DeleteAccountResponse
+ */
+export const DeleteAccountResponse = new DeleteAccountResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.IdentityService
  */
@@ -512,5 +598,6 @@ export const IdentityService = new ServiceType("polycentric.v2.IdentityService",
     { name: "IsModerator", options: {}, I: IsModeratorRequest, O: IsModeratorResponse },
     { name: "SetBanStatus", options: {}, I: SetBanStatusRequest, O: SetBanStatusResponse },
     { name: "IsBanned", options: {}, I: IsBannedRequest, O: IsBannedResponse },
-    { name: "ListBans", options: {}, I: ListBansRequest, O: ListBansResponse }
+    { name: "ListBans", options: {}, I: ListBansRequest, O: ListBansResponse },
+    { name: "DeleteAccount", options: {}, I: DeleteAccountRequest, O: DeleteAccountResponse }
 ]);
