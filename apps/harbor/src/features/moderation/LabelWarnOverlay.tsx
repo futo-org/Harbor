@@ -72,7 +72,7 @@ export function LabelWarnOverlay({
           openWarning({
             labels,
             identity: authorIdentity,
-            subject: 'post',
+            subject: 'content',
             onConfirm: onDismiss,
           })
         }
