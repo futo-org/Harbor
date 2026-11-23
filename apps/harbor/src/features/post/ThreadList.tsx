@@ -208,7 +208,7 @@ function ScrollHint({ onPress }: { onPress: () => void }) {
         title=""
         icon="arrowUp"
         size="sm"
-        variant="primary"
+        variant="tertiary"
         onPress={onPress}
       />
     </View>
