@@ -793,7 +793,7 @@ async fn query_parsing() {
     }
 }
 
-async fn expect_searched_posts(
+pub(crate) async fn expect_searched_posts(
     request: SearchPostsRequest,
     expected: Vec<Post>,
 ) {
