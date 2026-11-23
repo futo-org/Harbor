@@ -23,6 +23,10 @@ type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
 /** Time for the list to place the subject once the thread lands. */
 const SETTLE_MS = 120;
 
+/** How much of the parent shows above the subject: the parent's `pb_xs`
+ *  plus 2/3 of its ~38px toolbar. */
+const PARENT_PEEK_HEIGHT = 29;
+
 export function ThreadList({
   post,
   HeaderComponent,
@@ -39,6 +43,7 @@ export function ThreadList({
   const items = isFirstLayoutComplete ? orderedItems : subjectOnly;
 
   const subjectIndex = items.findIndex((p) => p.id === post.id);
+  const parentId = post.reply?.parentId;
 
   // Native scrolls the subject to the top. Fill only the shortfall.
   const { height: windowHeight } = useWindowDimensions();
@@ -100,7 +105,19 @@ export function ThreadList({
           const isSubject = item.id === post.id;
           return (
             <View
-              style={[Atoms.w_full]}
+              style={[
+                Atoms.w_full,
+                isSubject &&
+                  !!parentId && {
+                    // Reserved from the first frame, so the parent's bottom
+                    // fills it without moving the subject.
+                    paddingTop: PARENT_PEEK_HEIGHT,
+                    // Lets taps reach the parent's toolbar under the padding.
+                    pointerEvents: 'box-none',
+                  },
+                // Slides the subject's top padding over the parent's bottom.
+                item.id === parentId && { marginBottom: -PARENT_PEEK_HEIGHT },
+              ]}
               onLayout={(event) => measureRow(item.id, event)}
             >
               <Post
@@ -134,6 +151,7 @@ export function ThreadList({
           style={[Atoms.absolute, Atoms.inset_0, theme.atoms.box.primary.bg]}
         >
           {renderNode(HeaderComponent)}
+          {parentId ? <View style={{ height: PARENT_PEEK_HEIGHT }} /> : null}
           <Post post={post} hideReplyingTo={true} focusedView disablePress />
           <ComposerInput replyTo={post.id} />
         </View>
