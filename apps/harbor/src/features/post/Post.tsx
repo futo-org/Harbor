@@ -1,9 +1,14 @@
-import { ProfileAvatar, Text } from '@/src/common/components/primitives';
+import {
+  InlineLink,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
+import { isWeb } from '@/src/common/util/platform';
 import { COLLECTION } from '@polycentric/react-native';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -46,9 +51,10 @@ export const Post = memo(function Post({
 
   const authorIdentity = post.identity ?? null;
 
-  const cardLinkProps = useCardLinkPress(
-    disablePress ? null : eventRoute({ ...post, collection: COLLECTION.FEED }),
-  );
+  const postRoute = disablePress
+    ? null
+    : eventRoute({ ...post, collection: COLLECTION.FEED });
+  const cardLinkProps = useCardLinkPress(postRoute);
 
   const shownAt = post.createdAt;
   const fullTimestamp = useMemo(() => {
@@ -93,7 +99,15 @@ export const Post = memo(function Post({
               ·
             </Text>
             <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
-              <TimeAgo since={shownAt} />
+              {/* Same target as the card: on native it would only take the
+                  card's press feedback. */}
+              {isWeb && postRoute ? (
+                <InlineLink href={postRoute}>
+                  <TimeAgo since={shownAt} />
+                </InlineLink>
+              ) : (
+                <TimeAgo since={shownAt} />
+              )}
             </Text>
           </>
         ) : null}
