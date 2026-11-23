@@ -1,4 +1,4 @@
-//! Operator commands. Without `--yes` they only report what would change.
+//! Operator commands.
 
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ use crate::service::identity::service as identity_service;
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
        server prune-content [--yes]
        server sync-blob-index
-       server prune-blobs [--dry-run]";
+       server prune-blobs [--dry-run] [--grace-period-secs <secs>]";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
