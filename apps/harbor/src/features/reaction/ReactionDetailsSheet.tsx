@@ -1,14 +1,12 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import { Sheet } from '@/src/common/components/sheet';
 import { Tabs } from '@/src/common/components/tabs';
-import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { FetchMode } from '@polycentric/react-native';
 import { FlashList } from '@shopify/flash-list';
-import { router } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -140,10 +138,8 @@ export default function ReactionDetailsSheet({
       <ProfileRow
         identity={item.identity}
         fetchMode={FetchMode.OfflineFirst}
-        onPress={() => {
-          onClose();
-          router.navigate(Routes.tabs.profile(item.identity));
-        }}
+        linkToProfile
+        onPress={() => onClose()}
         trailing={
           <Text fontSize="lg" lineHeight="lg">
             {item.emoji}

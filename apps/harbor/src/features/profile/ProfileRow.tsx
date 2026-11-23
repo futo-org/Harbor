@@ -1,4 +1,6 @@
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
+import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
 import { IdentityHandle } from './IdentityHandle';
@@ -14,6 +16,7 @@ import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
  */
 export function ProfileRow({
   identity,
+  linkToProfile = false,
   onPress,
   trailing,
   size = 'md',
@@ -24,6 +27,11 @@ export function ProfileRow({
   style,
 }: {
   identity: string;
+  /**
+   * A plain click navigates to the profile, after `onPress`. On web,
+   * Cmd/Ctrl-click and middle-click open it in a new tab instead.
+   */
+  linkToProfile?: boolean;
   onPress?: (identity: string, profile: ProfileHookResult) => void;
   trailing?: ReactNode;
   size?: 'sm' | 'md';
@@ -36,10 +44,14 @@ export function ProfileRow({
 }) {
   const { theme } = useTheme();
   const profile = useProfile(identity, { fetchMode });
+  const cardLinkProps = useCardLinkPress(
+    linkToProfile && !disabled ? Routes.tabs.profile(identity) : null,
+    onPress && (() => onPress(identity, profile)),
+  );
 
   return (
     <Pressable
-      onPress={() => onPress?.(identity, profile)}
+      {...cardLinkProps}
       disabled={disabled}
       // iOS folds an accessible view's children into one element, which
       // would hide any control in `trailing` from assistive tech.
