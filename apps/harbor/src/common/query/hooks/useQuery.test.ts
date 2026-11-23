@@ -1,4 +1,4 @@
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   FetchMode: {
     Default: 'Default',
     OfflineFirst: 'OfflineFirst',
@@ -13,7 +13,7 @@ jest.mock('../../lib/polycentric-hooks/context', () => ({
   usePolycentric: jest.fn(),
 }));
 
-import { FetchMode, QueryStatus } from '@polycentric/react-native';
+import { FetchMode, QueryStatus } from '@polycentric/react-native-sdk';
 import { useQueryStore } from './useQuery';
 
 type Observer = {

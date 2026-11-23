@@ -6,7 +6,7 @@ import {
   type PostOverlay,
   type Reaction,
 } from './overlayTypes';
-import { labelsChanged, type v2 } from '@polycentric/react-native';
+import { labelsChanged, type v2 } from '@polycentric/react-native-sdk';
 
 /** Apply the patch to the overlay or return `undefined` if all of the overlays are undefined now. */
 export function patchPostOverlay(

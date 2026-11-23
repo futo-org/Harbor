@@ -10,7 +10,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native';
+import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native-sdk';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';

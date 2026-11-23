@@ -12,7 +12,7 @@ import { Atoms, type Theme, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from '@/src/features/profile/hooks/useIdentityState';
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { bytesEqual, COLLECTION, v2 } from '@polycentric/react-native';
+import { bytesEqual, COLLECTION, v2 } from '@polycentric/react-native-sdk';
 import { type ComponentProps, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,

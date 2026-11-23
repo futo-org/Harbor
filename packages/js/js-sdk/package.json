@@ -1,0 +1,46 @@
+{
+  "name": "@polycentric/js-sdk",
+  "version": "0.0.0",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.es.js",
+  "module": "./dist/index.es.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "generate": "mkdir -p ./src/proto && cd ../../.. && buf generate && node packages/js/js-sdk/scripts/generate-proto-barrel.mjs",
+    "build": "tsc -b && webpack",
+    "dev": "tsc -b && webpack --watch",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=./junit.xml"
+  },
+  "dependencies": {
+    "@noble/curves": "catalog:",
+    "@noble/hashes": "catalog:",
+    "@polycentric/js-wasm": "workspace:*",
+    "@protobuf-ts/grpcweb-transport": "^2.11.1",
+    "@protobuf-ts/runtime": "^2.10.0",
+    "@protobuf-ts/runtime-rpc": "^2.11.1",
+    "base64url": "^3.0.1",
+    "eventemitter3": "^5.0.1",
+    "js-base64": "^3.7.8"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
+    "@polycentric/tsconfig": "workspace:*",
+    "@protobuf-ts/plugin": "^2.11.1",
+    "ts-loader": "^9.5.4",
+    "typescript": "catalog:",
+    "vitest": "^5.0.0",
+    "webpack": "^5.100.1",
+    "webpack-cli": "^7.0.0"
+  }
+}

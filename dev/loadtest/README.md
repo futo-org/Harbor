@@ -65,7 +65,7 @@ isolates one backend.
 | `follow` | follows/s | One load-test account follows another. |
 | `search` | searches/s | `SearchPosts` or `SearchUsers`. |
 
-The call scripts come from reading the web client (`packages/rs-core`,
+The call scripts come from reading the web client (`packages/rust/rs-core`,
 `apps/harbor`). Worth knowing when you set rates:
 
 - Feed rows carry their authors' profiles and counts in `event_hints`, so rendering a post costs only image GETs.
@@ -197,7 +197,7 @@ uPlot build under `internal/web/static/vendor` is excluded.
 
 Unit tests cover:
 
-- identity derivation, the genesis signature and the Merkle root, against vectors computed independently from the protocol rules in `packages/rs-common`;
+- identity derivation, the genesis signature and the Merkle root, against vectors computed independently from the protocol rules in `packages/rust/rs-common`;
 - JWT minting and sequence chaining;
 - the arrival scheduler: rate accuracy, ramps, drop-on-cap and holds;
 - gRPC-Web framing and error classes;

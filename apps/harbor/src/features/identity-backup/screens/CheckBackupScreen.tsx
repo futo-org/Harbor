@@ -10,12 +10,12 @@ import {
   type PickedBackupFile,
 } from '@/src/features/identity-backup/components/BackupFilePicker';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
-import type { PolycentricClient } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 /** State for the current stage in the check backup flow */
 type CheckState =

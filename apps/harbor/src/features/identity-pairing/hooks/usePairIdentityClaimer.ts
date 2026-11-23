@@ -5,7 +5,7 @@ import type {
   PairingSession,
   PendingLogin,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useCallback, useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {

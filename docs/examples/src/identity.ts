@@ -1,8 +1,8 @@
 // Shown on docs/content/developer/examples.md under "Creating an identity".
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-sdk';
 // #region create-identity
-import { SyncStrategy } from '@polycentric/js-core';
+import { SyncStrategy } from '@polycentric/js-sdk';
 
 // #endregion create-identity
 

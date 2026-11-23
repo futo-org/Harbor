@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
-  kt-core:
+  kotlin-sdk:
     name: Build Kotlin
     needs: [ changes, setup-images ]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
@@ -134,13 +134,13 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
           environment: prod
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kotlin-sdk-build
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
         env:
           HARBOR_CI_TOKEN: ${{ env.HARBOR_CI_TOKEN }}
         run: |
-          cd packages/kt-core
+          cd packages/kotlin/kotlin-sdk
           ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -476,8 +476,8 @@ jobs:
           mkdir -p "$CARGO_CONFIG_DIR"
           printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > "$CARGO_CONFIG_DIR/config.toml"
           # Specify the version and registry for packaging and publishing
-          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
-          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rust/rs-common/Cargo.toml packages/rust/rs-core/Cargo.toml
+          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rust/rs-common\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
           mkdir -p target/package
           cargo package --registry harbor -p polycentric-common -p polycentric-core --no-verify --allow-dirty
       - uses: forgejo/upload-artifact@v4
@@ -532,7 +532,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [ notes, npm, crates, tag-images, apk, kt-core ]
+    needs: [ notes, npm, crates, tag-images, apk, kotlin-sdk ]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
@@ -551,8 +551,8 @@ jobs:
           path: apps/harbor
       - uses: forgejo/download-artifact@v4
         with:
-          name: kt-core-build
-          path: packages/kt-core/core/build
+          name: kotlin-sdk-build
+          path: packages/kotlin/kotlin-sdk/core/build
       - uses: forgejo/download-artifact@v4
         with:
           name: rs-core-crates
@@ -563,7 +563,7 @@ jobs:
         run: |
           node .forgejo/scripts/release.mjs release_notes.md \
             "harbor-${GITHUB_REF_NAME}.apk=apps/harbor/harbor.apk" \
-            "polycentric-core-${GITHUB_REF_NAME#v}.aar=packages/kt-core/core/build/outputs/aar/core-release.aar" \
+            "polycentric-kotlin-sdk-${GITHUB_REF_NAME#v}.aar=packages/kotlin/kotlin-sdk/core/build/outputs/aar/core-release.aar" \
             crates/*.crate
       - name: Announce on Zulip
         env:

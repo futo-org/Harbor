@@ -1,4 +1,4 @@
-import type { ServerPushResult } from '@polycentric/react-native';
+import type { ServerPushResult } from '@polycentric/react-native-sdk';
 import { useServerFailuresStore } from './useServerFailuresStore';
 
 const get = () => useServerFailuresStore.getState();

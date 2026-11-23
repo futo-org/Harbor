@@ -4,7 +4,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Tabs } from '@/src/common/components/tabs';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import useReports, { REPORTS_PER_SERVER } from '../hooks/useReports';

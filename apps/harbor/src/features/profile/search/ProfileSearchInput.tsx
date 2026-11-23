@@ -1,7 +1,7 @@
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { Fragment, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import {

@@ -42,7 +42,9 @@ jest.mock('./hooks/useProfile', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
+jest.mock('@polycentric/react-native-sdk', () => ({
+  FetchMode: { Default: 'd' },
+}));
 jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,

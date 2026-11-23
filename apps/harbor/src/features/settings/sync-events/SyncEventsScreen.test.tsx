@@ -95,10 +95,10 @@ jest.mock('@/src/common/components/Icon', () => {
   };
 });
 
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
   COLLECTION: jest.requireActual(
-    '../../../../../../packages/js-core/src/constants',
+    '../../../../../../packages/js/js-sdk/src/constants',
   ).COLLECTION,
   FetchMode: { OfflineOnly: 3 },
 }));
@@ -138,7 +138,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
 import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
 import { useLastSyncStore } from '@/src/features/core/sync-status/useLastSyncStore';
-import type { EventKey, ServerPushResult } from '@polycentric/react-native';
+import type { EventKey, ServerPushResult } from '@polycentric/react-native-sdk';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as React from 'react';
 import SyncEventsScreen from './SyncEventsScreen';

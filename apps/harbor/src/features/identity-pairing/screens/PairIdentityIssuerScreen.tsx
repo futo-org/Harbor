@@ -24,7 +24,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { pairingLinkFrom } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 /** Width of the UI elements in the pairing info card. */
 const PAIRING_BLOCK_WIDTH = 300;

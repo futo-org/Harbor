@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Rust deps
 RUN rustup component add clippy rustfmt && rustup target add wasm32-unknown-unknown
-# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
+# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rust/rs-core/Cargo.toml.
 # renovate: datasource=crate depName=wasm-bindgen-cli
 ARG WASM_BINDGEN_CLI_VERSION=0.2.130
 RUN cargo install just wasm-bindgen-cli@${WASM_BINDGEN_CLI_VERSION} && rm -rf /usr/local/cargo/registry

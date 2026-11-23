@@ -7,7 +7,7 @@ import {
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { useClaimCreateOptions } from '../claims/create/ClaimCreateContext';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';

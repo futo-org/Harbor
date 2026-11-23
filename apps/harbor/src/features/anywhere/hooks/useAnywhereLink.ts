@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useLinkPreviews } from '@/src/common/link-previews';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { useEffect, useReducer } from 'react';
 import { fallbackImage } from '../lib/fallback-image';
 

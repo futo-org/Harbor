@@ -5,7 +5,7 @@ import {
   formatImageImportErrorOrFallback,
 } from '@/src/common/lib/images/ImageImportError';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useRef } from 'react';
 import { Keyboard } from 'react-native';

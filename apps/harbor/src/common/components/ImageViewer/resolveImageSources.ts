@@ -1,5 +1,5 @@
 import { pickImageVariant } from '@/src/common/lib/polycentric-hooks/helpers';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 export type ImageViewerInput =
   | v2.ImageSet

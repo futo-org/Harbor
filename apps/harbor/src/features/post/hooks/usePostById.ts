@@ -5,7 +5,7 @@ import {
   Query,
   v2,
   labelsFromGetPostResponse,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   decodeFeedItems,
