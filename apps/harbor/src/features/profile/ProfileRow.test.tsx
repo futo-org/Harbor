@@ -16,11 +16,19 @@ jest.mock('./hooks/useProfile', () => ({ useProfile: () => ({}) }));
 jest.mock('@/src/common/lib/navigation/useCardLinkPress', () => ({
   useCardLinkPress: () => ({}),
 }));
-jest.mock('@/src/common/components/Avatar/ProfileAvatar', () => ({
-  ProfileAvatar: () => null,
-}));
 
-// Stand-ins that expose whether the name and handle link.
+// Stand-ins that expose whether the avatar, name and handle link.
+jest.mock('@/src/common/components/Avatar/ProfileAvatar', () => {
+  const react = require('react');
+  const { View } = require('react-native');
+  return {
+    ProfileAvatar: (props: { linkToProfile?: boolean }) =>
+      react.createElement(View, {
+        testID: 'avatar',
+        linkToProfile: props.linkToProfile,
+      }),
+  };
+});
 jest.mock('./Username', () => {
   const react = require('react');
   const { Text } = require('react-native');
@@ -46,35 +54,40 @@ jest.mock('./IdentityHandle', () => {
   };
 });
 
-import { render } from '@testing-library/react-native';
+import { render, type RenderResult } from '@testing-library/react-native';
 import { ProfileRow } from './ProfileRow';
 
 beforeEach(() => {
   mockIsWeb = true;
 });
 
-test('on web, in a row linked to the profile, the name and handle link too', async () => {
+test('on web, in a row linked to the profile, its parts link too', async () => {
   const screen = await render(<ProfileRow identity="alice-id" linkToProfile />);
 
-  expect(screen.getByText('Alice').props.linkToProfile).toBe(true);
-  expect(screen.getByText('alice@example.com').props.linkToProfile).toBe(true);
+  expectPartsToLink(screen, true);
 });
 
 test.each([
   ['without linkToProfile', {}],
   ['when disabled', { linkToProfile: true, disabled: true }],
   ['when the row has an onPress', { linkToProfile: true, onPress: () => {} }],
-])('%s, the name and handle do not link', async (_, props) => {
+])('%s, the parts do not link', async (_, props) => {
   const screen = await render(<ProfileRow identity="alice-id" {...props} />);
 
-  expect(screen.getByText('Alice').props.linkToProfile).toBe(false);
-  expect(screen.getByText('alice@example.com').props.linkToProfile).toBe(false);
+  expectPartsToLink(screen, false);
 });
 
 test('on native, only the row links to the profile', async () => {
   mockIsWeb = false;
   const screen = await render(<ProfileRow identity="alice-id" linkToProfile />);
 
-  expect(screen.getByText('Alice').props.linkToProfile).toBe(false);
-  expect(screen.getByText('alice@example.com').props.linkToProfile).toBe(false);
+  expectPartsToLink(screen, false);
 });
+
+function expectPartsToLink(screen: RenderResult, linked: boolean) {
+  expect(screen.getByTestId('avatar').props.linkToProfile).toBe(linked);
+  expect(screen.getByText('Alice').props.linkToProfile).toBe(linked);
+  expect(screen.getByText('alice@example.com').props.linkToProfile).toBe(
+    linked,
+  );
+}

@@ -1,12 +1,10 @@
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { COLLECTION } from '@polycentric/react-native';
-import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';
@@ -52,11 +50,6 @@ export const Post = memo(function Post({
     disablePress ? null : eventRoute({ ...post, collection: COLLECTION.FEED }),
   );
 
-  const handleAuthorPress = useCallback(() => {
-    if (!authorIdentity) return;
-    router.navigate(Routes.tabs.profile(authorIdentity));
-  }, [authorIdentity]);
-
   const shownAt = post.createdAt;
   const fullTimestamp = useMemo(() => {
     if (!shownAt) return '';
@@ -79,11 +72,7 @@ export const Post = memo(function Post({
   const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
 
   const avatar = authorIdentity ? (
-    <ProfileAvatar
-      identityKey={authorIdentity}
-      size="md"
-      onPress={handleAuthorPress}
-    />
+    <ProfileAvatar identityKey={authorIdentity} size="md" linkToProfile />
   ) : null;
 
   const authorRow = (

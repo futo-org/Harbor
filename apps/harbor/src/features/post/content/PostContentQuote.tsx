@@ -121,6 +121,7 @@ function AuthorRow({ post }: { post: PostData }) {
       <ProfileAvatar
         identityKey={post.identity}
         size="xs"
+        linkToProfile
         style={Atoms.mr_md}
       />
       <PostAuthor identity={post.identity} />

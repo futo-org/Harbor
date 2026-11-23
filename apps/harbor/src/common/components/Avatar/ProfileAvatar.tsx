@@ -7,15 +7,19 @@ import {
 } from '../../lib/polycentric-hooks';
 import Icon from '@/src/common/components/Icon';
 import { useFallbackUri } from '@/src/common/components/Image';
+import { Routes } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
+import { Link } from 'expo-router';
 import { View } from 'react-native';
 
 type ProfileAvatarProps = {
   identityKey: string;
-} & Omit<ComponentProps<typeof Avatar>, 'source'>;
+  /** Links the avatar to the profile. */
+  linkToProfile?: boolean;
+} & Omit<ComponentProps<typeof Avatar>, 'source' | 'href' | 'role'>;
 
 /**
  * Following badge diameter for an avatar of `size` logical pixels. Capped so
@@ -34,6 +38,7 @@ function badgeSize(size: number) {
 export function ProfileAvatar({
   identityKey,
   size = 'md',
+  linkToProfile = false,
   ...rest
 }: ProfileAvatarProps) {
   const profile = useProfile(identityKey);
@@ -63,17 +68,27 @@ export function ProfileAvatar({
   // inside the square's corner by r * (1 - 1/sqrt 2).
   const overhang = Math.round(badge / 2 - (pixels / 2) * (1 - Math.SQRT1_2));
 
+  const avatar = (
+    <Avatar
+      {...rest}
+      size={size}
+      // A warned profile shows the empty circle, not a blur.
+      source={uri && !obscured ? { uri } : undefined}
+      // The identity, not the URL
+      recyclingKey={identityKey}
+      onError={uri ? () => onError(uri) : undefined}
+    />
+  );
+
   return (
     <View style={{ width: pixels, height: pixels }}>
-      <Avatar
-        {...rest}
-        size={size}
-        // A warned profile shows the empty circle, not a blur.
-        source={uri && !obscured ? { uri } : undefined}
-        // The identity, not the URL
-        recyclingKey={identityKey}
-        onError={uri ? () => onError(uri) : undefined}
-      />
+      {linkToProfile ? (
+        <Link href={Routes.tabs.profile(identityKey)} asChild>
+          {avatar}
+        </Link>
+      ) : (
+        avatar
+      )}
       {obscured ? (
         <View
           pointerEvents="none"

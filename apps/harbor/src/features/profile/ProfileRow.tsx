@@ -79,7 +79,11 @@ export function ProfileRow({
           style,
         ]}
       >
-        <ProfileAvatar identityKey={identity} size={size} />
+        <ProfileAvatar
+          identityKey={identity}
+          size={size}
+          linkToProfile={linksPartsToProfile}
+        />
         <View style={Atoms.flex_1}>
           <Username
             identity={identity}

@@ -15,8 +15,7 @@ import { getPlatformFromClaim } from '@/src/features/verifications/utils/platfor
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
 import { COLLECTION } from '@polycentric/react-native';
-import { type Href, router } from 'expo-router';
-import { useCallback } from 'react';
+import type { Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type {
   MentionNotification,
@@ -132,11 +131,6 @@ function InteractionNotification({
       Routes.tabs.profile(notification.fromIdentity),
   );
 
-  const openProfile = useCallback(
-    () => router.navigate(Routes.tabs.profile(notification.fromIdentity)),
-    [notification.fromIdentity],
-  );
-
   return (
     <Pressable
       {...cardLinkProps}
@@ -147,7 +141,7 @@ function InteractionNotification({
           <ProfileAvatar
             identityKey={notification.fromIdentity}
             size="md"
-            onPress={openProfile}
+            linkToProfile
           />
         }
         title={
