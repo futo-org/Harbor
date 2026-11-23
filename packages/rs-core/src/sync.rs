@@ -122,9 +122,32 @@ pub async fn push_bundles(
     server: &str,
     bundles: Vec<EventBundle>,
 ) -> Result<PutEventsResponse, CoreError> {
-    let req = PutEventsRequest {
+    push(server, bundles, None).await
+}
+
+/// As [`push_bundles`], authenticated with `token` (a JWT).
+pub async fn push_bundles_as(
+    server: &str,
+    bundles: Vec<EventBundle>,
+    token: &str,
+) -> Result<PutEventsResponse, CoreError> {
+    push(server, bundles, Some(token)).await
+}
+
+async fn push(
+    server: &str,
+    bundles: Vec<EventBundle>,
+    token: Option<&str>,
+) -> Result<PutEventsResponse, CoreError> {
+    let mut req = tonic::Request::new(PutEventsRequest {
         event_bundles: bundles,
-    };
+    });
+    if let Some(token) = token {
+        let bearer = format!("Bearer {token}")
+            .parse()
+            .map_err(|_| CoreError::Network("sync: invalid auth token".to_string()))?;
+        req.metadata_mut().insert("authorization", bearer);
+    }
 
     let mut rpc_client =
         EventSyncServiceClient::new(channel(server).await.map_err(CoreError::Network)?);

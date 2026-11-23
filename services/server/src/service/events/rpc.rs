@@ -15,7 +15,9 @@ use polycentric_common::models::protos_v2::{
 };
 use tonic::{Request, Response, Status};
 
+use crate::config;
 use crate::grpc::stream_response;
+use crate::service::auth::{PutEventsAuth, authenticate_put_events};
 use crate::service::context::ServiceContext;
 use crate::service::events::heads_pubsub;
 
@@ -46,9 +48,15 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<PutEventsRequest>,
     ) -> Result<Response<PutEventsResponse>, Status> {
-        let ctx = self.ctx.public_rw(&request).await?;
+        let mut ctx = self.ctx.public_rw(&request).await?;
+        let auth = authenticate_put_events(&mut ctx.db, &request).await?;
+        if matches!(auth, PutEventsAuth::None)
+            && config::get().put_events_require_auth
+        {
+            return Err(Status::unauthenticated("authentication required"));
+        }
         Ok(Response::new(
-            put_events::handle(ctx, request.into_inner()).await?,
+            put_events::handle(ctx, auth, request.into_inner()).await?,
         ))
     }
 

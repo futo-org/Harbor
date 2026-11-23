@@ -26,6 +26,9 @@ pub struct Config {
     pub trusted_moderator: Option<String>,
     /// Valkey URL for live sync (`HARBOR_VALKEY_URL`). `None` turns it off.
     pub valkey_url: Option<String>,
+    /// Whether `put_events` requires an auth token
+    /// (`HARBOR_PUT_EVENTS_REQUIRE_AUTH`).
+    pub put_events_require_auth: bool,
     /// Gravity constant used in the reaction_count_decay function.
     ///
     /// Essentially the higher the number the larger the impact of the decay.
@@ -108,6 +111,10 @@ pub fn init() -> &'static Config {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
+            put_events_require_auth: std::env::var(
+                "HARBOR_PUT_EVENTS_REQUIRE_AUTH",
+            )
+            .is_ok_and(|s| matches!(s.trim(), "1" | "true")),
             feeds_gravity: std::env::var("HARBOR_FEEDS_GRAVITY")
                 .ok()
                 .and_then(|s| s.trim().parse().ok()),
