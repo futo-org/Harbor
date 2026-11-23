@@ -13,8 +13,8 @@ import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { LabelPill } from '@/src/features/moderation/LabelPill';
-import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
-import { PostWarnOverlay } from '@/src/features/post/PostWarnOverlay';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
+import { LabelWarnOverlay } from '@/src/features/moderation/LabelWarnOverlay';
 import { StatusChip } from './toolbar/StatusChip';
 import Icon from '@/src/common/components/Icon';
 
@@ -30,7 +30,7 @@ export function ClaimListItem({
   const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
   // Platform claims chip as their platform (brand logo + name).
   const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
-  const { hasWarnContent, warnLabels } = usePostModeration(claim.labels);
+  const { hasWarnContent, warnLabels } = useLabelModeration(claim.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
   const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
@@ -92,7 +92,7 @@ export function ClaimListItem({
           <ClaimMenu claim={claim} icon="more" iconSize={16} />
         </View>
         {isHidden ? (
-          <PostWarnOverlay
+          <LabelWarnOverlay
             labels={warnLabels}
             authorIdentity={claim.identity}
             onDismiss={handleWarnDismiss}

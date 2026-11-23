@@ -21,8 +21,8 @@ import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { LabelPill } from '@/src/features/moderation/LabelPill';
-import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
-import { PostWarnOverlay } from '@/src/features/post/PostWarnOverlay';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
+import { LabelWarnOverlay } from '@/src/features/moderation/LabelWarnOverlay';
 import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -60,7 +60,7 @@ export default function ViewClaimScreen() {
     refresh: refreshVerifiers,
   } = useClaimVerifiers(claim?.id, claim?.schemaName);
 
-  const { hasWarnContent, warnLabels } = usePostModeration(claim?.labels);
+  const { hasWarnContent, warnLabels } = useLabelModeration(claim?.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
   const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
@@ -138,7 +138,7 @@ export default function ViewClaimScreen() {
                 />
 
                 {isHidden ? (
-                  <PostWarnOverlay
+                  <LabelWarnOverlay
                     labels={warnLabels}
                     authorIdentity={claim.identity}
                     onDismiss={handleWarnDismiss}
