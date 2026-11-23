@@ -12,9 +12,16 @@ import { useOrderedThread } from './hooks/useOrderedThread';
 import { useThread } from './hooks/useThread';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
-import { List, type ListProps } from '@/src/common/components/List';
+import {
+  List,
+  type ListProps,
+  type ListRef,
+} from '@/src/common/components/List';
 import { renderNode } from '@/src/common/components/HidingHeader';
+import { Button } from '@/src/common/components/primitives';
 import { isWeb } from '@/src/common/util/platform';
+import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { runOnJS } from 'react-native-worklets';
 
 type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   post: PostData;
@@ -66,19 +73,36 @@ export function ThreadList({
     : Math.max(insets.bottom, windowHeight - belowHeight);
 
   // Parents shift the subject by a height the list can only estimate, so
-  // cover the list until it has placed.
-  const [settling, setSettling] = useState(!isWeb);
+  // native covers the list until it has placed.
+  const [settling, setSettling] = useState(true);
   useEffect(() => {
-    if (isWeb || thread.isLoading) return;
+    if (thread.isLoading) return;
     const timer = setTimeout(() => setSettling(false), SETTLE_MS);
     return () => clearTimeout(timer);
   }, [thread.isLoading]);
+
+  // Points at the parent above the anchored subject. Waits for the list to
+  // place the subject, since that can scroll up too.
+  const listRef = useRef<ListRef>(null);
+  const { scrollY, isScrollHintVisible } = useHideScrollHint(
+    !settling && subjectIndex > 0,
+  );
+  const header = (
+    <View>
+      {renderNode(HeaderComponent)}
+      {isScrollHintVisible ? (
+        <ScrollHint onPress={() => listRef.current?.scrollToTop()} />
+      ) : null}
+    </View>
+  );
 
   return (
     <View style={Atoms.flex_1}>
       <List
         {...rest}
-        HeaderComponent={HeaderComponent}
+        ref={listRef}
+        scrollY={scrollY}
+        HeaderComponent={header}
         data={items}
         // Keeps the subject anchored while parents load in above it.
         maintainVisibleContentPosition={{ disabled: false }}
@@ -129,7 +153,7 @@ export function ThreadList({
           ) : undefined
         }
       />
-      {settling ? (
+      {!isWeb && settling ? (
         <View
           style={[Atoms.absolute, Atoms.inset_0, theme.atoms.box.primary.bg]}
         >
@@ -138,6 +162,55 @@ export function ThreadList({
           <ComposerInput replyTo={post.id} />
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Shows a scroll hint once: from when `canShow` turns true until the first
+ * scroll up, after which it stays hidden. Pass `scrollY` to the list.
+ */
+function useHideScrollHint(canShow: boolean) {
+  const scrollY = useSharedValue(0);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const isScrollHintVisible = canShow && !isDismissed;
+
+  useAnimatedReaction(
+    () => scrollY.value,
+    (offset, previousOffset) => {
+      if (
+        isScrollHintVisible &&
+        previousOffset !== null &&
+        offset < previousOffset
+      ) {
+        runOnJS(setIsDismissed)(true);
+      }
+    },
+    [isScrollHintVisible],
+  );
+
+  return { scrollY, isScrollHintVisible };
+}
+
+function ScrollHint({ onPress }: { onPress: () => void }) {
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[
+        Atoms.absolute,
+        Atoms.items_center,
+        Atoms.pt_sm,
+        // Hangs below the header without changing its height.
+        { top: '100%', left: 0, right: 0 },
+      ]}
+    >
+      <Button
+        title=""
+        icon="arrowUp"
+        size="sm"
+        variant="tertiary"
+        onPress={onPress}
+      />
     </View>
   );
 }
