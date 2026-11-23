@@ -45,6 +45,7 @@ export class EventStore {
    * Try persisting the event and/or content that we have received from a
    * remote source.
    * An existing event is never overwritten.
+   * Does not throw if the event is already present.
    */
   async persist(
     owner: string,
@@ -54,20 +55,33 @@ export class EventStore {
     assertIdentity(owner, invalidOwner);
     const { eventKey, contentDigest } = decodeEvent(event);
 
-    const existing = await this.repository.get(owner, eventKey);
+    let existing = await this.repository.get(owner, eventKey);
     if (!existing) {
       assertSignature(event, eventKey);
       if (contentBytes) assertContentMatches(contentDigest, contentBytes);
 
-      await this.repository.insert({
-        owner,
-        eventKey,
-        eventBytes: event.eventBytes,
-        eventSignature: event.signature,
-        contentStatus: contentBytes ? 'present' : 'absent',
-        contentBytes,
-      });
-    } else if (contentBytes && existing.contentStatus === 'absent') {
+      try {
+        await this.repository.insert({
+          owner,
+          eventKey,
+          eventBytes: event.eventBytes,
+          eventSignature: event.signature,
+          contentStatus: contentBytes ? 'present' : 'absent',
+          contentBytes,
+        });
+
+        return;
+      } catch (error) {
+        if (!isAlreadyExists(error)) throw error;
+
+        // An event with the same event key was inserted after we checked.
+        // Let's try reading it so we can insert content if needed.
+        existing = await this.repository.get(owner, eventKey);
+        if (!existing) throw error;
+      }
+    }
+
+    if (contentBytes && existing.contentStatus === 'absent') {
       await this.addVerifiedContent(existing, contentBytes);
     }
   }
@@ -148,6 +162,9 @@ export class EventStore {
 
 const invalidOwner = (message: string) =>
   new EventRepositoryError('invalid owner', message);
+
+const isAlreadyExists = (error: unknown): boolean =>
+  error instanceof EventRepositoryError && error.code === 'already exists';
 
 type DecodedEvent = {
   event: Proto.Event;
