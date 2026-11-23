@@ -38,7 +38,7 @@ runs:
       uses: forgejo/download-artifact@v4
       with:
         name: js-wasm-build
-        path: packages
+        path: packages/js
     - if: inputs.android-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
