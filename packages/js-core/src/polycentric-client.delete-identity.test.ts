@@ -121,6 +121,8 @@ describe('deleteRemoteIdentity', () => {
     request.mockImplementation(async (server: string) => {
       if (server === SERVERS[1]) throw new Error('offline');
     });
+    // Suppress the console error that we expect from cluttering the output
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const results = await client.deleteRemoteIdentity();
 
@@ -129,6 +131,8 @@ describe('deleteRemoteIdentity', () => {
       { server: SERVERS[0], deleted: true },
       { server: SERVERS[1], deleted: false, error: expect.any(Error) },
     ]);
+
+    error.mockRestore();
   });
 
   it('includes servers the identity listed in the past', async () => {
@@ -180,6 +184,8 @@ describe('clearDevicePushSubscriptions', () => {
       typeof vi.fn
     >;
     send.mockRejectedValueOnce(new Error('offline'));
+    // Suppress the console error that we expect from cluttering the output
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await client.clearDevicePushSubscriptions(SERVERS, {
       service: 'expo',
@@ -192,5 +198,7 @@ describe('clearDevicePushSubscriptions', () => {
     );
     expect(request.pushTarget).toEqual({ service: 'expo', token: 'token' });
     expect(request.subscriptions).toEqual([]);
+
+    error.mockRestore();
   });
 });
