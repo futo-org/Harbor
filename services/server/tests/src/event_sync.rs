@@ -7299,17 +7299,29 @@ async fn validation_passed_meta() {
 }
 
 #[derive(Debug)]
-struct ExpectError {
-    bundle_index: usize,
-    kind: ExpectErrorKind,
+pub(crate) struct ExpectError {
+    pub(crate) bundle_index: usize,
+    pub(crate) kind: ExpectErrorKind,
+}
+
+impl ExpectError {
+    /// Expect an error that the identity is not known.
+    pub(crate) fn no_identity() -> ExpectError {
+        ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "no identity content for target",
+            ),
+        }
+    }
 }
 
 #[derive(Debug)]
-enum ExpectErrorKind {
+pub(crate) enum ExpectErrorKind {
     MsgContains(&'static str),
 }
 
-fn expect_errors(
+pub(crate) fn expect_errors(
     result: Result<(), SubmitErrors>,
     expected_errors: &[ExpectError],
     expected_warnings: &[ExpectError],

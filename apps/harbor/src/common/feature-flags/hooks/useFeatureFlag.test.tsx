@@ -6,6 +6,8 @@ import { useFeatureFlag } from '../';
 
 const SETTINGS_KEY = 'polycentric:settings';
 
+const renderers: TestRenderer.ReactTestRenderer[] = [];
+
 function renderFlag() {
   const result = { current: null as boolean | null };
   function Probe() {
@@ -13,14 +15,22 @@ function renderFlag() {
     return null;
   }
   act(() => {
-    TestRenderer.create(<Probe />);
+    renderers.push(TestRenderer.create(<Probe />));
   });
   return result;
 }
 
 beforeEach(async () => {
   await AsyncStorage.clear();
-  useSettings.setState({ featureFlags: {} });
+  act(() => {
+    useSettings.setState({ featureFlags: {} });
+  });
+});
+
+afterEach(() => {
+  act(() => {
+    for (const renderer of renderers.splice(0)) renderer.unmount();
+  });
 });
 
 describe('useFeatureFlag', () => {

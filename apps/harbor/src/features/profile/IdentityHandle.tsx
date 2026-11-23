@@ -6,10 +6,7 @@ import { useIdentityHandle } from './hooks/useIdentityHandle';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 
-type IdentityHandleProps = Omit<
-  ComponentProps<typeof Text>,
-  'children' | 'numberOfLines'
-> & {
+type IdentityHandleProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
 };
 
@@ -18,6 +15,7 @@ export function IdentityHandle({
   identity,
   variant = 'secondary',
   color = 'muted',
+  numberOfLines = 1,
   style,
   ...textProps
 }: IdentityHandleProps) {
@@ -29,7 +27,7 @@ export function IdentityHandle({
       {...textProps}
       variant={variant}
       color={color}
-      numberOfLines={1}
+      numberOfLines={numberOfLines}
       monospace={handle.kind === 'hash'}
       style={[
         style,

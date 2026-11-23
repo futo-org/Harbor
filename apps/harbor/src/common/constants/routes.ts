@@ -112,6 +112,7 @@ export const Routes = {
       pairIdentity: '/settings/pair-identity',
       createBackup: '/settings/create-backup',
       checkBackup: '/settings/check-backup',
+      deleteIdentity: '/settings/delete-identity',
       servers: '/settings/servers',
       syncEvents: '/settings/sync-events',
       verificationAuthorities: '/settings/verification-authorities',

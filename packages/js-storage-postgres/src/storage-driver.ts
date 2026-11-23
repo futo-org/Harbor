@@ -39,14 +39,7 @@ export class DrizzlePgStorageDriver implements IStorageDriver {
           throw new DatabaseError('Already logged in.');
         }
       } else {
-        const rows = await all(
-          this.db,
-          sql`SELECT id FROM active_login LIMIT 1`,
-        );
-
-        if (rows.length > 0) {
-          throw new DatabaseError('Already logged in.');
-        }
+        await all(this.db, sql`DELETE FROM active_login`);
       }
     } catch (error) {
       throw new DatabaseError(`set active login: ${error}`, error);

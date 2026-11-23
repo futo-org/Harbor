@@ -20,7 +20,7 @@
     "ads": "No, the app does not contain ads",
     "appAccess": {
       "restricted": true,
-      "instructions": "There is no sign-in. Explore and Search work without an identity. To post, follow or react, tap \"Create identity\" on the welcome screen and enter a display name. No email, phone or password is needed."
+      "instructions": "An identity is required to use the app. It is created on the device, with no email, phone or password. On the welcome screen tap \"Create new identity\", enter a display name and tap \"Continue\". No demo account or credentials are needed."
     },
     "contentRating": {
       "category": "Social networking, forums, blogs, UGC sharing",

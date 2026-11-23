@@ -63,6 +63,11 @@ export interface IEventRepository {
   getAll(owner: string): Promise<EventRow[]>;
 
   /**
+   * Delete every event and content owned by `owner`.
+   */
+  deleteAll(owner: string): Promise<void>;
+
+  /**
    * List all persisted event keys meeting the following criteria:
    * 1. owned by `owner`.
    * 2. identity matches the owner.
@@ -73,6 +78,12 @@ export interface IEventRepository {
    * Useful for syncing.
    */
   getHeads(owner: string): Promise<EventKey[]>;
+
+  /**
+   * Get all identity and profile events for each local identity (owner).
+   * Useful for hydrating rs-core for the identity switcher.
+   */
+  getProfiles(): Promise<EventRow[]>;
 }
 
 /**

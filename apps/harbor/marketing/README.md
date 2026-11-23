@@ -4,6 +4,7 @@ Copy, screenshots and graphics for the App Store and Google Play. Everything is 
 
 ```
 source/listing.mjs      Text, URLs, categories, declarations
+source/review-notes.txt App Review notes
 source/data.mjs         Fictional people, posts, slide headlines
 source/screens.mjs      App screen mockups
 source/render.mjs       Screenshots, feature graphic, icons
