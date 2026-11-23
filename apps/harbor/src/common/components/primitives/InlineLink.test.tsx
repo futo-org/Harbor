@@ -26,3 +26,13 @@ test('it renders an anchor underlined on hover', async () => {
   expect(link.props.href).toBe('/alice');
   expect(link.props.className).toBe('underlineOnHover');
 });
+
+test('it can skip the hover underline', async () => {
+  const screen = await render(
+    <InlineLink href="/alice" underlineOnHover={false}>
+      Alice
+    </InlineLink>,
+  );
+
+  expect(screen.getByText('Alice').props.className).toBeUndefined();
+});

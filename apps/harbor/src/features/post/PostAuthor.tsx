@@ -10,7 +10,7 @@ type PostAuthorProps = {
   stacked?: boolean;
 };
 
-/** The author's name, linked to their profile, and handle. */
+/** The author's name and handle, both linked to their profile. */
 export function PostAuthor({ stacked = false, ...props }: PostAuthorProps) {
   return stacked ? (
     <StackedNameAndHandle {...props} />
@@ -25,7 +25,7 @@ function StackedNameAndHandle({ identity }: PostAuthorProps) {
       <AuthorName identity={identity} style={Atoms.flex_shrink_1} />
       {identity ? (
         <View style={Atoms.self_start}>
-          <IdentityHandle identity={identity} />
+          <IdentityHandle identity={identity} linkToProfile />
         </View>
       ) : null}
     </>
@@ -45,6 +45,7 @@ function InlineNameAndHandle({ identity }: PostAuthorProps) {
       {identity ? (
         <IdentityHandle
           identity={identity}
+          linkToProfile
           style={isHandleHash ? styles.hash : styles.alias}
         />
       ) : null}

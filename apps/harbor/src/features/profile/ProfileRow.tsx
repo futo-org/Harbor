@@ -50,6 +50,10 @@ export function ProfileRow({
     linksToProfile ? Routes.tabs.profile(identity) : null,
     onPress && (() => onPress(identity, profile)),
   );
+  // On web, the parts are anchors too, for the hover URL and the context
+  // menu; on native they'd only take the row's press feedback. Not with
+  // `onPress`, which the anchors wouldn't run.
+  const linksPartsToProfile = isWeb && linksToProfile && !onPress;
 
   return (
     <Pressable
@@ -83,15 +87,13 @@ export function ProfileRow({
             variant="secondary"
             fontWeight="semibold"
             selectable={false}
-            // On web, an anchor too, for the hover URL and the context menu;
-            // on native it would only take the row's press feedback. Not with
-            // `onPress`, which the anchor wouldn't run.
-            linkToProfile={isWeb && linksToProfile && !onPress}
+            linkToProfile={linksPartsToProfile}
           />
           <IdentityHandle
             identity={identity}
             variant="small"
             selectable={false}
+            linkToProfile={linksPartsToProfile}
           />
         </View>
         {trailing}
