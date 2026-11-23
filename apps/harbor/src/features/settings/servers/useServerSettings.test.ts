@@ -160,6 +160,8 @@ describe('addServer', () => {
     mockClient.identityManager.addServer.mockRejectedValueOnce(
       new Error('offline'),
     );
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     const hook = renderHook();
 
     let added = true;
@@ -170,12 +172,16 @@ describe('addServer', () => {
     expect(added).toBe(false);
     expect(mockToast.error).toHaveBeenCalledWith('Could not add server');
     expect(hook.current.addError?.message).toBe('offline');
+
+    error.mockRestore();
   });
 
   it('clears a previous error on the next attempt', async () => {
     mockClient.identityManager.addServer.mockRejectedValueOnce(
       new Error('offline'),
     );
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     const hook = renderHook();
 
     await act(async () => {
@@ -187,6 +193,8 @@ describe('addServer', () => {
       await hook.current.addServer('https://new.example');
     });
     expect(hook.current.addError).toBeNull();
+
+    error.mockRestore();
   });
 });
 
@@ -225,6 +233,8 @@ describe('removeServer', () => {
     mockClient.identityManager.removeServer.mockRejectedValueOnce(
       new Error('offline'),
     );
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     const hook = renderHook();
 
     await act(async () => {
@@ -233,5 +243,7 @@ describe('removeServer', () => {
 
     expect(mockToast.error).toHaveBeenCalledWith('offline');
     expect(hook.current.isBusy).toBe(false);
+
+    error.mockRestore();
   });
 });

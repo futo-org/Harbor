@@ -130,6 +130,14 @@ export class EventRepository implements IEventRepository {
     }
   }
 
+  async deleteAll(owner: string): Promise<void> {
+    try {
+      await this.db.run(sql`DELETE FROM events WHERE owner = ${owner}`);
+    } catch (error) {
+      throw toEventRepositoryError('delete all events', error);
+    }
+  }
+
   async getHeads(owner: string): Promise<EventKey[]> {
     try {
       const rows = await this.db.all<EventKeyColumns>(sql`

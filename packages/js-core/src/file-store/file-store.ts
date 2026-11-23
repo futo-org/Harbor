@@ -4,6 +4,9 @@ import { FileStoreError } from '../platform-interfaces/file-store-driver';
 import type * as Proto from '../proto/v2';
 import { toDigestKey } from '../utils/hex';
 
+// File names written by the legacy store at the root: `{type}_{hex}`.
+const LEGACY_BLOB_NAME = /^\d+_(?:[0-9a-f]{2})+$/;
+
 /**
  * Manage blobs that have been persisted locally by the client.
  */
@@ -61,6 +64,19 @@ export class FileStore {
     return this.driver.delete(this.pathFor(owner, digest));
   }
 
+  /**
+   * Delete every file under the owner, and every legacy file.
+   */
+  async deleteAll(owner: string): Promise<void> {
+    assertIdentity(owner, invalidOwner);
+    await this.driver.deleteSubpath(`blobs/${owner}`);
+
+    for (const entry of (await this.driver.list('')) ?? []) {
+      if (entry.kind !== 'file' || !LEGACY_BLOB_NAME.test(entry.name)) continue;
+      await this.driver.delete(entry.name);
+    }
+  }
+
   // ---- Legacy blobs ----
 
   private legacyPathFor(digest: Proto.ContentDigest): string {
@@ -89,9 +105,6 @@ export class FileStore {
   async migrate({ storage }: FileStoreMigrationOptions): Promise<void> {
     // Path at which the marker is placed when the migration has completed.
     const MIGRATION_MARKER = 'migrations/v2';
-
-    // File names written by the legacy store at the root: `{type}_{hex}`.
-    const LEGACY_BLOB_NAME = /^\d+_(?:[0-9a-f]{2})+$/;
 
     if (await this.driver.has(MIGRATION_MARKER)) return;
 

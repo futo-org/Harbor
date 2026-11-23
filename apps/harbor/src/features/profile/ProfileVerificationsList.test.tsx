@@ -24,11 +24,13 @@ jest.mock('@/src/common/components/List', () => {
   return {
     List: ({
       data,
+      keyExtractor,
       renderItem,
       ListHeaderComponent,
       ListEmptyComponent,
     }: {
-      data: { key: string }[];
+      data: unknown[];
+      keyExtractor: (item: unknown, index: number) => string;
       renderItem: (info: { item: unknown; index: number }) => unknown;
       ListHeaderComponent?: unknown;
       ListEmptyComponent?: unknown;
@@ -42,7 +44,7 @@ jest.mock('@/src/common/components/List', () => {
           : data.map((item, index) =>
               react.createElement(
                 View,
-                { key: item.key },
+                { key: keyExtractor(item, index) },
                 renderItem({ item, index }),
               ),
             ),
