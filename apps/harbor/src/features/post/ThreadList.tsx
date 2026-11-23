@@ -195,14 +195,13 @@ function useHideScrollHint(canShow: boolean) {
 function ScrollHint({ onPress }: { onPress: () => void }) {
   return (
     <View
+      pointerEvents="box-none"
       style={[
         Atoms.absolute,
         Atoms.items_center,
         Atoms.pt_sm,
         // Hangs below the header without changing its height.
         { top: '100%', left: 0, right: 0 },
-        // Only the pill takes taps, not the row around it.
-        { pointerEvents: 'box-none' },
       ]}
     >
       <Button
