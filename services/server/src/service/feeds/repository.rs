@@ -20,7 +20,7 @@ use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     application, content, content_delete, content_label,
     content_post_attributed_url, content_reaction as Contentreaction, event,
-    follow, interaction_tally, quote, reaction, reply, repost,
+    follow, interaction_tally, profile, quote, reaction, reply, repost,
 };
 
 /// Application identifiers hidden from the global Explore feed.
@@ -33,7 +33,6 @@ const EXPLORE_HIDDEN_APPLICATIONS: &[&str] = &[
 ];
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
-const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
 /// Type used when ordering events by the create at column.
 pub type EventCreatedAt = DateTimeWithTimeZone;
@@ -904,10 +903,7 @@ impl Query {
             .await
     }
 
-    /// Return the latest PROFILE event (highest `sequence`) per
-    /// identity for each of `identities`. Used as `event_hints` on
-    /// feed/thread responses so clients can populate author profiles
-    /// without a follow-up round-trip.
+    /// Return the latest PROFILE event per identity for each of `identities`.
     #[tracing::instrument(skip_all)]
     pub async fn list_latest_profiles_for_identities<C: Connection>(
         db: &mut C,
@@ -916,25 +912,27 @@ impl Query {
         if identities.is_empty() {
             return Ok(Vec::new());
         }
-        let rows = event::Entity::find()
-            .select_also(content::Entity)
-            .join(JoinType::LeftJoin, content_join())
-            .filter(event::Column::Collection.eq(PROFILE_COLLECTION))
-            .filter(event::Column::Identity.is_in(identities))
-            .order_by_desc(event::Column::Sequence)
-            .all(db)
-            .await?;
 
-        // Keep the first (highest-sequence) row per identity.
-        let mut seen: std::collections::HashSet<String> =
-            std::collections::HashSet::new();
-        let mut deduped = Vec::with_capacity(rows.len());
-        for row in rows {
-            if seen.insert(row.0.identity.clone()) {
-                deduped.push(row);
-            }
-        }
-        Ok(deduped)
+        let mut query = profile::Entity::find().select_only();
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            "A_", // NOTE: required for typed_query below.
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            "B_", // NOTE: required for typed_query below.
+            content::Column::iter(),
+        );
+        query = query
+            .inner_join(event::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .filter(event::Column::Identity.eq_any(identities));
+
+        let mut typed_query =
+            event::Entity::find().select_also(content::Entity);
+        *QueryTrait::query(&mut typed_query) = query.into_query();
+        typed_query.all(db).await
     }
 
     /// Bulk-fetch event rows by primary key, joining content. Order of the
