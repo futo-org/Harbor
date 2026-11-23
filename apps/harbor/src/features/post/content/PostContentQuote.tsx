@@ -12,7 +12,7 @@ import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
-import { router } from 'expo-router';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -62,18 +62,15 @@ export function PostContentQuote({
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
-  const handlePress = useCallback(() => {
-    if (!post) return;
-
-    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
-    if (route) router.navigate(route);
-  }, [post]);
+  const cardLinkProps = useCardLinkPress(
+    post ? eventRoute({ ...post, collection: COLLECTION.FEED }) : null,
+  );
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
 
   return (
     <Pressable
-      onPress={handlePress}
+      {...cardLinkProps}
       style={[
         Atoms.p_md,
         Atoms.rounded_md,

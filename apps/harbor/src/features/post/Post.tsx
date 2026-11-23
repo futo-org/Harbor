@@ -4,6 +4,7 @@ import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { COLLECTION } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -47,11 +48,9 @@ export const Post = memo(function Post({
 
   const authorIdentity = post.identity ?? null;
 
-  const handlePress = useCallback(() => {
-    if (disablePress) return;
-    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
-    if (route) router.navigate(route);
-  }, [disablePress, post]);
+  const cardLinkProps = useCardLinkPress(
+    disablePress ? null : eventRoute({ ...post, collection: COLLECTION.FEED }),
+  );
 
   const handleAuthorPress = useCallback(() => {
     if (!authorIdentity) return;
@@ -144,7 +143,7 @@ export const Post = memo(function Post({
         !hideBottomBorder && [theme.atoms.box.primary.border, Atoms.border_b],
         pressed && theme.atoms.box.primary.bg_hover,
       ]}
-      onPress={handlePress}
+      {...cardLinkProps}
       disabled={disablePress}
     >
       <PostHeader

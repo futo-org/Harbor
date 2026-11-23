@@ -3,6 +3,7 @@ import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import { Atoms, useTheme } from '@/src/common/theme';
@@ -126,12 +127,10 @@ function InteractionNotification({
 
   const quoted = quotedPost(notification);
 
-  const handlePress = useCallback(() => {
-    router.navigate(
-      notificationRoute(notification) ??
-        Routes.tabs.profile(notification.fromIdentity),
-    );
-  }, [notification]);
+  const cardLinkProps = useCardLinkPress(
+    notificationRoute(notification) ??
+      Routes.tabs.profile(notification.fromIdentity),
+  );
 
   const openProfile = useCallback(
     () => router.navigate(Routes.tabs.profile(notification.fromIdentity)),
@@ -140,7 +139,7 @@ function InteractionNotification({
 
   return (
     <Pressable
-      onPress={handlePress}
+      {...cardLinkProps}
       style={[Atoms.p_md, theme.atoms.box.primary.border, Atoms.border_b]}
     >
       <EventSummary
