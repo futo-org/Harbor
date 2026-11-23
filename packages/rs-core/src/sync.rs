@@ -1,6 +1,6 @@
 use polycentric_common::models::{
     collections,
-    protos_v2::{PutEventsRequest, PutEventsResponse},
+    protos_v2::{PutEventError, PutEventsRequest, PutEventsResponse},
 };
 use std::collections::{BTreeMap, HashMap, btree_map::Entry};
 
@@ -117,25 +117,58 @@ pub fn bundle_local_events(
     Ok(bundles)
 }
 
-/// Send event bundles to server
+/// Events sent per `put_events` request.
+const PUSH_BATCH_SIZE: usize = 200;
+
+/// Send event bundles to server, [`PUSH_BATCH_SIZE`] per request and in
+/// order. The responses are returned as one, as if for a single request.
 pub async fn push_bundles(
     server: &str,
-    bundles: Vec<EventBundle>,
+    mut bundles: Vec<EventBundle>,
 ) -> Result<PutEventsResponse, CoreError> {
-    let req = PutEventsRequest {
-        event_bundles: bundles,
-    };
-
     let mut rpc_client =
         EventSyncServiceClient::new(channel(server).await.map_err(CoreError::Network)?);
 
-    let response = rpc_client
-        .put_events(req)
-        .await
-        .map_err(|e| CoreError::Network(format!("sync: put_events: {e}")))?
-        .into_inner();
+    let mut merged = PutEventsResponse::default();
+    let mut sent = 0;
+    loop {
+        let rest = bundles.split_off(bundles.len().min(PUSH_BATCH_SIZE));
+        let batch_len = bundles.len();
+        let response = rpc_client
+            .put_events(PutEventsRequest {
+                event_bundles: bundles,
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("sync: put_events: {e}")))?
+            .into_inner();
+        merge_response(&mut merged, response, sent as u32);
 
-    Ok(response)
+        sent += batch_len;
+        bundles = rest;
+        if bundles.is_empty() {
+            return Ok(merged);
+        }
+    }
+}
+
+/// Add the `response` of the batch that started at bundle `offset` to `merged`.
+fn merge_response(merged: &mut PutEventsResponse, response: PutEventsResponse, offset: u32) {
+    let at_offset = |mut issue: PutEventError| {
+        issue.event_bundle_index += offset;
+        issue
+    };
+    merged
+        .errors
+        .extend(response.errors.into_iter().map(at_offset));
+    merged
+        .warnings
+        .extend(response.warnings.into_iter().map(at_offset));
+    // Batches can ask for the same blob.
+    for blob in response.requested_blobs {
+        if !merged.requested_blobs.contains(&blob) {
+            merged.requested_blobs.push(blob);
+        }
+    }
 }
 
 /// Decode the key of the event in `bundle`.
@@ -209,6 +242,44 @@ mod tests {
             event_bundle_index,
             message: message.to_string(),
         }
+    }
+
+    #[test]
+    fn merges_batch_responses_as_one() {
+        use polycentric_common::models::protos_v2::Blob;
+
+        let blob = |size| Blob {
+            size,
+            ..Default::default()
+        };
+        let mut merged = PutEventsResponse::default();
+        merge_response(
+            &mut merged,
+            PutEventsResponse {
+                errors: vec![issue(3, "first batch")],
+                requested_blobs: vec![blob(1), blob(2)],
+                warnings: vec![],
+            },
+            0,
+        );
+        merge_response(
+            &mut merged,
+            PutEventsResponse {
+                errors: vec![issue(0, "second batch")],
+                requested_blobs: vec![blob(2), blob(3)],
+                warnings: vec![issue(199, "second batch")],
+            },
+            200,
+        );
+
+        assert_eq!(
+            merged,
+            PutEventsResponse {
+                errors: vec![issue(3, "first batch"), issue(200, "second batch")],
+                requested_blobs: vec![blob(1), blob(2), blob(3)],
+                warnings: vec![issue(399, "second batch")],
+            }
+        );
     }
 
     #[test]
