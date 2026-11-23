@@ -30,6 +30,7 @@ use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
 mod blobs;
+mod deleting;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -590,6 +591,20 @@ impl TestClient {
         self.verification_claim(claim, created_at)
     }
 
+    pub async fn delete_self(&self) {
+        let auth_token = self.create_auth_token();
+        let mut request = tonic::Request::new(DeleteIdentityRequest {});
+        request
+            .metadata_mut()
+            .insert("authorization", auth_token.try_into().unwrap());
+
+        identity_service()
+            .await
+            .delete_identity(request)
+            .await
+            .unwrap();
+    }
+
     #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
@@ -866,6 +881,12 @@ pub enum ExpectEventKind<'a> {
     Repost {
         post: EventKey,
     },
+    ProfileUpdate {
+        name: Option<String>,
+        description: Option<String>,
+        alias: Option<String>,
+        // TODO: add other fields as needed.
+    },
     VerificationClaim {
         schema: VerificationSchema,
         fields: HashMap<&'a str, &'a str>,
@@ -896,6 +917,21 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
             (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
                 let got = repost.post.as_ref().expect("repost is missing key");
                 assert_eq!(got, post);
+            }
+            (
+                ContentBody::ProfileUpdate(update),
+                ExpectEventKind::ProfileUpdate {
+                    name,
+                    description,
+                    alias,
+                },
+            ) => {
+                assert_eq!(update.name.as_deref(), name.as_deref());
+                assert_eq!(
+                    update.description.as_deref(),
+                    description.as_deref()
+                );
+                assert_eq!(update.alias.as_deref(), alias.as_deref());
             }
             (
                 ContentBody::VerificationClaim(claim),

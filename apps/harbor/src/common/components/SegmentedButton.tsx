@@ -59,6 +59,9 @@ export function SegmentedButton({
 
   const updateSegmentFrame = (index: number) => (event: LayoutChangeEvent) => {
     const { x, width, height } = event.nativeEvent.layout;
+    // Hidden screens report zero size on web; keep the last frame
+    if (width === 0) return;
+
     setSegmentFrames((frames) => {
       const updatedFrames = [...frames];
       updatedFrames[index] = { x, width, height };

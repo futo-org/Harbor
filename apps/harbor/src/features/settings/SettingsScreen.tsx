@@ -152,6 +152,17 @@ export default function SettingsTabScreen() {
                 >
                   <Text variant="body">Test Backup</Text>
                 </ListItemWrapper>
+                {identityKey && (
+                  <ListItemWrapper
+                    onPress={() =>
+                      router.navigate(Routes.tabs.settings.deleteIdentity)
+                    }
+                  >
+                    <Text variant="body" color="danger">
+                      Delete Identity
+                    </Text>
+                  </ListItemWrapper>
+                )}
               </ListItemGroup>
 
               <ListItemGroup label="Servers">

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SeverityNumber } from '@opentelemetry/api';
 import { setTelemetryIdentity } from '../lib/identity';
 import {
@@ -6,7 +7,7 @@ import {
   levelOf,
   toLogEntry,
 } from '../lib/logging';
-import { MAX_LOG_ENTRIES, useLogStore } from './useLogStore';
+import { MAX_LOG_ENTRIES, persistLogs, useLogStore } from './useLogStore';
 import { formatLogArgs, formatLogs } from '../utils/format';
 
 jest.mock('@opentelemetry/exporter-trace-otlp-http', () => ({
@@ -21,6 +22,15 @@ beforeEach(() => {
     canSign: true,
     canRotate: false,
   });
+});
+
+// The log store code automatically schedules `persistLogs()` to be called after
+// a delay to debounce storage writes.
+// For testing, we should just force it to write and then clear right after each
+// test so that jest doesn't wait on it.
+afterEach(async () => {
+  await persistLogs();
+  await AsyncStorage.clear();
 });
 
 test('emitted records land in the store as OTLP JSON', () => {

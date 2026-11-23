@@ -4,7 +4,7 @@ use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
 use polycentric_common::jwt;
-use polycentric_common::models::protos_v2::{KeyType, PublicKey};
+use polycentric_common::models::protos_v2::PublicKey;
 use tonic::Status;
 
 use crate::db::DbConn;
@@ -13,18 +13,30 @@ use crate::service::identity::service::cached_identity_content;
 
 /// The verified identity of a request, available via request extensions.
 #[derive(Debug, Clone)]
-pub struct AuthenticatedIdentity(pub String);
+pub struct AuthenticatedIdentity {
+    /// Identity of the caller.
+    pub identity: String,
+    /// Public key used by the caller.
+    pub public_key: PublicKey,
+}
 
 /// The identity the request is authenticated as, or `None` when it
 /// arrived without a verified auth token. Populated by [`auth_middleware`]
 /// from the bearer JWT and carried through as a request extension.
+pub fn authenticated<T>(
+    request: &tonic::Request<T>,
+) -> Option<AuthenticatedIdentity> {
+    request.extensions().get::<AuthenticatedIdentity>().cloned()
+}
+
+/// Same as [`authenticated`], but only returns the identity.
 pub fn authenticated_identity<T>(
     request: &tonic::Request<T>,
 ) -> Option<String> {
     request
         .extensions()
         .get::<AuthenticatedIdentity>()
-        .map(|AuthenticatedIdentity(identity)| identity.clone())
+        .map(|AuthenticatedIdentity { identity, .. }| identity.clone())
 }
 
 #[derive(Clone)]
@@ -52,11 +64,13 @@ pub async fn auth_middleware(
     let mut authenticated = None;
     if let Some(token) = token {
         match verify_auth_token(&state.ctx, token, &state.allow_hosts).await {
-            Ok(identity) => {
-                tracing::Span::current().record("harbor.identity", &identity);
-                let identity = AuthenticatedIdentity(identity);
-                authenticated = Some(identity.clone());
-                request.extensions_mut().insert(identity);
+            Ok(auth) => {
+                tracing::Span::current()
+                    .record("harbor.identity", &auth.identity);
+                tracing::Span::current()
+                    .record("harbor.public_key", auth.public_key.to_string());
+                authenticated = Some(auth.clone());
+                request.extensions_mut().insert(auth);
             }
             Err(status) if status.code() == tonic::Code::FailedPrecondition => {
                 tracing::debug!(
@@ -103,7 +117,7 @@ async fn verify_auth_token(
     ctx: &ServiceContext,
     token: &str,
     allow_hosts: &[String],
-) -> Result<String, Status> {
+) -> Result<AuthenticatedIdentity, Status> {
     let unauthenticated =
         |e: jwt::JwtError| Status::unauthenticated(format!("Auth Token: {e}"));
 
@@ -114,10 +128,6 @@ async fn verify_auth_token(
 
     // The signing key must be in the issuer's identity document. Our copy
     // may be stale (pairing), so fail as a precondition, not a rejection.
-    let signer = PublicKey {
-        key_type: KeyType::Ed25519 as i32,
-        key: verified.signed_by,
-    };
     let mut db = DbConn::from_pool(&ctx.ro_db).await?;
     let identity_content = cached_identity_content(
         &mut db,
@@ -126,13 +136,16 @@ async fn verify_auth_token(
     )
     .await?;
     drop(db);
-    if !identity_content.authorizes_signer(&signer) {
+    if !identity_content.authorizes_signer(&verified.signed_by) {
         return Err(Status::failed_precondition(
             "auth token: signing key is not authorized by the issuer's identity document here",
         ));
     }
 
-    Ok(verified.claims.iss)
+    Ok(AuthenticatedIdentity {
+        identity: verified.claims.iss,
+        public_key: verified.signed_by,
+    })
 }
 
 fn now_secs() -> u64 {
@@ -152,6 +165,7 @@ mod tests {
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use ed25519_dalek::{Signer, SigningKey};
+    use polycentric_common::models::protos_v2::KeyType;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase};
     use tower::ServiceExt;
 
@@ -168,7 +182,7 @@ mod tests {
                 "/",
                 any(|request: Request| async move {
                     match request.extensions().get::<AuthenticatedIdentity>() {
-                        Some(AuthenticatedIdentity(identity)) => {
+                        Some(AuthenticatedIdentity { identity, .. }) => {
                             identity.clone()
                         }
                         None => "anonymous".to_string(),

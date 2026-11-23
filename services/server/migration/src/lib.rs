@@ -91,6 +91,8 @@ mod m20261117_000001_rm_old_search_functions;
 mod m20261117_000002_fix_removing_whitespace_from_query;
 mod m20261118_000001_update_content_image_table;
 mod m20261119_000001_fill_content_image_table;
+mod m20261120_000001_deleted_events_table;
+mod m20261120_000002_identity_audit_log;
 
 mod old_entity;
 
@@ -191,6 +193,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20261117_000002_fix_removing_whitespace_from_query::Migration),
             Box::new(m20261118_000001_update_content_image_table::Migration),
             Box::new(m20261119_000001_fill_content_image_table::Migration),
+            Box::new(m20261120_000001_deleted_events_table::Migration),
+            Box::new(m20261120_000002_identity_audit_log::Migration),
         ]
     }
 }

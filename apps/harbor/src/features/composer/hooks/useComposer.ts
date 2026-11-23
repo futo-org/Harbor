@@ -335,6 +335,7 @@ export function useComposer({
     handleCaptureImage,
     handleRemoveAttachment,
     handleRemoveLinkPreview,
+    ingestAssets,
   };
 }
 

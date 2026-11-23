@@ -75,9 +75,21 @@ export type CommitEventArgs = {
   contentBytes: Uint8Array;
 };
 
+export type NewBlob = {
+  digest: Proto.ContentDigest;
+  bytes: Uint8Array;
+};
+
 export type CreateEventArgs = {
   collection: Collection | number;
   content: Proto.Content;
+  blobs?: NewBlob[];
+};
+
+export type IdentityDeletionResult = {
+  server: string;
+  deleted: boolean;
+  error?: unknown;
 };
 
 export type CreatedEvent = {
@@ -88,6 +100,7 @@ export type CreatedEvent = {
   eventBytes: Uint8Array;
   content: Proto.Content;
   contentBytes: Uint8Array;
+  blobs: NewBlob[];
 };
 
 /**
@@ -291,6 +304,77 @@ export class PolycentricClient {
   }
 
   /**
+   * The current servers, followed by every other server the active identity
+   * has listed in its identity chain.
+   */
+  identityServerHistory(): string[] {
+    const servers = new Set(this.servers);
+    const identity = this.activeIdentityKey;
+    if (!identity) return [...servers];
+
+    let chain: Proto.EventBundle[] = [];
+    try {
+      chain = this.resolveIdentityChain(identity);
+    } catch (e) {
+      console.warn('identityServerHistory: no identity chain:', e);
+    }
+
+    for (const bundle of chain) {
+      const contentBytes = bundle.serializedContent?.contentBytes;
+      if (!contentBytes) continue;
+
+      try {
+        const body = Proto.Content.fromBinary(contentBytes).contentBody;
+        if (body.oneofKind !== 'identity') continue;
+        for (const url of body.identity.servers?.urls ?? []) servers.add(url);
+      } catch {
+        // Skip content we cannot decode.
+      }
+    }
+
+    return [...servers];
+  }
+
+  /**
+   * Ask every server the active identity has ever listed to delete it
+   * (`IdentityService.DeleteIdentity`). Never throws for a server; each
+   * outcome is returned.
+   */
+  async deleteRemoteIdentity(): Promise<IdentityDeletionResult[]> {
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const servers = this.identityServerHistory();
+    const results = await Promise.allSettled(
+      servers.map((server) => this.core.deleteIdentity(server)),
+    );
+
+    return results.map((result, i): IdentityDeletionResult => {
+      const server = servers[i]!;
+      if (result.status === 'fulfilled') return { server, deleted: true };
+      console.error(`Identity deletion failed for ${server}:`, result.reason);
+      return { server, deleted: false, error: result.reason };
+    });
+  }
+
+  /**
+   * Log out of `identity` if it is active, then delete its key pairs, events
+   * and blobs from this device. Safe to call again after a failure.
+   */
+  async deleteLocalIdentity(identity: string): Promise<void> {
+    if (this.activeIdentityKey === identity) {
+      await this.loginAs(null);
+    }
+
+    const logins = await this.storage.logins.listLogins(identity);
+    for (const login of logins) {
+      await this.storage.logins.deleteLogin(identity, login.publicKey);
+    }
+
+    await this.storage.events.deleteAll(identity);
+    await this.fileStore.deleteAll(identity);
+  }
+
+  /**
    * Mark every notification of the active identity as read on each
    * configured server (`NotificationService.AcknowledgeNotifications`), up to
    * the notification `lastSeen` triggered. Per-server failures are logged
@@ -485,14 +569,17 @@ export class PolycentricClient {
 
   /**
    * Create a new event under the current login.
+   * Any blobs provided will be stored first, and then the event+content will be
+   * persisted locally.
    * This should be used for most user content where the API fits.
-   * Handles signing, persisting locally, and mirroring to rs-core.
+   * This method handles signing, persisting locally, and mirroring to rs-core.
    * Does not sync to remote servers.
    * Throws on failure.
    */
   async createEvent({
     collection,
     content,
+    blobs,
   }: CreateEventArgs): Promise<CreatedEvent> {
     // Snapshot the current login at the start
     const identityKey = this.activeIdentityKey;
@@ -512,6 +599,13 @@ export class PolycentricClient {
     // Sign event
     const signedEvent = await this.signEvent(event, keyPair);
 
+    // Store blobs
+    if (blobs) {
+      for (const { digest, bytes } of blobs) {
+        await this.fileStore.put(identityKey, digest, bytes);
+      }
+    }
+
     // Persist event and content locally
     // This event can be considered canonical after this succeeds
     await this.commitEvent({
@@ -521,7 +615,7 @@ export class PolycentricClient {
       contentBytes,
     });
 
-    // Expose all derived objects to caller
+    // Expose all relevant objects to caller
     return {
       signedEvent,
       event,
@@ -530,6 +624,7 @@ export class PolycentricClient {
       eventBytes: signedEvent.eventBytes,
       content,
       contentBytes,
+      blobs: blobs ?? [],
     };
   }
 
@@ -772,6 +867,40 @@ export class PolycentricClient {
       if (result.status === 'rejected') {
         console.error(
           'setDevicePushSubscriptions failed for a server:',
+          result.reason,
+        );
+      }
+    }
+  }
+
+  /**
+   * Remove every push subscription of `target` on each of the push servers
+   * in `servers`. Per-server failures are logged but do not throw.
+   */
+  async clearDevicePushSubscriptions(
+    servers: string[],
+    target: Proto.PushTarget,
+  ): Promise<void> {
+    const requestBytes = Proto.SetDevicePushSubscriptionsRequest.toBinary(
+      Proto.SetDevicePushSubscriptionsRequest.create({
+        pushTarget: target,
+        subscriptions: [],
+      }),
+    );
+
+    const results = await Promise.allSettled(
+      servers.map((server) =>
+        this.core.setDevicePushSubscriptions(
+          server,
+          requestBytes.buffer as ArrayBuffer,
+        ),
+      ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(
+          'clearDevicePushSubscriptions failed for a server:',
           result.reason,
         );
       }

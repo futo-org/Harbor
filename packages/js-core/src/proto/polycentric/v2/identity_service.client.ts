@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { IdentityService } from "./identity_service";
+import type { DeleteIdentityResponse } from "./identity_service";
+import type { DeleteIdentityRequest } from "./identity_service";
 import type { ListBansResponse } from "./identity_service";
 import type { ListBansRequest } from "./identity_service";
 import type { IsBannedResponse } from "./identity_service";
@@ -47,6 +49,14 @@ export interface IIdentityServiceClient {
      * @generated from protobuf rpc: ListBans
      */
     listBans(input: ListBansRequest, options?: RpcOptions): UnaryCall<ListBansRequest, ListBansResponse>;
+    /**
+     * Deletes the currently authenticated identity.
+     *
+     * This identity can not be undone, use with caution.
+     *
+     * @generated from protobuf rpc: DeleteIdentity
+     */
+    deleteIdentity(input: DeleteIdentityRequest, options?: RpcOptions): UnaryCall<DeleteIdentityRequest, DeleteIdentityResponse>;
 }
 /**
  * *
@@ -96,5 +106,16 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
     listBans(input: ListBansRequest, options?: RpcOptions): UnaryCall<ListBansRequest, ListBansResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListBansRequest, ListBansResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Deletes the currently authenticated identity.
+     *
+     * This identity can not be undone, use with caution.
+     *
+     * @generated from protobuf rpc: DeleteIdentity
+     */
+    deleteIdentity(input: DeleteIdentityRequest, options?: RpcOptions): UnaryCall<DeleteIdentityRequest, DeleteIdentityResponse> {
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        return stackIntercept<DeleteIdentityRequest, DeleteIdentityResponse>("unary", this._transport, method, opt, input);
     }
 }

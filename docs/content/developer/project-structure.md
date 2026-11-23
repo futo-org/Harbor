@@ -31,6 +31,34 @@ scripts fan out across them.
 
 ## Packages
 
+The packages layer around a Rust core, called `rs-core`. It does the protocol work
+(event assembly and validation, the query engine, sync, and gRPC transport), and is
+exposed through [uniffi](https://mozilla.github.io/uniffi-rs/) as
+`PolycentricCore`. The client libraries, `js-core` and its Kotlin port
+`kt-core`, own identities, keys, logins, and persistence, and hand protocol work to
+that core. The SDK packages build a client for one platform by supplying a
+core, a storage driver, and a blob store.
+
+```mermaid
+flowchart TD
+  common[rs-common] --> core[rs-core]
+  core -- "uniffi (wasm)" --> wasm[rs-core-wasm]
+  core -- "uniffi (JSI)" --> rn[react-native]
+  core -- "uniffi (Kotlin)" --> kt[kt-core]
+  wasm --> jscore[js-core]
+  jscore --> browser[js-browser]
+  jscore --> node[js-node]
+  jscore --> rn
+  sqlite[js-storage-sqlite] --> node
+  sqlite --> rn
+  pg[js-storage-postgres] --> node
+  browser --> rn
+  wasm --> node
+  wasm --> rn
+```
+
+Arrows point from a dependency to its dependants.
+
 | Package                        | Description                                                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |

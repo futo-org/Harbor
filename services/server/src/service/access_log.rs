@@ -102,6 +102,7 @@ pub async fn access_log_middleware(
         client.address = client_ip,
         user_agent.original = user_agent,
         harbor.identity = Empty,
+        harbor.public_key = Empty,
         trace_id = Empty,
     );
     let parent = common_telemetry::trace::context_from_headers(&headers);
@@ -133,10 +134,14 @@ pub async fn access_log_middleware(
 
     let response = next.run(request).instrument(span.clone()).await;
 
-    let identity = response
-        .extensions()
-        .get::<AuthenticatedIdentity>()
-        .map(|i| i.0.clone());
+    let (identity, public_key) =
+        match response.extensions().get::<AuthenticatedIdentity>() {
+            Some(auth) => (
+                Some(auth.identity.clone()),
+                Some(auth.public_key.to_string()),
+            ),
+            None => (None, None),
+        };
     // Present on gRPC-Web trailers-only responses; full gRPC puts it in
     // trailers, which are not visible here.
     let grpc_status = response
@@ -177,6 +182,7 @@ pub async fn access_log_middleware(
         // the last bytes of the body is read, not when the request is decoded.
         method_latency_ms = method_elapsed.as_millis() as u64,
         identity,
+        public_key,
         client_ip,
         user_agent,
         trace_id,

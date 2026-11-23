@@ -1,6 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace';
 import { emitLog } from './logging';
-import { useLogStore } from '../hooks/useLogStore';
+import { persistLogs, useLogStore } from '../hooks/useLogStore';
 import { buildFeedback } from './feedback';
 import { createTracerProvider, recordFeedbackSpan } from './tracing';
 
@@ -29,6 +30,15 @@ const record = {
 
 beforeEach(() => {
   useLogStore.getState().clear();
+});
+
+// The log store code automatically schedules `persistLogs()` to be called after
+// a delay to debounce storage writes.
+// For testing, we should just force it to write and then clear right after each
+// test so that jest doesn't wait on it.
+afterEach(async () => {
+  await persistLogs();
+  await AsyncStorage.clear();
 });
 
 test('builds feedback honouring the toggles', () => {
