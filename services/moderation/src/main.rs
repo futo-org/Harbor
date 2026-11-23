@@ -263,7 +263,12 @@ async fn moderate(
         return Ok(no_findings());
     };
 
-    let text = content_text(content);
+    // Azure rejects text over 10k characters, or 1k when sent with an image,
+    // so we clip the rest.
+    // TODO: In the future might be worth switching to scoring it in chunks.
+    let max_text_chars = if images.is_empty() { 10_000 } else { 1_000 };
+    let text =
+        content_text(content).map(|text| text.chars().take(max_text_chars).collect::<String>());
 
     let analyze = |request| async {
         client.analyze(request).await.map_err(|e| {
