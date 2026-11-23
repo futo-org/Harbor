@@ -52,7 +52,9 @@ function withTwemoji(text: string): ReactNode {
   );
 }
 
-function renderChildren(children: ReactNode): ReactNode {
+/** Gives emoji runs the Twemoji font on native; web's font stack has it. */
+export function renderWithTwemoji(children: ReactNode): ReactNode {
+  if (isWeb) return children;
   if (typeof children === 'string') return withTwemoji(children);
   if (!Array.isArray(children)) return children;
   return Children.map(children, (child) =>
@@ -125,7 +127,7 @@ export function Text({
       ]}
       {...props}
     >
-      {isWeb ? children : renderChildren(children)}
+      {renderWithTwemoji(children)}
     </UITextView>
   );
 }

@@ -2,6 +2,7 @@ import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
 import { IdentityHandle } from './IdentityHandle';
 import { Username } from './Username';
@@ -44,8 +45,9 @@ export function ProfileRow({
 }) {
   const { theme } = useTheme();
   const profile = useProfile(identity, { fetchMode });
+  const linksToProfile = linkToProfile && !disabled;
   const cardLinkProps = useCardLinkPress(
-    linkToProfile && !disabled ? Routes.tabs.profile(identity) : null,
+    linksToProfile ? Routes.tabs.profile(identity) : null,
     onPress && (() => onPress(identity, profile)),
   );
 
@@ -81,6 +83,10 @@ export function ProfileRow({
             variant="secondary"
             fontWeight="semibold"
             selectable={false}
+            // On web, an anchor too, for the hover URL and the context menu;
+            // on native it would only take the row's press feedback. Not with
+            // `onPress`, which the anchor wouldn't run.
+            linkToProfile={isWeb && linksToProfile && !onPress}
           />
           <IdentityHandle
             identity={identity}

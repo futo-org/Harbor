@@ -154,7 +154,7 @@ function InteractionNotification({
           <Username
             identity={notification.fromIdentity}
             fontWeight="bold"
-            onPress={openProfile}
+            linkToProfile
           />
         }
         action={summary(notification)}

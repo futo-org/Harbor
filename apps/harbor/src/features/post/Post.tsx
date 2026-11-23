@@ -91,7 +91,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthor identity={authorIdentity} onNamePress={handleAuthorPress} />
+        <PostAuthor identity={authorIdentity} />
 
         {shownAt ? (
           <>
@@ -157,11 +157,7 @@ export const Post = memo(function Post({
           <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
-              <PostAuthor
-                identity={authorIdentity}
-                onNamePress={handleAuthorPress}
-                stacked
-              />
+              <PostAuthor identity={authorIdentity} stacked />
             </View>
             <PostMenu post={post} />
           </View>
