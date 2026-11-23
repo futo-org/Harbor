@@ -2436,7 +2436,10 @@ async fn recommended_feed_includes_metadata() {
     );
 }
 
-async fn recommended_feed(for_identity: &str, expected: &[EventKey]) {
+pub(crate) async fn recommended_feed(
+    for_identity: &str,
+    expected: &[EventKey],
+) {
     eprintln!("for_identity: {for_identity:?}");
     let request = async {
         let mut feeds = connect_feeds().await;

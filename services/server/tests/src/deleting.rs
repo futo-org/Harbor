@@ -3,7 +3,9 @@
 use std::slice;
 
 use crate::event_sync::{ExpectError, expect_errors};
-use crate::feeds::{following_feed, identity_feed, post_thread, test_get_post};
+use crate::feeds::{
+    following_feed, identity_feed, post_thread, recommended_feed, test_get_post,
+};
 use crate::graph::{
     ExpectedFollowSuggestion, check_followers, check_following, suggest_follow,
 };
@@ -13,7 +15,8 @@ use crate::*;
 
 // TODO: things to fix:
 // * full_resync_after_deletion: not sure what to do yet.
-// * with_following: check_followers on deleted identity still returns results.
+// * checking followers on deleted identity still returns results.
+// * recommended feed still behaves like the identity wasn't deleted.
 
 #[tokio::test]
 async fn no_more_events() {
@@ -363,6 +366,140 @@ async fn get_post_thread_excludes_posts_from_deleted_identities() {
         .await
         .unwrap_err();
     assert_eq!(status.code(), tonic::Code::NotFound);
+}
+
+#[tokio::test]
+async fn recommended_feed_excludes_anything_from_deleted_identities() {
+    // Identity used to react to, repost, etc. posts from.
+    let mut other_client = TestClient::new().await;
+    other_client.post_text("Other post, react to", current_timestamp());
+    let post_react_key = other_client.get_last_event_key();
+    other_client.post_text("Other post, repost", current_timestamp());
+    let post_repost_key = other_client.get_last_event_key();
+    other_client.post_text("Other post, quote", current_timestamp());
+    let post_quote_key = other_client.get_last_event_key();
+    other_client.post_text("Other post, reply", current_timestamp());
+    let post_reply_key = other_client.get_last_event_key();
+    other_client.submit_events().await;
+
+    // Identity that will be deleted. Creates the following.
+    let mut to_delete_client = TestClient::new().await;
+    // * Post
+    to_delete_client
+        .post_text("Post from deleted identity", current_timestamp());
+    let post_key = to_delete_client.get_last_event_key();
+    // * Reacts to a post
+    to_delete_client.thumbs_up(post_react_key.clone(), current_timestamp());
+    // * Reposts a post
+    to_delete_client.repost_key(post_repost_key.clone(), current_timestamp());
+    // * Quotes a post
+    to_delete_client.quote(
+        post_quote_key.clone(),
+        "Quoted post",
+        current_timestamp(),
+    );
+    let quote_key = to_delete_client.get_last_event_key();
+    // * Replies to a post
+    to_delete_client.reply(
+        post_reply_key.clone(),
+        "Reply to post",
+        current_timestamp(),
+    );
+    let reply_key = to_delete_client.get_last_event_key();
+    to_delete_client.submit_events().await;
+    let to_delete_identity = to_delete_client.identity();
+
+    // Identity that follows the identity that will be deleted. Should have a
+    // full recommended feed first, empty once the identity is deleted.
+    let mut follower_client = TestClient::new().await;
+    follower_client
+        .follow_identity(to_delete_identity.to_owned(), current_timestamp());
+    follower_client.submit_events().await;
+    let follower_identity = follower_client.identity();
+
+    recommended_feed(
+        follower_identity,
+        &[
+            post_reply_key.clone(),
+            post_quote_key.clone(),
+            post_repost_key.clone(),
+            post_react_key.clone(),
+            reply_key,
+            quote_key,
+            post_key,
+        ],
+    )
+    .await;
+
+    to_delete_client.delete_self().await;
+    no_events(&mut to_delete_client).await;
+
+    recommended_feed(
+        follower_identity,
+        &[
+            // FIXME: these posts shouldn't be returned as the follower isn't
+            // connected to other identity (which created these posts) anymore,
+            // as the in between identity has been deleted.
+            post_reply_key,
+            post_quote_key,
+            post_repost_key,
+            post_react_key,
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn getting_profile_for_deleted_identity_returns_nothing() {
+    let mut to_delete_client = TestClient::new().await;
+    to_delete_client.profile_update(
+        ProfileUpdate {
+            name: Some("Delete me".to_string()),
+            ..Default::default()
+        },
+        current_timestamp(),
+    );
+    let profile_key = to_delete_client.get_last_event_key();
+    to_delete_client.submit_events().await;
+    let to_delete_identity = to_delete_client.identity().to_owned();
+
+    let response = connect_profile()
+        .await
+        .get_profile(GetProfileRequest {
+            identity: to_delete_identity.clone(),
+        })
+        .await
+        .expect("failed to get profile")
+        .into_inner();
+    expect_events(
+        &response.event_bundles,
+        &[ExpectEvent {
+            key: profile_key,
+            kind: ExpectEventKind::ProfileUpdate {
+                name: Some("Delete me".to_string()),
+                description: None,
+                alias: None,
+            },
+        }],
+    );
+    expect_hints(
+        &response.event_hints,
+        vec![ExpectHint::Identity(to_delete_identity.clone())],
+    );
+
+    to_delete_client.delete_self().await;
+    no_events(&mut to_delete_client).await;
+
+    let response = connect_profile()
+        .await
+        .get_profile(GetProfileRequest {
+            identity: to_delete_identity.clone(),
+        })
+        .await
+        .expect("failed to get profile")
+        .into_inner();
+    expect_events(&response.event_bundles, &[]);
+    expect_hints(&response.event_hints, Vec::new());
 }
 
 async fn no_events(client: &mut TestClient) {
