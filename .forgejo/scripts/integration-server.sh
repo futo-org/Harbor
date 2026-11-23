@@ -267,8 +267,8 @@ if [ "$CI_MODE" = true ]; then
 
   # Needed for running the admin CLI in the tests.
   # (it's set for the server, which uses a different IP address)
-  export HARBOR_DATABASE_URL="postgres://postgres:testing@localhost:5432}"
-  export HARBOR_DATABASE_URL_RO="postgres://postgres:testing@localhost:5432?options=-c%20default_transaction_read_only=on}"
+  export HARBOR_DATABASE_URL='postgres://postgres:testing@localhost:5432'
+  export HARBOR_DATABASE_URL_RO='postgres://postgres:testing@localhost:5432?options=-c%20default_transaction_read_only=on'
 
   # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
   cargo nextest run -P ci -p integration-tests 2>&1
