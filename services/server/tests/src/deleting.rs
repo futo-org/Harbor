@@ -9,6 +9,7 @@ use crate::feeds::{
 use crate::graph::{
     ExpectedFollowSuggestion, check_followers, check_following, suggest_follow,
 };
+use crate::pairing::new_session;
 use crate::search_posts::expect_searched_posts;
 use crate::search_users::expect_searched_users;
 use crate::*;
@@ -17,6 +18,8 @@ use crate::*;
 // * full_resync_after_deletion: not sure what to do yet.
 // * checking followers on deleted identity still returns results.
 // * recommended feed still behaves like the identity wasn't deleted.
+// * getting pairing session currently works for deleted identities.
+// * getting recommended and following feed for a deleted identity succeeds.
 
 #[tokio::test]
 async fn no_more_events() {
@@ -272,6 +275,30 @@ async fn following_feed_excludes_posts_from_deleted_identities() {
 }
 
 #[tokio::test]
+#[ignore = "this fails"]
+async fn following_feed_for_deleted_identity_returns_nothing() {
+    let mut follower_client = TestClient::new().await;
+    follower_client.post_text("Some text", current_timestamp());
+    let post_key = follower_client.get_last_event_key();
+    follower_client.submit_events().await;
+
+    let mut to_delete_client = TestClient::new().await;
+    to_delete_client.follow_identity(
+        follower_client.identity().to_owned(),
+        current_timestamp(),
+    );
+    to_delete_client.submit_events().await;
+    let to_delete_identity = to_delete_client.identity().to_owned();
+
+    following_feed(&to_delete_identity, &[post_key]).await;
+
+    to_delete_client.delete_self().await;
+    no_events(&mut to_delete_client).await;
+
+    following_feed(&to_delete_identity, &[]).await;
+}
+
+#[tokio::test]
 async fn identity_feed_excludes_posts_from_deleted_identities() {
     let mut to_delete_client = TestClient::new().await;
     let query = random_string();
@@ -450,6 +477,30 @@ async fn recommended_feed_excludes_anything_from_deleted_identities() {
 }
 
 #[tokio::test]
+#[ignore = "this fails"]
+async fn recommended_feed_for_deleted_identity_returns_nothing() {
+    let mut other_client = TestClient::new().await;
+    other_client.post_text("Some post", current_timestamp());
+    let post_key = other_client.get_last_event_key();
+    other_client.submit_events().await;
+
+    // Identity that will be deleted.
+    let mut to_delete_client = TestClient::new().await;
+    to_delete_client.follow_identity(
+        other_client.identity().to_owned(),
+        current_timestamp(),
+    );
+    to_delete_client.submit_events().await;
+
+    recommended_feed(to_delete_client.identity(), &[post_key]).await;
+
+    to_delete_client.delete_self().await;
+    no_events(&mut to_delete_client).await;
+
+    recommended_feed(to_delete_client.identity(), &[]).await;
+}
+
+#[tokio::test]
 async fn getting_profile_for_deleted_identity_returns_nothing() {
     let mut to_delete_client = TestClient::new().await;
     to_delete_client.profile_update(
@@ -500,6 +551,50 @@ async fn getting_profile_for_deleted_identity_returns_nothing() {
         .into_inner();
     expect_events(&response.event_bundles, &[]);
     expect_hints(&response.event_hints, Vec::new());
+}
+
+#[tokio::test]
+#[ignore = "this fails"]
+async fn pairing_sessions_are_not_listed_for_deleted_identity() {
+    let mut to_delete_client = TestClient::new().await;
+    let identity_state = to_delete_client.get_last_event_bundle();
+    to_delete_client.submit_events().await;
+
+    let (issuer_state, digest_sha256) =
+        new_session(&to_delete_client, identity_state);
+    let mut pairing = pairing_service().await;
+
+    let put = pairing
+        .put_pairing_session(PutPairingSessionRequest {
+            issuer_state: Some(issuer_state.clone()),
+        })
+        .await
+        .expect("put_pairing_session failed")
+        .into_inner();
+    let state = put.session_state.unwrap();
+    assert_eq!(state.issuer_state, Some(issuer_state.clone()));
+    assert!(state.claimers.is_empty());
+
+    let get = pairing
+        .get_pairing_session(GetPairingSessionRequest {
+            digest_sha256: digest_sha256.clone(),
+        })
+        .await
+        .expect("get_pairing_session failed")
+        .into_inner();
+    assert_eq!(
+        get.session_state.unwrap().issuer_state.as_ref(),
+        Some(&issuer_state)
+    );
+
+    to_delete_client.delete_self().await;
+    no_events(&mut to_delete_client).await;
+
+    let status = pairing
+        .get_pairing_session(GetPairingSessionRequest { digest_sha256 })
+        .await
+        .unwrap_err();
+    assert_eq!(status.code(), tonic::Code::NotFound);
 }
 
 async fn no_events(client: &mut TestClient) {

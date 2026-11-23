@@ -5,7 +5,7 @@ use crate::*;
 /// Signs the first issuer state of a new session for `issuer`, reporting
 /// `identity_state` as the issuer's most recent identity event.
 /// Returns the signed state and the session's `digest_sha256`.
-fn new_session(
+pub(crate) fn new_session(
     issuer: &TestClient,
     identity_state: EventBundle,
 ) -> (SignedIssuerState, Vec<u8>) {
