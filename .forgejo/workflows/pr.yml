@@ -255,6 +255,7 @@ jobs:
       #    make db_schema
       #    git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
