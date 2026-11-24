@@ -56,7 +56,12 @@ export default function RepostButton({ post }: RepostButtonProps) {
     <View style={[]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>{button}</DropdownMenu.Trigger>
-        <DropdownMenu.Content align="start" side="top">
+        <DropdownMenu.Content
+          align="start"
+          side="top"
+          // On web the dropdown refocuses its trigger on close, stealing focus from the Quote composer
+          onCloseAutoFocus={(event) => event.preventDefault()}
+        >
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon
               name="repost"
