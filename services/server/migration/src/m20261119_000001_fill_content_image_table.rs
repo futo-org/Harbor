@@ -29,6 +29,7 @@ impl MigrationTrait for Migration {
                 .expr(Expr::col("serialized_bytes"))
                 .from("content")
                 .and_where(Expr::col("id").gt(content_id))
+                .order_by("id", Order::Desc)
                 .limit(1000);
 
             let contents = tx.query_all(&query).await?;
