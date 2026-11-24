@@ -8,7 +8,7 @@
 # under plain node (rs-core-wasm ships a compiled .js via its node export).
 
 # Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
-FROM rust:1.100-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS build
+FROM rust:1.100-slim-trixie@sha256:86993c97389ebb5487eb09e88168e2a00b0de29aa08dff9ae896049b9be96ed9 AS build
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/pnpm:$PATH"
@@ -77,7 +77,7 @@ RUN pnpm --filter @polycentric/verifier-bot --prod \
   deploy /deploy
 
 # Stage 2: Run
-FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS runner
+FROM node:26-trixie-slim@sha256:615a27817f7b9508f0de73eb1cc8fc8894ab122bee56c1a7a568b72cd1032067 AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).

@@ -40,6 +40,7 @@ function WebList<T>({
   listRef,
   restorationKey,
   initialScrollIndex,
+  scrollY,
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const items = (data as readonly T[] | null | undefined) ?? [];
   const isEmpty = items.length === 0;
@@ -77,6 +78,18 @@ function WebList<T>({
     }),
     [],
   );
+
+  useEffect(() => {
+    if (!scrollY) return;
+    const updateScrollY = () => {
+      // The window scroll belongs to the shown screen, not a hidden one.
+      if (containerRef.current?.offsetParent === null) return;
+      scrollY.value = window.scrollY;
+    };
+    updateScrollY();
+    window.addEventListener('scroll', updateScrollY, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollY);
+  }, [scrollY]);
 
   // FlashList parity. Before paint, so gated items never flash.
   const hasFiredOnLoad = useRef(false);

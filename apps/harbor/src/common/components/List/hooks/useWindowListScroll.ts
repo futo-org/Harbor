@@ -197,6 +197,8 @@ function useAnchoredRow({
   const applied = useRef<number | undefined>(undefined);
   useLayoutEffect(() => {
     if (anchorIndex === undefined || cancelled.current) return;
+    // A hidden screen measures zero and would yank the shown screen's scroll.
+    if (containerRef.current?.offsetParent === null) return;
     const row = containerRef.current?.querySelector<HTMLElement>(
       `[data-index="${anchorIndex}"]`,
     );
