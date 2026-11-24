@@ -160,7 +160,12 @@ export function NavItem({
   if (!isWeb) {
     return (
       <Link href={href!} onPress={onPress} asChild {...props}>
-        <Pressable accessibilityLabel={label} style={StyleSheet.flatten(style)}>
+        <Pressable
+          accessibilityLabel={label}
+          onPressIn={() => setHovering(true)}
+          onPressOut={() => setHovering(false)}
+          style={StyleSheet.flatten([style, Atoms.self_stretch])}
+        >
           {content}
         </Pressable>
       </Link>
