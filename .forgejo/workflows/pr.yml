@@ -897,7 +897,7 @@ jobs:
           environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
-          cache: services-integration
+          cache: server-integration
       - name: Server integration tests
         if: fromJSON(needs.changes.outputs.plan).flags.server_integration && needs.service-images.result == 'success'
         run: .forgejo/scripts/integration-server.sh --ci
@@ -931,7 +931,7 @@ jobs:
           environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
-          cache: services-integration
+          cache: moderation-integration
       - name: Moderation integration tests
         if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
         run: .forgejo/scripts/integration-moderation.sh
@@ -1151,7 +1151,8 @@ jobs:
       - web-image
       - browser-extension
       - browser-extension-safari
-      - services-integration
+      - server-integration
+      - moderation-integration
       - scraper-integration
       - verifier-bot
       - web-e2e
