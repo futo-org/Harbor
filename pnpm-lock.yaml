@@ -447,7 +447,7 @@ importers:
         version: 19.3.0(react@19.3.0)
       react-dropzone:
         specifier: ^20.2.0
-        version: 20.2.0(@types/react@19.3.0)(react@19.3.0)
+        version: 20.2.1(@types/react@19.3.0)(react@19.3.0)
       react-native:
         specifier: 0.88.1
         version: 0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
@@ -11647,8 +11647,8 @@ packages:
     peerDependencies:
       react: ^19.3.0
 
-  react-dropzone@20.2.0:
-    resolution: {integrity: sha512-FRlcSp6UFT9Etg57U4+g6O6qF/jH7sUh2Hz67lQlrZJa/3FjfAFvw7DwDSItiG2vBUXTdh2wroEwXPPg7o/jkg==}
+  react-dropzone@20.2.1:
+    resolution: {integrity: sha512-8ldzI42a+iz6jlC5t0HoOO5ce65dU8ZGo8ZpesL2E57JByC8LBUieMrkGj97YYfgMaYKwkhpkfYxKOCKAekywA==}
     engines: {node: '>= 22'}
     peerDependencies:
       '@types/react': '*'
@@ -27436,7 +27436,7 @@ snapshots:
       react: 19.3.0
       scheduler: 0.28.0
 
-  react-dropzone@20.2.0(@types/react@19.3.0)(react@19.3.0):
+  react-dropzone@20.2.1(@types/react@19.3.0)(react@19.3.0):
     dependencies:
       attr-accept: 4.0.1
       file-selector: 5.0.3
