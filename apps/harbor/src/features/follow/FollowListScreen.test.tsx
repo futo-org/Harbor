@@ -140,6 +140,7 @@ jest.mock('expo-router', () => ({
   Link: { resolveHref: (href: string) => href },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
   useFocusEffect: () => undefined,
+  useIsFocused: () => true,
 }));
 
 jest.mock('@/src/features/follow/FollowingBadge', () => ({

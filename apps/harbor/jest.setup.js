@@ -26,10 +26,12 @@ jest.mock('react-native-reanimated', () => {
       createAnimatedComponent: (component) => component,
     },
     useSharedValue: (initial) => ({ value: initial }),
+    makeMutable: (initial) => ({ value: initial }),
     useAnimatedStyle: (updater) => updater(),
     useAnimatedScrollHandler: () => () => undefined,
     useAnimatedReaction: () => undefined,
     withTiming: (toValue) => toValue,
+    withSpring: (toValue) => toValue,
     withRepeat: (animation) => animation,
     cancelAnimation: () => undefined,
     Easing: new Proxy({}, { get: () => (value) => value }),
@@ -42,6 +44,23 @@ jest.mock('react-native-worklets', () => ({
   scheduleOnRN: (fn, ...args) => fn(...args),
   runOnJS: (fn) => fn,
 }));
+
+// Its hooks install bindings on the UI runtime, which Jest does not have.
+jest.mock('react-native-gesture-handler', () => {
+  const { View } = require('react-native');
+  const gesture = () => ({});
+  return {
+    GestureHandlerRootView: View,
+    GestureDetector: ({ children }) => children,
+    usePanGesture: gesture,
+    useNativeGesture: gesture,
+    usePinchGesture: gesture,
+    useTapGesture: gesture,
+    useCompetingGestures: gesture,
+    useExclusiveGestures: gesture,
+    useSimultaneousGestures: gesture,
+  };
+});
 
 // Native UITextView; the base Text is its own non-iOS fallback.
 jest.mock('@bsky.app/react-native-uitextview', () => ({

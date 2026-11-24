@@ -5,8 +5,22 @@ import ExpoPagerView, {
   type PagerViewOnPageSelectedEvent,
   type PagerViewRef,
 } from '@expo/ui/community/pager-view';
-import { Children, useEffect, useRef, type ReactNode } from 'react';
+import { useIsFocused } from 'expo-router';
+import {
+  Children,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+} from 'react';
+import {
+  GestureDetector,
+  useNativeGesture,
+} from 'react-native-gesture-handler';
 import type { SharedValue } from 'react-native-reanimated';
+import { NavDrawerGestureContext } from '../layout/nav/drawer/lib/nav-drawer-gesture-context';
+import { useNavDrawerStore } from '../layout/nav/drawer/hooks/useNavDrawerStore';
 import { PageActiveContext } from './PageActiveContext';
 
 export type PagerViewCoreProps<T extends string> = {
@@ -44,12 +58,26 @@ export function PagerViewCore<T extends string>({
   // and this keeps the two from fighting each other.
   const indexRef = useRef(activeIndex);
 
+  const pagerId = useId();
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
+    const { claimPager, releasePager } = useNavDrawerStore.getState();
+    claimPager(pagerId, indexRef.current);
+    return () => releasePager(pagerId);
+  }, [isFocused, pagerId]);
+
   useEffect(() => {
     if (indexRef.current === activeIndex) return;
     onLeavePage?.(indexRef.current);
     indexRef.current = activeIndex;
+    useNavDrawerStore.getState().setPagerPage(pagerId, activeIndex);
     pagerRef.current?.setPage(activeIndex);
-  }, [activeIndex, onLeavePage]);
+  }, [activeIndex, onLeavePage, pagerId]);
+
+  const waitsForDrawer = useNativeGesture({
+    requireToFail: useContext(NavDrawerGestureContext),
+  });
 
   const hasScrollEvents = useRef(false);
 
@@ -64,6 +92,7 @@ export function PagerViewCore<T extends string>({
     if (!hasScrollEvents.current) dragProgress.value = index;
     if (index === indexRef.current) return;
     indexRef.current = index;
+    useNavDrawerStore.getState().setPagerPage(pagerId, index);
     onSwipeSettled?.();
     const next = values[index];
     if (next !== undefined) onChange(next);
@@ -75,19 +104,21 @@ export function PagerViewCore<T extends string>({
   };
 
   return (
-    <ExpoPagerView
-      ref={pagerRef}
-      style={Atoms.flex_1}
-      initialPage={initialIndex}
-      onPageScroll={onPageScroll}
-      onPageSelected={onPageSelected}
-      onPageScrollStateChanged={onPageScrollStateChanged}
-    >
-      {Children.map(children, (child, index) => (
-        <PageActiveContext value={index === activeIndex}>
-          {wrapPage(child, index)}
-        </PageActiveContext>
-      ))}
-    </ExpoPagerView>
+    <GestureDetector gesture={waitsForDrawer}>
+      <ExpoPagerView
+        ref={pagerRef}
+        style={Atoms.flex_1}
+        initialPage={initialIndex}
+        onPageScroll={onPageScroll}
+        onPageSelected={onPageSelected}
+        onPageScrollStateChanged={onPageScrollStateChanged}
+      >
+        {Children.map(children, (child, index) => (
+          <PageActiveContext value={index === activeIndex}>
+            {wrapPage(child, index)}
+          </PageActiveContext>
+        ))}
+      </ExpoPagerView>
+    </GestureDetector>
   );
 }
