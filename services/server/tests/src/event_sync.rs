@@ -1933,9 +1933,7 @@ async fn validation_missing_content_content_body() {
         &[],
         &[ExpectError {
             bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body is missing",
-            ),
+            kind: ExpectErrorKind::MsgContains("content body is missing"),
         }],
     );
 }
@@ -2000,7 +1998,7 @@ async fn validation_content_content_body_post_text_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post text is too long (2001), maximum is 2000",
+                "content body post text is too long (2001), maximum is 2000",
             ),
         }],
     );
@@ -2038,7 +2036,7 @@ async fn validation_content_content_body_post_reply_root_invalid() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post reply root signed by is missing",
+                "content body post reply root signed by is missing",
             ),
         }],
     );
@@ -2072,7 +2070,7 @@ async fn validation_content_content_body_post_reply_root_missing() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post reply root is missing",
+                "content body post reply root is missing",
             ),
         }],
     );
@@ -2110,7 +2108,7 @@ async fn validation_content_content_body_post_reply_parent_invalid() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post reply parent signed by is missing",
+                "content body post reply parent signed by is missing",
             ),
         }],
     );
@@ -2144,7 +2142,7 @@ async fn validation_content_content_body_post_reply_parent_missing() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post reply parent is missing",
+                "content body post reply parent is missing",
             ),
         }],
     );
@@ -2224,7 +2222,7 @@ async fn validation_content_content_body_post_imageset_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set is too long (5), maximum is 4",
+                "content body post image set is too long (5), maximum is 4",
             ),
         }],
     );
@@ -2273,7 +2271,7 @@ async fn validation_content_content_body_post_imageset_images_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images is too long (11), maximum is 10",
+                "content body post image set 0-th images is too long (11), maximum is 10",
             ),
         }],
     );
@@ -2316,7 +2314,7 @@ async fn validation_content_content_body_post_imageset_images_blob_digest_invali
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images 0-th blob digest type is invalid",
+                "content body post image set 0-th images 0-th blob digest type is invalid",
             ),
         }],
     );
@@ -2356,7 +2354,7 @@ async fn validation_content_content_body_post_imageset_images_blob_digest_missin
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images 0-th blob digest is missing",
+                "content body post image set 0-th images 0-th blob digest is missing",
             ),
         }],
     );
@@ -2399,7 +2397,7 @@ async fn validation_content_content_body_post_imageset_images_blob_mime_type_too
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images 0-th blob mime type is too long (51), maximum is 50",
+                "content body post image set 0-th images 0-th blob mime type is too long (51), maximum is 50",
             ),
         }],
     );
@@ -2442,7 +2440,7 @@ async fn validation_content_content_body_post_imageset_images_blob_size_too_larg
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images 0-th blob size is too large (104857601), maximum is 104857600",
+                "content body post image set 0-th images 0-th blob size is too large (104857601), maximum is 104857600",
             ),
         }],
     );
@@ -2477,7 +2475,7 @@ async fn validation_content_content_body_post_imageset_images_blob_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post image set 0-th images 0-th blob is missing",
+                "content body post image set 0-th images 0-th blob is missing",
             ),
         }],
     );
@@ -2553,7 +2551,7 @@ async fn validation_content_content_body_post_links_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links is too long (11), maximum is 10",
+                "content body post links is too long (11), maximum is 10",
             ),
         }],
     );
@@ -2587,7 +2585,7 @@ async fn validation_content_content_body_post_links_title_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th title is too long (1001), maximum is 1000",
+                "content body post links 0-th title is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -2621,7 +2619,7 @@ async fn validation_content_content_body_post_links_description_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th description is too long (2001), maximum is 2000",
+                "content body post links 0-th description is too long (2001), maximum is 2000",
             ),
         }],
     );
@@ -2655,7 +2653,7 @@ async fn validation_content_content_body_post_links_image_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th image is too long (201), maximum is 200",
+                "content body post links 0-th image is too long (201), maximum is 200",
             ),
         }],
     );
@@ -2689,7 +2687,7 @@ async fn validation_content_content_body_post_links_url_empty() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th url can't be empty",
+                "content body post links 0-th url can't be empty",
             ),
         }],
     );
@@ -2723,7 +2721,7 @@ async fn validation_content_content_body_post_links_url_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th url is too long (1001), maximum is 1000",
+                "content body post links 0-th url is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -2756,7 +2754,7 @@ async fn validation_content_content_body_post_labels_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post labels is too long (11), maximum is 10",
+                "content body post labels is too long (11), maximum is 10",
             ),
         }],
     );
@@ -2785,7 +2783,7 @@ async fn validation_content_content_body_post_labels_value_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post labels 0-th is too long (201), maximum is 200",
+                "content body post labels 0-th is too long (201), maximum is 200",
             ),
         }],
     );
@@ -2828,7 +2826,7 @@ async fn validation_content_content_body_post_attribute_to_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to is too long (11), maximum is 10",
+                "content body post attributed to is too long (11), maximum is 10",
             ),
         }],
     );
@@ -2865,7 +2863,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_title_too_lon
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link title is too long (1001), maximum is 1000",
+                "content body post attributed to 0-th to link title is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -2902,7 +2900,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_description_t
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link description is too long (2001), maximum is 2000",
+                "content body post attributed to 0-th to link description is too long (2001), maximum is 2000",
             ),
         }],
     );
@@ -2939,7 +2937,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_image_too_lon
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link image is too long (201), maximum is 200",
+                "content body post attributed to 0-th to link image is too long (201), maximum is 200",
             ),
         }],
     );
@@ -2975,7 +2973,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_url_empty() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link url can't be empty",
+                "content body post attributed to 0-th to link url can't be empty",
             ),
         }],
     );
@@ -3012,7 +3010,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_url_too_long(
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link url is too long (1001), maximum is 1000",
+                "content body post attributed to 0-th to link url is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -3041,7 +3039,7 @@ async fn validation_content_content_body_post_attribute_to_to_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to is missing",
+                "content body post attributed to 0-th to is missing",
             ),
         }],
     );
@@ -3070,7 +3068,7 @@ async fn validation_missing_content_content_body_delete_event_key() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body delete event key is missing",
+                "content body delete event key is missing",
             ),
         }],
     );
@@ -3206,7 +3204,7 @@ async fn validation_invalid_content_content_body_follow_identity() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body follow identity is not a valid identity",
+                "content body follow identity is not a valid identity",
             ),
         }],
     );
@@ -3299,7 +3297,7 @@ async fn validation_invalid_content_content_body_block_identity() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body block identity is not a valid identity",
+                "content body block identity is not a valid identity",
             ),
         }],
     );
@@ -3398,7 +3396,7 @@ async fn validation_invalid_content_content_body_reaction_no_event_key() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body reaction event key is missing",
+                "content body reaction event key is missing",
             ),
         }],
     );
@@ -3562,7 +3560,7 @@ async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body reaction emoji is too long (80), maximum is 40",
+                "content body reaction emoji is too long (80), maximum is 40",
             ),
         }],
     );
@@ -3642,7 +3640,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_no_attri
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body attributed to reaction attributed to is missing",
+                "content body attributed to reaction attributed to is missing",
             ),
         }],
     );
@@ -3678,7 +3676,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_no_attri
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body attributed to reaction attributed to to is missing",
+                "content body attributed to reaction attributed to to is missing",
             ),
         }],
     );
@@ -3827,7 +3825,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_emoji_to
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body attributed to reaction emoji is too long (80), maximum is 40",
+                "content body attributed to reaction emoji is too long (80), maximum is 40",
             ),
         }],
     );
@@ -3923,7 +3921,7 @@ async fn validation_invalid_content_content_body_profile_update_name_too_long()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body profile update name is too long (101), maximum is 100",
+                "content body profile update name is too long (101), maximum is 100",
             ),
         }],
     );
@@ -3970,13 +3968,13 @@ async fn validation_invalid_content_content_body_profile_update_avatar_too_large
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update avatar images 0-th blob digest is missing",
+                    "content body profile update avatar images 0-th blob digest is missing",
                 ),
             },
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update avatar images 0-th blob size is too large (104857601), maximum is 104857600",
+                    "content body profile update avatar images 0-th blob size is too large (104857601), maximum is 104857600",
                 ),
             },
         ],
@@ -4024,13 +4022,13 @@ async fn validation_invalid_content_content_body_profile_update_banner_too_large
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update banner images 0-th blob digest is missing",
+                    "content body profile update banner images 0-th blob digest is missing",
                 ),
             },
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update banner images 0-th blob size is too large (104857601), maximum is 104857600",
+                    "content body profile update banner images 0-th blob size is too large (104857601), maximum is 104857600",
                 ),
             },
         ],
@@ -4092,7 +4090,7 @@ async fn validation_invalid_content_content_body_profile_update_description_too_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body profile update description is too long (161), maximum is 160",
+                "content body profile update description is too long (161), maximum is 160",
             ),
         }],
     );
@@ -4153,7 +4151,7 @@ async fn validation_invalid_content_content_body_profile_update_alias_too_long()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body profile update alias is too long (101), maximum is 100",
+                "content body profile update alias is too long (101), maximum is 100",
             ),
         }],
     );
@@ -4231,7 +4229,7 @@ async fn validation_content_content_body_identity_rotation_keys_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity rotation keys is too long (1001), maximum is 1000",
+                "content body identity rotation keys is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -4272,7 +4270,7 @@ async fn validation_content_content_body_identity_rotation_keys_key_invalid() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity rotation keys 0-th key type is invalid",
+                "content body identity rotation keys 0-th key type is invalid",
             ),
         }],
     );
@@ -4313,7 +4311,7 @@ async fn validation_content_content_body_identity_signing_keys_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity signing keys is too long (1001), maximum is 1000",
+                "content body identity signing keys is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -4353,7 +4351,7 @@ async fn validation_content_content_body_identity_signing_keys_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity signing keys 0-th key type is invalid",
+                "content body identity signing keys 0-th key type is invalid",
             ),
         }],
     );
@@ -4400,7 +4398,7 @@ async fn validation_content_content_body_identity_revocation_bounds_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds is too long (1001), maximum is 1000",
+                "content body identity revocation bounds is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -4441,7 +4439,7 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_key_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds 0-th revoked key is missing",
+                "content body identity revocation bounds 0-th revoked key is missing",
             ),
         }],
     );
@@ -4485,7 +4483,7 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_key_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds 0-th revoked key key type is invalid",
+                "content body identity revocation bounds 0-th revoked key key type is invalid",
             ),
         }],
     );
@@ -4538,7 +4536,7 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds 0-th targets is too long (201), maximum is 200",
+                "content body identity revocation bounds 0-th targets is too long (201), maximum is 200",
             ),
         }],
     );
@@ -4584,7 +4582,7 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds 0-th targets 0-th signature is too short (0), minimum is 64",
+                "content body identity revocation bounds 0-th targets 0-th signature is too short (0), minimum is 64",
             ),
         }],
     );
@@ -4630,7 +4628,7 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity revocation bounds 0-th targets 0-th root is too short (0), minimum is 32",
+                "content body identity revocation bounds 0-th targets 0-th root is too short (0), minimum is 32",
             ),
         }],
     );
@@ -4673,7 +4671,7 @@ async fn validation_content_content_body_identity_servers_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity servers urls is too long (101), maximum is 100",
+                "content body identity servers urls is too long (101), maximum is 100",
             ),
         }],
     );
@@ -4712,7 +4710,7 @@ async fn validation_content_content_body_identity_servers_url_empty() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity servers urls 0-th can't be empty",
+                "content body identity servers urls 0-th can't be empty",
             ),
         }],
     );
@@ -4751,7 +4749,7 @@ async fn validation_content_content_body_identity_servers_url_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity servers urls 0-th is too long (1013), maximum is 1000",
+                "content body identity servers urls 0-th is too long (1013), maximum is 1000",
             ),
         }],
     );
@@ -4791,7 +4789,7 @@ async fn validation_content_content_body_identity_recovery_key_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity recovery key key type is invalid",
+                "content body identity recovery key key type is invalid",
             ),
         }],
     );
@@ -4828,7 +4826,7 @@ async fn validation_content_content_body_identity_recovery_signature_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body identity recovery signature is too short (0), minimum is 64",
+                "content body identity recovery signature is too short (0), minimum is 64",
             ),
         }],
     );
@@ -4890,7 +4888,7 @@ async fn validation_content_content_body_repost_post_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body repost post is missing",
+                "content body repost post is missing",
             ),
         }],
     );
@@ -4971,7 +4969,7 @@ async fn validation_content_content_body_report_event_key_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body report event key is missing",
+                "content body report event key is missing",
             ),
         }],
     );
@@ -5006,7 +5004,7 @@ async fn validation_content_content_body_report_invalid_category() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body report category is invalid",
+                "content body report category is invalid",
             ),
         }],
     );
@@ -5041,7 +5039,7 @@ async fn validation_content_content_body_report_additional_info_too_long() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body report additional info is too long (501), maximum is 500",
+                "content body report additional info is too long (501), maximum is 500",
             ),
         }],
     );
@@ -5107,7 +5105,7 @@ async fn validation_content_content_body_labels_event_key_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body labels event key is missing",
+                "content body labels event key is missing",
             ),
         }],
     );
@@ -5151,7 +5149,7 @@ async fn validation_content_content_body_labels_labels_values_empty() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body labels label values can't be empty",
+                "content body labels label values can't be empty",
             ),
         }],
     );
@@ -5189,7 +5187,7 @@ async fn validation_content_content_body_labels_labels_values_too_long() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body labels label values is too long (11), maximum is 10",
+                "content body labels label values is too long (11), maximum is 10",
             ),
         }],
     );
@@ -5247,7 +5245,7 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body labels label values 0-th is too long (201), maximum is 200",
+                "content body labels label values 0-th is too long (201), maximum is 200",
             ),
         }],
     );
@@ -5350,7 +5348,7 @@ async fn validation_content_content_body_verification_claim_schema_too_large() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema bytes is too long (1048577), maximum is 1048576",
+                "content body verification claim schema schema bytes is too long (1048577), maximum is 1048576",
             ),
         }],
     );
@@ -5395,7 +5393,7 @@ async fn validation_content_content_body_verification_claim_schema_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema bytes are invalid",
+                "content body verification claim schema schema bytes are invalid",
             ),
         }],
     );
@@ -5453,7 +5451,7 @@ async fn validation_content_content_body_verification_claim_digest_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema digest type is invalid",
+                "content body verification claim schema digest type is invalid",
             ),
         }],
     );
@@ -5511,7 +5509,7 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema digest does not match",
+                "content body verification claim schema digest does not match",
             ),
         }],
     );
@@ -5565,7 +5563,7 @@ async fn validation_content_content_body_verification_claim_digest_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema digest is missing",
+                "content body verification claim schema digest is missing",
             ),
         }],
     );
@@ -5624,7 +5622,7 @@ async fn validation_content_content_body_verification_claim_schema_name_too_long
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema name is too long (201), maximum is 200",
+                "content body verification claim schema schema name is too long (201), maximum is 200",
             ),
         }],
     );
@@ -5683,7 +5681,7 @@ async fn validation_content_content_body_verification_claim_schema_description_t
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema description is too long (1001), maximum is 1000",
+                "content body verification claim schema schema description is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -5745,7 +5743,7 @@ async fn validation_content_content_body_verification_claim_schema_too_many_fiel
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields is too long (101), maximum is 100",
+                "content body verification claim schema schema fields is too long (101), maximum is 100",
             ),
         }],
     );
@@ -5804,7 +5802,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_em
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th key can't be empty",
+                "content body verification claim schema schema fields 0-th key can't be empty",
             ),
         }],
     );
@@ -5863,7 +5861,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_to
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th key is too long (201), maximum is 200",
+                "content body verification claim schema schema fields 0-th key is too long (201), maximum is 200",
             ),
         }],
     );
@@ -5922,7 +5920,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_v
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th kind invalid",
+                "content body verification claim schema schema fields 0-th kind invalid",
             ),
         }],
     );
@@ -5981,7 +5979,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_u
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th kind invalid",
+                "content body verification claim schema schema fields 0-th kind invalid",
             ),
         }],
     );
@@ -6040,7 +6038,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_format
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th format is too long (101), maximum is 100",
+                "content body verification claim schema schema fields 0-th format is too long (101), maximum is 100",
             ),
         }],
     );
@@ -6099,7 +6097,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_descri
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th description is too long (1001), maximum is 1000",
+                "content body verification claim schema schema fields 0-th description is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -6158,7 +6156,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_regex_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields 0-th regex is too long (101), maximum is 100",
+                "content body verification claim schema schema fields 0-th regex is too long (101), maximum is 100",
             ),
         }],
     );
@@ -6228,7 +6226,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema fields duplicate 'key1'",
+                "content body verification claim schema schema fields duplicate 'key1'",
             ),
         }],
     );
@@ -6264,7 +6262,7 @@ async fn validation_content_content_body_verification_claim_schema_missing() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema is missing",
+                "content body verification claim schema is missing",
             ),
         }],
     );
@@ -6326,7 +6324,7 @@ async fn validation_content_content_body_verification_claim_fields_key_empty() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field '' can't be empty",
+                "content body verification claim field '' can't be empty",
             ),
         }],
     );
@@ -6389,7 +6387,7 @@ async fn validation_content_content_body_verification_claim_fields_key_too_long(
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk' is too long (201), maximum is 200",
+                "content body verification claim field 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk' is too long (201), maximum is 200",
             ),
         }],
     );
@@ -6452,7 +6450,7 @@ async fn validation_content_content_body_verification_claim_fields_value_too_lon
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' value is too long (10001), maximum is 10000",
+                "content body verification claim field 'key1' value is too long (10001), maximum is 10000",
             ),
         }],
     );
@@ -6513,7 +6511,7 @@ async fn validation_content_content_body_verification_claim_fields_too_many() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim too many fields (1001), maximum is 1000",
+                "content body verification claim too many fields (1001), maximum is 1000",
             ),
         }],
     );
@@ -6576,7 +6574,7 @@ async fn validation_content_content_body_verification_claim_fields_key_unknown()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'unknown' is not part of the schema",
+                "content body verification claim field 'unknown' is not part of the schema",
             ),
         }],
     );
@@ -6639,7 +6637,7 @@ async fn validation_content_content_body_verification_claim_fields_value_not_val
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' is not a valid UTF-8 string",
+                "content body verification claim field 'key1' is not a valid UTF-8 string",
             ),
         }],
     );
@@ -6702,7 +6700,7 @@ async fn validation_content_content_body_verification_claim_fields_value_string_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' is too long according the schema, maximum is 1",
+                "content body verification claim field 'key1' is too long according the schema, maximum is 1",
             ),
         }],
     );
@@ -6765,7 +6763,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' is incorrectly sized (expected 8 bytes)",
+                "content body verification claim field 'key1' is incorrectly sized (expected 8 bytes)",
             ),
         }],
     );
@@ -6828,7 +6826,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' is invalid, expected 0x0 or 0x1",
+                "content body verification claim field 'key1' is invalid, expected 0x0 or 0x1",
             ),
         }],
     );
@@ -6891,7 +6889,7 @@ async fn validation_content_content_body_verification_claim_fields_value_bytes_t
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field 'key1' is too long according the schema, maximum is 1",
+                "content body verification claim field 'key1' is too long according the schema, maximum is 1",
             ),
         }],
     );
@@ -6950,7 +6948,7 @@ async fn validation_content_content_body_verification_claim_fields_missing_requi
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim field required field 'key1' missing",
+                "content body verification claim field required field 'key1' missing",
             ),
         }],
     );
@@ -7022,7 +7020,7 @@ async fn validation_content_content_body_verification_verify_claim_event_key_inv
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification verify claim event key signed by is missing",
+                "content body verification verify claim event key signed by is missing",
             ),
         }],
     );
@@ -7057,7 +7055,7 @@ async fn validation_content_content_body_verification_verify_claim_event_key_wro
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification verify claim event key collection invalid, expected '8'",
+                "content body verification verify claim event key collection invalid, expected '8'",
             ),
         }],
     );
@@ -7091,7 +7089,7 @@ async fn validation_content_content_body_verification_verify_claim_event_key_mis
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification verify claim event key is missing",
+                "content body verification verify claim event key is missing",
             ),
         }],
     );
@@ -7165,7 +7163,7 @@ async fn validation_content_content_body_verification_target_claim_event_key_inv
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target claim event key signed by is missing",
+                "content body verification target claim event key signed by is missing",
             ),
         }],
     );
@@ -7201,7 +7199,7 @@ async fn validation_content_content_body_verification_target_claim_event_key_wro
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target claim event key collection invalid, expected '8'",
+                "content body verification target claim event key collection invalid, expected '8'",
             ),
         }],
     );
@@ -7236,7 +7234,7 @@ async fn validation_content_content_body_verification_target_claim_event_key_mis
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target claim event key is missing",
+                "content body verification target claim event key is missing",
             ),
         }],
     );
@@ -7273,7 +7271,7 @@ async fn validation_content_content_body_verification_target_identities_empty()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target target identities can't be empty",
+                "content body verification target target identities can't be empty",
             ),
         }],
     );
@@ -7315,7 +7313,7 @@ async fn validation_content_content_body_verification_target_identities_too_long
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target target identities is too long (101), maximum is 100",
+                "content body verification target target identities is too long (101), maximum is 100",
             ),
         }],
     );
@@ -7352,7 +7350,7 @@ async fn validation_content_content_body_verification_target_identities_invalid(
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification target target identities 0-th is not a valid identity",
+                "content body verification target target identities 0-th is not a valid identity",
             ),
         }],
     );
@@ -7509,7 +7507,7 @@ async fn validation_content_content_body_verification_claim_imageset_too_many()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim image set is too long (5), maximum is 4",
+                "content body verification claim image set is too long (5), maximum is 4",
             ),
         }],
     );
@@ -7578,7 +7576,7 @@ async fn validation_content_content_body_verification_claim_imageset_images_too_
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim image set 0-th images is too long (11), maximum is 10",
+                "content body verification claim image set 0-th images is too long (11), maximum is 10",
             ),
         }],
     );

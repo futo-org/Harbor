@@ -100,8 +100,8 @@ pub enum ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ValidationError::ContentBody(err) => write!(f, "content body {err}"),
-            ValidationError::ContentBodyMissing => write!(f, "content body is missing"),
+            ValidationError::ContentBody(err) => write!(f, "body {err}"),
+            ValidationError::ContentBodyMissing => write!(f, "body is missing"),
         }
     }
 }
