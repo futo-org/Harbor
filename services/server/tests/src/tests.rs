@@ -2,10 +2,8 @@ use std::cmp::min;
 use std::mem::take;
 use std::time::SystemTime;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::jwt::ServerJwtClaims;
+use polycentric_common::jwt::mint_jwt;
 use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::attributed_to::To;
 use polycentric_common::models::protos_v2::content::ContentBody;
@@ -21,8 +19,7 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
-use rand::distr::Distribution;
-use rand::distr::{Alphabetic, SampleString};
+use rand::distr::{Alphabetic, Distribution, SampleString, StandardUniform};
 use rand::{Rng, RngExt};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -73,6 +70,7 @@ pub const COLLECTION_SOCIAL_GRAPH: i32 = 5;
 pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_CALENDAR: i32 = 9;
 pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
@@ -120,6 +118,11 @@ pub fn random_unstemmed_string() -> String {
     }
 
     SampleString::sample_string(&Unstemmed, &mut rand::rng(), 20)
+}
+
+pub fn random_blob() -> Vec<u8> {
+    let mut rng = rand::rng();
+    StandardUniform.sample_iter(&mut rng).take(32).collect()
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
@@ -645,6 +648,8 @@ impl TestClient {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => COLLECTION_VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => COLLECTION_CALENDAR,
         };
         let content = Content {
             content_body: Some(body),
@@ -746,9 +751,13 @@ impl TestClient {
 
         let response = self
             .event_sync_client
-            .put_events(PutEventsRequest {
-                event_bundles: event_bundles.clone(),
-            })
+            .put_events(as_identity(
+                &self.identity,
+                &self.key,
+                PutEventsRequest {
+                    event_bundles: event_bundles.clone(),
+                },
+            ))
             .await
             .expect("put_events failed")
             .into_inner();
@@ -773,32 +782,32 @@ impl TestClient {
     }
 
     pub fn create_auth_token(&self) -> String {
-        let header = serde_json::json!({
-            "alg": "EdDSA",
-            "typ": "JWT",
-            "kid": hex::encode(self.key.verifying_key().as_bytes()),
-        });
-
-        let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
-        let payload = ServerJwtClaims {
-            iss: self.identity().to_owned(),
-            aud: audience(),
-            iat: now,
-            exp: now + (24 * 60 * 60),
-        };
-
-        let to_sign = format!(
-            "{}.{}",
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap()),
-        );
-        let signature = self.key.sign(to_sign.as_bytes());
-
-        format!(
-            "Bearer {to_sign}.{}",
-            URL_SAFE_NO_PAD.encode(signature.to_bytes().as_slice()),
-        )
+        auth_token(&self.identity, &self.key)
     }
+
+    pub fn signing_key(&self) -> &SigningKey {
+        &self.key
+    }
+}
+
+/// An `authorization` header value for `identity`, signed by `key`.
+pub fn auth_token(identity: &str, key: &SigningKey) -> String {
+    let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
+    let token = mint_jwt(key, identity, &audience(), now, 24 * 60 * 60);
+    format!("Bearer {token}")
+}
+
+/// `message` as a request authenticated as `identity` with `key`.
+pub fn as_identity<T>(
+    identity: &str,
+    key: &SigningKey,
+    message: T,
+) -> tonic::Request<T> {
+    let mut request = tonic::Request::new(message);
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token(identity, key).parse().unwrap());
+    request
 }
 
 fn github_verification_claim(login: &str) -> VerificationClaim {
@@ -1392,9 +1401,13 @@ async fn publish_genesis(
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
     let sig = bundle_signature(&bundle);
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
+        .put_events(as_identity(
+            identity,
+            key,
+            PutEventsRequest {
+                event_bundles: vec![bundle],
+            },
+        ))
         .await
         .expect("genesis put failed")
         .into_inner();
@@ -1423,9 +1436,13 @@ async fn publish_post(
     );
     let sig = bundle_signature(&bundle);
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
+        .put_events(as_identity(
+            identity,
+            key,
+            PutEventsRequest {
+                event_bundles: vec![bundle],
+            },
+        ))
         .await
         .expect("post put failed")
         .into_inner();

@@ -342,6 +342,8 @@ impl Client {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => collections::VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => collections::CALENDAR,
         };
         let content = Content {
             content_body: Some(body),
@@ -401,41 +403,30 @@ impl Client {
             return;
         }
 
+        let mut request =
+            tonic::Request::new(PutEventsRequest { event_bundles });
+        request
+            .metadata_mut()
+            .insert("authorization", self.create_auth_token().parse().unwrap());
         self.event_sync_client
-            .put_events(PutEventsRequest { event_bundles })
+            .put_events(request)
             .await
             .expect("put_events failed");
     }
 
-    /*
+    /// An `authorization` header value.
     fn create_auth_token(&self) -> String {
-        let header = serde_json::json!({
-            "alg": "EdDSA",
-            "typ": "JWT",
-            "kid": hex::encode(self.key.verifying_key().as_bytes()),
-        });
-
-        let now = current_timestamp();
-        let payload = ServerJwtClaims {
-            iss: self.identity().to_owned(),
-            aud: audience(),
-            iat: now,
-            exp: now + (24 * 60 * 60),
-        };
-
-        let to_sign = format!(
-            "{}.{}",
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap()),
+        let audience = std::env::var("HARBOR_SERVER_NAME")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let token = polycentric_common::jwt::mint_jwt(
+            &self.key,
+            self.identity(),
+            &audience,
+            current_timestamp() / 1000,
+            24 * 60 * 60,
         );
-        let signature = self.key.sign(to_sign.as_bytes());
-
-        format!(
-            "Bearer {to_sign}.{}",
-            URL_SAFE_NO_PAD.encode(signature.to_bytes().as_slice()),
-        )
+        format!("Bearer {token}")
     }
-    */
 }
 
 fn github_verification_schema() -> VerificationSchema {

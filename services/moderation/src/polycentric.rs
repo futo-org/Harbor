@@ -77,6 +77,15 @@ pub struct PolycentricClient {
 }
 
 impl PolycentricClient {
+    /// A token to put our events to `server`.
+    fn auth_token(&self, server: &str) -> String {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        polycentric_common::jwt::mint_jwt(&self.signing_key, &self.identity, server, now, 300)
+    }
+
     /// Build from the signing key seed, identity, and server URLs in
     /// [`crate::config::Config`]. Fails if the seed is not valid hex.
     pub fn new(config: &crate::config::Config) -> Result<Self, String> {
@@ -147,7 +156,7 @@ impl PolycentricClient {
         }
 
         let count = bundles.len();
-        let response = core_sync::push_bundles(server, bundles)
+        let response = core_sync::push_bundles_as(server, bundles, &self.auth_token(server))
             .await
             .map_err(|e| e.to_string())?;
         if !response.errors.is_empty() {
@@ -343,7 +352,7 @@ impl PolycentricClient {
         };
         let mut pushed = false;
         for server in &self.servers {
-            match put_events(server, request.clone()).await {
+            match put_events(server, request.clone(), &self.auth_token(server)).await {
                 Ok(()) => pushed = true,
                 Err(e) => warn!("publish: put_events to {server} failed: {e}"),
             }
@@ -380,14 +389,11 @@ fn max_identity_sequence(bundles: &[EventBundle]) -> u64 {
 
 /// Push a request to a single server, treating any per-event error the
 /// server reports for our event as a failure.
-async fn put_events(server: &str, request: PutEventsRequest) -> Result<(), String> {
-    let chan = channel(server).await?;
-    let mut client = EventSyncServiceClient::new(chan);
-    let response = client
-        .put_events(request)
+async fn put_events(server: &str, request: PutEventsRequest, token: &str) -> Result<(), String> {
+    let response = core_sync::push_bundles_as(server, request.event_bundles, token)
         .await
-        .map_err(|e| format!("put_events: {e}"))?;
-    let errors = response.into_inner().errors;
+        .map_err(|e| e.to_string())?;
+    let errors = response.errors;
     if !errors.is_empty() {
         let messages: Vec<&str> = errors.iter().map(|e| e.message.as_str()).collect();
         return Err(format!("server rejected event: {messages:?}"));

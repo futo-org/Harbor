@@ -4,7 +4,7 @@ use prost::Message;
 
 use crate::error::Error;
 use crate::models::collections::{
-    FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
+    CALENDAR, FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
 };
 use crate::models::protos_v2::{EventKey, PublicKey};
 use crate::models::validate::{self, Validate};
@@ -70,6 +70,7 @@ impl fmt::Debug for EventKey {
                     REPORTS => &"reports",
                     LABELS => &"labels",
                     VERIFICATIONS => &"verifications",
+                    CALENDAR => &"calendar",
                     _ => collection,
                 },
             )

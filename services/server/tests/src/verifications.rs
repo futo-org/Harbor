@@ -97,9 +97,14 @@ async fn verification_claim_images_are_requested_as_blobs() {
     client.verification_claim(claim, current_timestamp());
     let event_bundles = client.take_pending_events();
 
+    let request = as_identity(
+        client.identity(),
+        client.signing_key(),
+        PutEventsRequest { event_bundles },
+    );
     let response = client
         .event_sync_client()
-        .put_events(PutEventsRequest { event_bundles })
+        .put_events(request)
         .await
         .expect("put_events failed")
         .into_inner();

@@ -274,7 +274,8 @@ impl IdentityStore {
     /// Publish the identity event chain and any profile events to `server`
     /// via gRPC PutEvents. Returns the number of events sent.
     pub fn publish(&self, server: &str) -> Result<usize> {
-        crate::polycentric::publish(server, self.export()?)
+        let key = ed25519_dalek::SigningKey::from_bytes(&self.private_key(None)?);
+        crate::polycentric::publish(server, self.export()?, &self.identity()?, &key)
     }
 
     /// Every signed event paired with its content — the identity chain

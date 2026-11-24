@@ -21,6 +21,8 @@ pub mod attributed_to;
 pub mod attributed_to_reaction;
 pub mod blob;
 pub mod block;
+pub mod calendar_event;
+pub mod calendar_event_rsvp;
 pub mod collections;
 pub mod content;
 pub mod content_body;

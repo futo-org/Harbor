@@ -9,13 +9,11 @@ import {
 import { Tabs } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { router } from 'expo-router';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import {
@@ -277,7 +275,7 @@ function UserRow({ identity }: { identity: string }) {
   return (
     <ProfileRow
       identity={identity}
-      onPress={() => router.navigate(Routes.tabs.profile(identity))}
+      linkToProfile
       style={[theme.atoms.box.primary.border, Atoms.border_b]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />

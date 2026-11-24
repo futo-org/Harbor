@@ -265,8 +265,14 @@ echo "==> Running integration tests…"
 if [ "$CI_MODE" = true ]; then
   set +e # Don't stop on test failure, want to print the server logs in that case.
 
+  # Needed for running the admin CLI in the tests
+  # (it's set for the server, which uses a different IP address).
+  PG_IP="$(docker inspect -f '{{(index .NetworkSettings.Networks "'harbor_default'").IPAddress}}' harbor-postgres-1 2>/dev/null)"
+  export HARBOR_DATABASE_URL="postgres://postgres:testing@${PG_IP}:5432"
+  export HARBOR_DATABASE_URL_RO="postgres://postgres:testing@${PG_IP}:5432?options=-c%20default_transaction_read_only=on"
+
   # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
-  cargo nextest run -P ci -p integration-tests 2>&1
+  cargo nextest run -P ci -p integration-tests --no-fail-fast 2>&1
 
   if [ "$?" != 0 ]; then
     cd "$REPO_ROOT"

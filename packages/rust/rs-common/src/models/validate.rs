@@ -6,11 +6,12 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::models::{
-    application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
-    content_digest, delete, event, event_key, event_proof_target, field_def, follow, identity,
-    image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction, report,
-    repost, revocation_bound, serialized_verification_schema, server_list, to, vector_clock,
-    verification_claim, verification_schema, verification_target, verification_verify,
+    application, attributed_to, attributed_to_reaction, blob, block, calendar_event,
+    calendar_event_rsvp, content, content_body, content_digest, delete, event, event_key,
+    event_proof_target, field_def, follow, identity, image, image_set, labels, link, post,
+    post_reply, profile_update, public_key, reaction, report, repost, revocation_bound,
+    serialized_verification_schema, server_list, to, vector_clock, verification_claim,
+    verification_schema, verification_target, verification_verify,
 };
 
 /// Validate a value.
@@ -79,6 +80,8 @@ pub enum ValidationError {
     FieldDef(field_def::ValidationError),
     VerificationVerify(verification_verify::ValidationError),
     VerificationTarget(verification_target::ValidationError),
+    CalendarEvent(calendar_event::ValidationError),
+    CalendarEventRsvp(calendar_event_rsvp::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -291,6 +294,18 @@ impl From<verification_target::ValidationError> for ValidationError {
     }
 }
 
+impl From<calendar_event_rsvp::ValidationError> for ValidationError {
+    fn from(err: calendar_event_rsvp::ValidationError) -> ValidationError {
+        ValidationError::CalendarEventRsvp(err)
+    }
+}
+
+impl From<calendar_event::ValidationError> for ValidationError {
+    fn from(err: calendar_event::ValidationError) -> ValidationError {
+        ValidationError::CalendarEvent(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -331,6 +346,8 @@ impl fmt::Display for ValidationError {
             ValidationError::FieldDef(err) => write!(f, "field def {err}"),
             ValidationError::VerificationVerify(err) => write!(f, "verification verify {err}"),
             ValidationError::VerificationTarget(err) => write!(f, "verification target {err}"),
+            ValidationError::CalendarEvent(err) => write!(f, "calendar event {err}"),
+            ValidationError::CalendarEventRsvp(err) => write!(f, "calendar event rsvp {err}"),
         }
     }
 }

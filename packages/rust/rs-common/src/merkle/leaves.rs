@@ -15,22 +15,24 @@ pub fn canonical_signatures<'a, I>(items: I) -> Vec<Vec<u8>>
 where
     I: IntoIterator<Item = (&'a [u8], &'a [u8])>,
 {
-    let mut decoded: Vec<(u64, u64, Vec<u8>)> = items
+    let mut keys: Vec<CanonicalKey> = items
         .into_iter()
-        .filter_map(|(event_bytes, signature)| {
-            let inner = Event::decode(event_bytes).ok()?;
-            let vc_sum: u64 = inner
-                .vector_clock
-                .as_ref()
-                .map(|vc| vc.sequence.iter().sum())
-                .unwrap_or(0);
-            Some((vc_sum, inner.created_at, signature.to_vec()))
-        })
+        .filter_map(|(event_bytes, signature)| canonical_key(event_bytes, signature))
         .collect();
-    decoded.sort_by(|a, b| {
-        a.0.cmp(&b.0)
-            .then_with(|| a.1.cmp(&b.1))
-            .then_with(|| a.2.cmp(&b.2))
-    });
-    decoded.into_iter().map(|(_, _, sig)| sig).collect()
+    keys.sort();
+    keys.into_iter().map(|(_, _, sig)| sig).collect()
+}
+
+/// Canonical sort key: `sum(vector_clock)`, `created_at`, signature.
+pub type CanonicalKey = (u64, u64, Vec<u8>);
+
+/// The [`CanonicalKey`] of an event, or `None` if it does not decode.
+pub fn canonical_key(event_bytes: &[u8], signature: &[u8]) -> Option<CanonicalKey> {
+    let inner = Event::decode(event_bytes).ok()?;
+    let vc_sum: u64 = inner
+        .vector_clock
+        .as_ref()
+        .map(|vc| vc.sequence.iter().sum())
+        .unwrap_or(0);
+    Some((vc_sum, inner.created_at, signature.to_vec()))
 }

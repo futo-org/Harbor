@@ -179,13 +179,12 @@ async fn match_identity() {
 async fn match_identity_prefix() {
     let mut client = TestClient::new().await;
 
-    let alias = random_string();
     let profile_update = ProfileUpdate {
         name: Some(random_string()),
         avatar: None,
         banner: None,
         description: None,
-        alias: Some(alias.clone()),
+        alias: None,
     };
     client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
@@ -200,6 +199,41 @@ async fn match_identity_prefix() {
             vec![profile_update.clone()],
         )
         .await;
+    }
+}
+
+#[tokio::test]
+async fn regression_match_on_identities() {
+    // Identities that have been incorrectly parsed in the pased.
+    let identities = [
+        "95e173609246906dd0c110e3aa7cbbe4d2994d9af0eec668f3d43aa0dfec3c2e",
+        "865e90e93264f4f93bd28d594e5347f2430ff3e45c59b78e1c1923b8518e837d",
+    ];
+
+    for identity in identities {
+        let key = signing_key(identity);
+        let mut client = TestClient::new_with_identity(key).await;
+        let profile_update = ProfileUpdate {
+            name: Some(identity.to_owned()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        };
+        client.profile_update(profile_update.clone(), current_timestamp());
+        client.submit_events().await;
+
+        for n in 4..identity.len() {
+            expect_searched_users(
+                SearchUsersRequest {
+                    query: identity[..n].to_owned(),
+                    sort_by: None,
+                    page_params: None,
+                },
+                vec![profile_update.clone()],
+            )
+            .await;
+        }
     }
 }
 

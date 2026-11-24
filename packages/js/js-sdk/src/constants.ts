@@ -13,6 +13,7 @@ export const COLLECTION = {
   REPORTS: 6,
   LABELS: 7,
   VERIFICATIONS: 8,
+  CALENDAR: 9,
 } as const;
 
 /** A known COLLECTION value. Callers may also pass any number. */

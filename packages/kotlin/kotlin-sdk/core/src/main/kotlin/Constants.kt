@@ -18,6 +18,7 @@ object Collections {
     const val REPORTS = 6
     const val LABELS = 7
     const val VERIFICATIONS = 8
+    const val CALENDAR = 9
 }
 
 /** `PublicKey.key_type` / `ContentDigest.type` values (KeyType enum in keypair.proto only defines ED25519). */

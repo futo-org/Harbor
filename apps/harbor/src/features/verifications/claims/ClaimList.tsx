@@ -36,7 +36,7 @@ export function ClaimList({
       keyExtractor={(claim) =>
         `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
       }
-      renderItem={({ item }) => <ClaimListItem claim={item} />}
+      renderItem={({ item }) => <ClaimListItem claim={item} linkToClaim />}
       ListHeaderComponent={
         onCreateClaim && claims.length > 0 ? (
           <ClaimActionRow

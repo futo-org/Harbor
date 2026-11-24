@@ -1,4 +1,4 @@
-FROM rust:1.100-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS chef
+FROM rust:1.100-slim-trixie@sha256:86993c97389ebb5487eb09e88168e2a00b0de29aa08dff9ae896049b9be96ed9 AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -30,7 +30,7 @@ RUN cargo build --release \
 
 # CI builds the binaries outside Docker (.forgejo/actions/rust-binaries) and
 # swaps them in for the builder stage, so trixie here matches its ci/rust.
-FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
+FROM debian:trixie-slim@sha256:8aa5a7bf5a1955bddbe7d74fcdd0b91ab30e74362a8b73af672b0481b35b44a0
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh

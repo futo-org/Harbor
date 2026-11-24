@@ -146,7 +146,7 @@ export function HidingHeaderStack({
             onLayout={onHeaderLayout}
             style={
               SLIDES_TOGETHER
-                ? undefined
+                ? styles.inFlowHeader
                 : [Atoms.absolute, styles.floatingHeader, style]
             }
           >
@@ -187,6 +187,9 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    zIndex: ZIndex.raised,
+  } satisfies ViewStyle,
+  inFlowHeader: {
     zIndex: ZIndex.raised,
   } satisfies ViewStyle,
 });

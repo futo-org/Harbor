@@ -18,6 +18,17 @@ On submission the `EventMetadata` in `meta` and `EventProof` in `event_proofs`
 are not used, these are only useful when the `EventBundle`s are returned by a
 server.
 
+## Authentication
+
+`PutEvents` takes an [auth token](/docs/protocol/server-auth) in the
+`authorization: Bearer <token>` header. When one is sent, the server only
+accepts events of the identity the token is for.
+
+Requests without a token are still accepted for now, so that older clients
+keep working. So are requests whose token the server can't match to an
+identity yet, such as a first sync or a freshly paired device. Servers will
+require the token in the future, so clients should always send it.
+
 ## Signed Event
 
 Let's start with the `SignedEvent`. Internally it contains an `Event` and a

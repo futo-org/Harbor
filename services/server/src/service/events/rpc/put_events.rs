@@ -19,7 +19,7 @@ use tonic::{Code, Status};
 use tracing::Instrument;
 
 use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::PublicContext;
+use crate::service::context::{Auth, PublicContext};
 use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
@@ -187,6 +187,15 @@ async fn process_event(
         .record("event.identity", &key.identity)
         .record("event.collection", key.collection)
         .record("event.sequence", key.sequence);
+
+    // An authenticated request only puts its own identity's events.
+    if let Some(identity) = ctx.auth.identity()
+        && identity != key.identity
+    {
+        return Err(Status::permission_denied(
+            "event is not from the request's identity",
+        ));
+    }
 
     // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
@@ -534,6 +543,9 @@ fn validate_content(
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
+        }
+        ContentBody::CalendarEvent(_) | ContentBody::CalendarEventRsvp(_) => {
+            check_collection(collection, collections::CALENDAR);
         }
     }
 }
