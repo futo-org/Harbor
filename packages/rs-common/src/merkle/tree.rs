@@ -36,41 +36,99 @@ fn largest_pow2_lt(n: usize) -> usize {
 
 /// Merkle tree hash of `leaves`. `None` if empty.
 pub fn merkle_tree_hash(leaves: &[Vec<u8>]) -> Option<Hash> {
-    if leaves.is_empty() {
-        return None;
-    }
-    Some(mth(leaves))
-}
-
-fn mth(leaves: &[Vec<u8>]) -> Hash {
-    if leaves.len() == 1 {
-        return leaf_hash(&leaves[0]);
-    }
-    let k = largest_pow2_lt(leaves.len());
-    node_hash(&mth(&leaves[..k]), &mth(&leaves[k..]))
+    MerkleTree::new(leaves.iter().map(Vec::as_slice)).root(leaves.len())
 }
 
 /// Audit path for the leaf at `index`.
 pub fn build_audit_path(leaves: &[Vec<u8>], index: u64) -> Option<Vec<Hash>> {
-    if (index as usize) >= leaves.len() {
-        return None;
-    }
-    let mut path = Vec::new();
-    fill_audit_path(leaves, index, &mut path);
-    Some(path)
+    MerkleTree::new(leaves.iter().map(Vec::as_slice)).audit_path(index as usize, leaves.len())
 }
 
-fn fill_audit_path(leaves: &[Vec<u8>], index: u64, path: &mut Vec<Hash>) {
-    if leaves.len() <= 1 {
-        return;
+/// A Merkle tree that keeps its hashes, so appends, roots and audit paths are `O(log n)`.
+#[derive(Clone, Debug, Default)]
+pub struct MerkleTree {
+    /// `levels[k][i]` is the hash of leaves `i * 2^k .. (i + 1) * 2^k`.
+    levels: Vec<Vec<Hash>>,
+}
+
+impl MerkleTree {
+    pub fn new<'a>(leaves: impl IntoIterator<Item = &'a [u8]>) -> Self {
+        let mut tree = Self::default();
+        for leaf in leaves {
+            tree.push(leaf);
+        }
+        tree
     }
-    let k = largest_pow2_lt(leaves.len()) as u64;
-    if index < k {
-        fill_audit_path(&leaves[..k as usize], index, path);
-        path.push(mth(&leaves[k as usize..]));
-    } else {
-        fill_audit_path(&leaves[k as usize..], index - k, path);
-        path.push(mth(&leaves[..k as usize]));
+
+    /// Number of leaves.
+    pub fn len(&self) -> usize {
+        self.levels.first().map_or(0, Vec::len)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Add a leaf after the others.
+    pub fn push(&mut self, leaf: &[u8]) {
+        let mut hash = leaf_hash(leaf);
+        for level in 0.. {
+            if self.levels.len() == level {
+                self.levels.push(Vec::new());
+            }
+            let hashes = &mut self.levels[level];
+            hashes.push(hash);
+            let count = hashes.len();
+            if count % 2 == 1 {
+                break;
+            }
+            // An even count completes a node on the next level.
+            hash = node_hash(&hashes[count - 2], &hashes[count - 1]);
+        }
+    }
+
+    /// Merkle tree hash of the first `leaf_count` leaves.
+    pub fn root(&self, leaf_count: usize) -> Option<Hash> {
+        (1..=self.len())
+            .contains(&leaf_count)
+            .then(|| self.range_hash(0, leaf_count))
+    }
+
+    /// Audit path for leaf `index` in the tree of the first `leaf_count` leaves.
+    pub fn audit_path(&self, index: usize, leaf_count: usize) -> Option<Vec<Hash>> {
+        if index >= leaf_count || leaf_count > self.len() {
+            return None;
+        }
+        let mut path = Vec::new();
+        self.fill_audit_path(index, 0, leaf_count, &mut path);
+        Some(path)
+    }
+
+    fn fill_audit_path(&self, index: usize, start: usize, len: usize, path: &mut Vec<Hash>) {
+        if len <= 1 {
+            return;
+        }
+        let k = largest_pow2_lt(len);
+        if index < k {
+            self.fill_audit_path(index, start, k, path);
+            path.push(self.range_hash(start + k, len - k));
+        } else {
+            self.fill_audit_path(index - k, start + k, len - k, path);
+            path.push(self.range_hash(start, k));
+        }
+    }
+
+    /// Hash of the subtree over leaves `start .. start + len`.
+    fn range_hash(&self, start: usize, len: usize) -> Hash {
+        if len.is_power_of_two() {
+            let level = len.trailing_zeros() as usize;
+            return self.levels[level][start >> level];
+        }
+        let k = largest_pow2_lt(len);
+        node_hash(
+            &self.range_hash(start, k),
+            &self.range_hash(start + k, len - k),
+        )
     }
 }
 
@@ -119,6 +177,31 @@ mod tests {
 
     fn leaves(n: usize) -> Vec<Vec<u8>> {
         (0..n).map(|i| vec![i as u8]).collect()
+    }
+
+    #[test]
+    fn kept_tree_proves_every_prefix() {
+        let ls = leaves(35);
+        let mut tree = MerkleTree::default();
+        assert!(tree.is_empty());
+        assert_eq!(tree.root(0), None);
+        for (pushed, leaf) in ls.iter().enumerate() {
+            tree.push(leaf);
+            assert_eq!(tree.len(), pushed + 1);
+            for leaf_count in 1..=tree.len() {
+                let root = tree.root(leaf_count).unwrap();
+                for (index, leaf) in ls.iter().enumerate().take(leaf_count) {
+                    let path = tree.audit_path(index, leaf_count).unwrap();
+                    assert!(
+                        verify_inclusion(leaf, index as u64, leaf_count as u64, &path, &root),
+                        "pushed={pushed} leaf_count={leaf_count} index={index}"
+                    );
+                }
+            }
+        }
+        assert_eq!(tree.root(36), None);
+        assert_eq!(tree.audit_path(3, 3), None);
+        assert_eq!(tree.audit_path(0, 36), None);
     }
 
     #[test]

@@ -4,5 +4,6 @@ pub mod event_store;
 pub mod identity_store;
 pub mod keys;
 pub mod label_store;
+pub mod merkle_tree_store;
 pub mod meta_store;
 pub mod pairing_store;
