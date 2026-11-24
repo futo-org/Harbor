@@ -193,6 +193,8 @@ function useHideScrollHint(canShow: boolean) {
 }
 
 function ScrollHint({ onPress }: { onPress: () => void }) {
+  const { theme } = useTheme();
+
   return (
     <View
       pointerEvents="box-none"
@@ -204,13 +206,15 @@ function ScrollHint({ onPress }: { onPress: () => void }) {
         { top: '100%', left: 0, right: 0 },
       ]}
     >
-      <Button
-        title=""
-        icon="arrowUp"
-        size="sm"
-        variant="tertiary"
-        onPress={onPress}
-      />
+      <View style={[theme.atoms.box.primary.bg, Atoms.rounded_full]}>
+        <Button
+          title=""
+          icon="arrowUp"
+          size="sm"
+          variant="tertiary"
+          onPress={onPress}
+        />
+      </View>
     </View>
   );
 }
