@@ -14,9 +14,13 @@ async fn ban_after_identity_creation() {
     let event_bundles = take(&mut client.pending);
     let response = client
         .event_sync_client
-        .put_events(PutEventsRequest {
-            event_bundles: event_bundles.clone(),
-        })
+        .put_events(as_identity(
+            &client.identity,
+            &client.key,
+            PutEventsRequest {
+                event_bundles: event_bundles.clone(),
+            },
+        ))
         .await
         .expect("put_events failed")
         .into_inner();
@@ -34,9 +38,13 @@ async fn ban_before_identity_creation() {
     let event_bundles = take(&mut client.pending);
     let response = client
         .event_sync_client
-        .put_events(PutEventsRequest {
-            event_bundles: event_bundles.clone(),
-        })
+        .put_events(as_identity(
+            &client.identity,
+            &client.key,
+            PutEventsRequest {
+                event_bundles: event_bundles.clone(),
+            },
+        ))
         .await
         .expect("put_events failed")
         .into_inner();

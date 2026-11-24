@@ -36,6 +36,44 @@ async fn put_then_list_round_trip() {
     );
 }
 
+/// Clients that send no token keep working.
+#[tokio::test]
+async fn put_events_without_auth_token_is_still_accepted() {
+    let mut client = TestClient::new().await;
+    let event_bundles = client.take_pending_events();
+
+    let response = client
+        .event_sync_client()
+        .put_events(PutEventsRequest { event_bundles })
+        .await
+        .expect("put_events failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
+}
+
+#[tokio::test]
+async fn put_events_rejects_another_identitys_events() {
+    let mut alice = TestClient::new().await;
+    alice.post_text("hello", current_timestamp() + 1);
+    let event_bundles = alice.take_pending_events();
+    let mut bob = TestClient::new().await;
+    bob.submit_events().await;
+
+    // Bob puts Alice's events with his own token.
+    let request = as_identity(
+        bob.identity(),
+        bob.signing_key(),
+        PutEventsRequest { event_bundles },
+    );
+    let response = bob
+        .event_sync_client()
+        .put_events(request)
+        .await
+        .expect("put_events failed")
+        .into_inner();
+    assert_eq!(response.errors.len(), 2, "response: {response:?}");
+}
+
 #[tokio::test]
 async fn invalid_signature_rejected() {
     let mut client = connect_event_sync().await;
@@ -66,9 +104,13 @@ async fn invalid_signature_rejected() {
     }
 
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
+        .put_events(as_identity(
+            &identity,
+            &key,
+            PutEventsRequest {
+                event_bundles: vec![bundle],
+            },
+        ))
         .await
         .expect("put_events failed");
     let inner = response.into_inner();
@@ -114,9 +156,13 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         current_timestamp(),
     );
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![genesis],
+            },
+        ))
         .await
         .expect("genesis put failed");
 
@@ -135,9 +181,13 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
     );
     let sig_1 = bundle_signature(&post_1);
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_1],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_1],
+            },
+        ))
         .await
         .expect("post_1 put failed");
 
@@ -157,9 +207,13 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
     );
     let sig_2 = bundle_signature(&post_2);
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_2],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_2],
+            },
+        ))
         .await
         .expect("post_2 put failed");
 
@@ -189,9 +243,13 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         current_timestamp() + 3,
     );
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![rotation],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![rotation],
+            },
+        ))
         .await
         .expect("rotation put failed");
 
@@ -296,9 +354,13 @@ async fn post_revocation_event_returns_without_proof() {
         current_timestamp(),
     );
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![genesis],
+            },
+        ))
         .await
         .expect("genesis put failed");
 
@@ -316,9 +378,13 @@ async fn post_revocation_event_returns_without_proof() {
     );
     let sig_1 = bundle_signature(&post_1);
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_1],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_1],
+            },
+        ))
         .await
         .expect("post_1 put failed");
 
@@ -336,9 +402,13 @@ async fn post_revocation_event_returns_without_proof() {
     );
     let sig_2 = bundle_signature(&post_2);
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_2],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_2],
+            },
+        ))
         .await
         .expect("post_2 put failed");
 
@@ -367,9 +437,13 @@ async fn post_revocation_event_returns_without_proof() {
         current_timestamp() + 3,
     );
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![rotation],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![rotation],
+            },
+        ))
         .await
         .expect("rotation put failed");
 
@@ -394,9 +468,13 @@ async fn post_revocation_event_returns_without_proof() {
     // server returns the rejection in the response errors, not as a gRPC
     // error.
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_3],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_3],
+            },
+        ))
         .await
         .expect("put_events call succeeded");
     let inner = response.into_inner();
@@ -460,9 +538,13 @@ async fn rewritten_event_invalidates_proofs() {
         current_timestamp(),
     );
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![genesis],
+            },
+        ))
         .await
         .expect("genesis put failed");
 
@@ -554,9 +636,13 @@ async fn rewritten_event_invalidates_proofs() {
     // PUT in order. Note: post_2_rewritten replaces post_2_original — the
     // original is never seen by the server.
     client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post_1, post_2_rewritten, post_3, rotation],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![post_1, post_2_rewritten, post_3, rotation],
+            },
+        ))
         .await
         .expect("puts failed");
 
@@ -648,9 +734,13 @@ async fn put_verification_claim_is_ingested_and_listable() {
     let claim_signature = bundle_signature(&claim);
 
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis, claim],
-        })
+        .put_events(as_identity(
+            &identity,
+            &rotation_key,
+            PutEventsRequest {
+                event_bundles: vec![genesis, claim],
+            },
+        ))
         .await
         .expect("put_events failed")
         .into_inner();
@@ -795,7 +885,7 @@ async fn validation_invalid_signed_event_bytes() {
 #[tokio::test]
 async fn validation_missing_event_key() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -873,7 +963,7 @@ async fn validation_invalid_event_collection() {
 #[tokio::test]
 async fn validation_invalid_event_identity() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -898,9 +988,15 @@ async fn validation_invalid_event_identity() {
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
+    // Rejected: it is not the identity the request is authenticated as.
     expect_errors(
         result,
-        &[],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event is not from the request's identity",
+            ),
+        }],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -913,7 +1009,7 @@ async fn validation_invalid_event_identity() {
 #[tokio::test]
 async fn validation_missing_event_signed_by() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -953,7 +1049,7 @@ async fn validation_missing_event_signed_by() {
 #[tokio::test]
 async fn validation_invalid_event_signed_by_key_type() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1005,7 +1101,7 @@ async fn validation_invalid_event_signed_by_key_type() {
 #[tokio::test]
 async fn validation_invalid_event_signed_by_key() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1109,7 +1205,7 @@ async fn validation_event_key_sequence_duplicate() {
 #[tokio::test]
 async fn validation_missing_event_content_digest() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1149,7 +1245,7 @@ async fn validation_missing_event_content_digest() {
 #[tokio::test]
 async fn validation_invalid_event_content_digest_type() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1194,7 +1290,7 @@ async fn validation_invalid_event_content_digest_type() {
 #[tokio::test]
 async fn validation_invalid_event_content_digest_value() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1236,7 +1332,7 @@ async fn validation_invalid_event_content_digest_value() {
 #[tokio::test]
 async fn validation_event_vector_clock_sequence_too_long() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1276,7 +1372,7 @@ async fn validation_event_vector_clock_sequence_too_long() {
 #[tokio::test]
 async fn validation_event_vector_clock_missing() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1314,7 +1410,7 @@ async fn validation_event_vector_clock_missing() {
 #[tokio::test]
 async fn validation_event_previous_signature_invalid() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1353,7 +1449,7 @@ async fn validation_event_previous_signature_invalid() {
 #[tokio::test]
 async fn validation_event_previous_root_invalid() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1392,7 +1488,7 @@ async fn validation_event_previous_root_invalid() {
 #[tokio::test]
 async fn validation_invalid_event_application_name_empty() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1437,7 +1533,7 @@ async fn validation_invalid_event_application_name_empty() {
 #[tokio::test]
 async fn validation_invalid_event_application_name_too_long() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1482,7 +1578,7 @@ async fn validation_invalid_event_application_name_too_long() {
 #[tokio::test]
 async fn validation_invalid_event_application_id_empty() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1527,7 +1623,7 @@ async fn validation_invalid_event_application_id_empty() {
 #[tokio::test]
 async fn validation_invalid_event_application_id_too_long() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1572,7 +1668,7 @@ async fn validation_invalid_event_application_id_too_long() {
 #[tokio::test]
 async fn validation_invalid_event_application_version_empty() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1617,7 +1713,7 @@ async fn validation_invalid_event_application_version_empty() {
 #[tokio::test]
 async fn validation_invalid_event_application_version_too_long() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1662,7 +1758,7 @@ async fn validation_invalid_event_application_version_too_long() {
 #[tokio::test]
 async fn validation_invalid_event_application_url_empty() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1707,7 +1803,7 @@ async fn validation_invalid_event_application_url_empty() {
 #[tokio::test]
 async fn validation_invalid_event_application_url_too_long() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -1752,7 +1848,7 @@ async fn validation_invalid_event_application_url_too_long() {
 #[tokio::test]
 async fn validation_invalid_event_application_url_not_an_url() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
+    client.submit_events().await;
 
     let identity = Identity {
         rotation_keys: vec![public_key_of(&client.key)],
@@ -4144,6 +4240,7 @@ async fn validation_content_content_body_identity_rotation_keys_too_many() {
 #[tokio::test]
 async fn validation_content_content_body_identity_rotation_keys_key_invalid() {
     let mut client = TestClient::new().await;
+    client.submit_events().await;
     let identity = Identity {
         rotation_keys: vec![PublicKey {
             key_type: 999,
@@ -4173,7 +4270,7 @@ async fn validation_content_content_body_identity_rotation_keys_key_invalid() {
         result,
         &[],
         &[ExpectError {
-            bundle_index: 1,
+            bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
                 "content content body identity rotation keys 0-th key type is invalid",
             ),

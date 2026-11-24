@@ -64,6 +64,8 @@ if [[ "${CI:-}" == "true" ]]; then
   export HARBOR_TEST_DATABASE_URL="postgres://postgres:testing@postgres:5432"
   export HARBOR_TEST_OS_ENDPOINT="http://rustfs:9000"
   export HARBOR_TEST_KAFKA_BROKERS="kafka:19092"
+  # The moderation service's auth tokens are addressed to this name.
+  export HARBOR_ALLOW_HOSTS="http://server:3000"
 fi
 
 echo "==> Building and starting the server…"
@@ -81,15 +83,14 @@ else
   docker compose up -d --no-deps --build --wait server
 fi
 
-# Resolve the server container's IP on the compose network and use it
-# directly, bypassing Docker embedded DNS (which can be flaky in a
-# Docker-in-Docker environment when the job container is connected to the
-# compose network via `docker network connect`).
+# Pin `server` to the container's IP in /etc/hosts, bypassing Docker embedded
+# DNS (which can be flaky in a Docker-in-Docker environment when the job
+# container is connected to the compose network via `docker network connect`).
 if [[ "${CI:-}" == "true" ]]; then
   SERVER_HOST=server
   SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
-    SERVER_HOST=$SERVER_IP
+    echo "$SERVER_IP server" >> /etc/hosts
   fi
 fi
 export HARBOR_TEST_SERVER="http://${SERVER_HOST}:${SERVER_PORT}"

@@ -124,8 +124,33 @@ const PUSH_BATCH_SIZE: usize = 200;
 /// order. The responses are returned as one, as if for a single request.
 pub async fn push_bundles(
     server: &str,
-    mut bundles: Vec<EventBundle>,
+    bundles: Vec<EventBundle>,
 ) -> Result<PutEventsResponse, CoreError> {
+    push(server, bundles, None).await
+}
+
+/// As [`push_bundles`], authenticated with `token` (a JWT).
+pub async fn push_bundles_as(
+    server: &str,
+    bundles: Vec<EventBundle>,
+    token: &str,
+) -> Result<PutEventsResponse, CoreError> {
+    push(server, bundles, Some(token)).await
+}
+
+async fn push(
+    server: &str,
+    mut bundles: Vec<EventBundle>,
+    token: Option<&str>,
+) -> Result<PutEventsResponse, CoreError> {
+    let bearer = token
+        .map(|token| {
+            format!("Bearer {token}")
+                .parse::<tonic::metadata::MetadataValue<_>>()
+                .map_err(|_| CoreError::Network("sync: invalid auth token".to_string()))
+        })
+        .transpose()?;
+
     let mut rpc_client =
         EventSyncServiceClient::new(channel(server).await.map_err(CoreError::Network)?);
 
@@ -134,10 +159,14 @@ pub async fn push_bundles(
     loop {
         let rest = bundles.split_off(bundles.len().min(PUSH_BATCH_SIZE));
         let batch_len = bundles.len();
+        let mut req = tonic::Request::new(PutEventsRequest {
+            event_bundles: bundles,
+        });
+        if let Some(bearer) = &bearer {
+            req.metadata_mut().insert("authorization", bearer.clone());
+        }
         let response = rpc_client
-            .put_events(PutEventsRequest {
-                event_bundles: bundles,
-            })
+            .put_events(req)
             .await
             .map_err(|e| CoreError::Network(format!("sync: put_events: {e}")))?
             .into_inner();

@@ -1,6 +1,6 @@
-//! Verification of the JWTs clients mint to authenticate against a server
-//! (see js-core's `createServerJwt`). EdDSA over `header.claims`, signing
-//! key carried as hex in the header's `kid`.
+//! Minting and verification of the JWTs clients use to authenticate against
+//! a server (see js-core's `createServerJwt`). EdDSA over `header.claims`,
+//! signing key carried as hex in the header's `kid`.
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -38,6 +38,41 @@ pub struct ServerJwtClaims {
     pub aud: String,
     pub iat: u64,
     pub exp: u64,
+}
+
+/// Mint a token for `identity` on server `audience`, valid for `ttl_secs`
+/// from `now` (unix seconds).
+pub fn mint_jwt(
+    key: &ed25519_dalek::SigningKey,
+    identity: &str,
+    audience: &str,
+    now: u64,
+    ttl_secs: u64,
+) -> String {
+    use ed25519_dalek::Signer;
+
+    let header = serde_json::json!({
+        "alg": "EdDSA",
+        "typ": "JWT",
+        "kid": hex::encode(key.verifying_key().as_bytes()),
+    });
+    let claims = ServerJwtClaims {
+        iss: identity.to_owned(),
+        aud: audience.to_owned(),
+        iat: now,
+        exp: now + ttl_secs,
+    };
+    // Serializing these can't fail.
+    let signing_input = format!(
+        "{}.{}",
+        URL_SAFE_NO_PAD.encode(header.to_string()),
+        URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).unwrap_or_default()),
+    );
+    let signature = key.sign(signing_input.as_bytes());
+    format!(
+        "{signing_input}.{}",
+        URL_SAFE_NO_PAD.encode(signature.to_bytes())
+    )
 }
 
 /// A token with a valid signature. Callers must still [`validate`] the
@@ -116,6 +151,22 @@ mod tests {
 
     fn signing_key() -> SigningKey {
         SigningKey::from_bytes(&[7u8; 32])
+    }
+
+    #[test]
+    fn minted_token_verifies() {
+        let token = mint_jwt(&signing_key(), IDENTITY, SERVER, 1000, 60);
+        let verified = verify_jwt(&token).unwrap();
+        assert_eq!(verified.claims.iss, IDENTITY);
+        assert_eq!(
+            verified.signed_by.key,
+            signing_key().verifying_key().to_bytes()
+        );
+        assert_eq!(verified.validate(&[SERVER.to_string()], 1059), Ok(()));
+        assert_eq!(
+            verified.validate(&[SERVER.to_string()], 1060),
+            Err(JwtError::Expired)
+        );
     }
 
     /// Mint a token matching js-core's `createServerJwt` format.
