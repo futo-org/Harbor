@@ -9,6 +9,7 @@ import { useExtensionNavigation } from '@/src/features/anywhere/hooks/useExtensi
 import { extensionScreenLayout } from '@/src/features/anywhere/browser-extension/lib/extension-screen-layout';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
+import { ReportSheet } from '@/src/features/moderation/ReportSheet';
 import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
@@ -211,6 +212,7 @@ export default function RootLayout() {
                   {isWeb ? <ExtensionLoginSheet /> : null}
                   <EmojiPickerSheet />
                   <ModerationWarningSheet />
+                  <ReportSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

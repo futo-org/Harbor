@@ -11,7 +11,7 @@ import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
-import ReportSheet from '../moderation/ReportSheet';
+import { useReportSheetStore } from '../moderation/ReportSheet';
 import { useProfile } from './hooks/useProfile';
 import { useProfileContext } from './ProfileContext';
 
@@ -42,8 +42,8 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
   const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
+  const openReportSheet = useReportSheetStore((s) => s.openFor);
   // Reports on an identity target its first event.
-  const [reportEventId, setReportEventId] = useState<string | null>(null);
   const profileEventId = useProfile(identityKey ?? null).eventId;
 
   const items: MenuItem[] = [];
@@ -72,7 +72,9 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
       label: 'Report',
       // Null only until the profile has loaded.
       onPress: () =>
-        withIdentity(() => setReportEventId(profileEventId ?? null)),
+        withIdentity(() => {
+          if (profileEventId) openReportSheet(profileEventId);
+        }),
     });
     items.push({
       key: 'block',
@@ -134,13 +136,6 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
       </DropdownMenu>
 
       {/* Modals */}
-      {reportEventId ? (
-        <ReportSheet
-          eventId={reportEventId}
-          open
-          onClose={() => setReportEventId(null)}
-        />
-      ) : null}
       <BanSheet
         identityKey={identityKey}
         open={showBanSheet}

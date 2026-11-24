@@ -12,7 +12,7 @@ import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
 import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
-import ReportSheet from '../moderation/ReportSheet';
+import { useReportSheetStore } from '../moderation/ReportSheet';
 import { buildPostLink } from './buildPostLink';
 import usePostActions from './hooks/usePostActions';
 
@@ -29,7 +29,7 @@ export default function PostMenu({ post }: PostMenuProps) {
   const { deleteAsync } = usePostActions(post);
   const { copyToClipboard } = useCopyToClipboard({ showToast: true });
 
-  const [showReportSheet, setShowReportSheet] = useState<boolean>(false);
+  const openReportSheet = useReportSheetStore((s) => s.openFor);
   const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
 
   const onDeletePress = async () => {
@@ -102,7 +102,7 @@ export default function PostMenu({ post }: PostMenuProps) {
           {/* Report */}
           {!isPostAuthor && (
             <DropdownMenu.Item
-              onPress={() => withIdentity(() => setShowReportSheet(true))}
+              onPress={() => withIdentity(() => openReportSheet(post.id))}
             >
               <Icon name="flag" color="muted" size={16} />
               <Text variant="secondary" fontWeight="bold">
@@ -114,11 +114,6 @@ export default function PostMenu({ post }: PostMenuProps) {
       </DropdownMenu>
 
       {/* Modals */}
-      <ReportSheet
-        eventId={post.id}
-        open={showReportSheet}
-        onClose={() => setShowReportSheet(false)}
-      />
       <EventInfoSheet
         source={{ signedEvent: post.signedEvent }}
         open={showInfoSheet}

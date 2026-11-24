@@ -4,9 +4,8 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
-import { useState } from 'react';
 import { View } from 'react-native';
-import ReportSheet from '../../moderation/ReportSheet';
+import { useReportSheetStore } from '../../moderation/ReportSheet';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import useClaimActions from '../hooks/useClaimActions';
 
@@ -26,7 +25,7 @@ export function ClaimMenu({
   const isAuthor = identityKey === claim.identity;
 
   const { deleteAsync } = useClaimActions(claim);
-  const [showReportSheet, setShowReportSheet] = useState(false);
+  const openReportSheet = useReportSheetStore((s) => s.openFor);
 
   const onDeletePress = async () => {
     await new Promise((resolve, reject) => {
@@ -39,46 +38,38 @@ export function ClaimMenu({
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
-          {({ pressed, hovered }) => (
-            <View
-              style={[
-                Atoms.p_xs,
-                Atoms.rounded_full,
-                Atoms.overflow_hidden,
-                (hovered || pressed) && theme.atoms.box.raised.bg,
-              ]}
-            >
-              <Icon name={icon} color="muted" size={iconSize} />
-            </View>
-          )}
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
-          {isAuthor ? (
-            <DropdownMenu.Item onPress={onDeletePress}>
-              <Icon name="trashBin" color="danger" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="danger">
-                Delete
-              </Text>
-            </DropdownMenu.Item>
-          ) : (
-            <DropdownMenu.Item onPress={() => setShowReportSheet(true)}>
-              <Icon name="flag" color="muted" size={16} />
-              <Text variant="secondary" fontWeight="bold">
-                Report
-              </Text>
-            </DropdownMenu.Item>
-          )}
-        </DropdownMenu.Content>
-      </DropdownMenu>
-
-      <ReportSheet
-        eventId={claim.id}
-        open={showReportSheet}
-        onClose={() => setShowReportSheet(false)}
-      />
-    </>
+    <DropdownMenu>
+      <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
+        {({ pressed, hovered }) => (
+          <View
+            style={[
+              Atoms.p_xs,
+              Atoms.rounded_full,
+              Atoms.overflow_hidden,
+              (hovered || pressed) && theme.atoms.box.raised.bg,
+            ]}
+          >
+            <Icon name={icon} color="muted" size={iconSize} />
+          </View>
+        )}
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        {isAuthor ? (
+          <DropdownMenu.Item onPress={onDeletePress}>
+            <Icon name="trashBin" color="danger" size={16} />
+            <Text variant="secondary" fontWeight="bold" color="danger">
+              Delete
+            </Text>
+          </DropdownMenu.Item>
+        ) : (
+          <DropdownMenu.Item onPress={() => openReportSheet(claim.id)}>
+            <Icon name="flag" color="muted" size={16} />
+            <Text variant="secondary" fontWeight="bold">
+              Report
+            </Text>
+          </DropdownMenu.Item>
+        )}
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }

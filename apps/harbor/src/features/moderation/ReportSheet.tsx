@@ -8,19 +8,33 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
 import useReportAction from './hooks/useReportAction';
+import { create } from 'zustand';
 import type { v2 } from '@polycentric/react-native';
 
-type ReportSheetProps = {
-  eventId: string;
-  open: boolean;
-  onClose: () => void;
-};
+/** Mounted once at the root; opened via `useReportSheetStore`. */
+export function ReportSheet() {
+  const eventId = useReportSheetStore((s) => s.eventId);
+  if (!eventId) return null;
+  // Each reported event starts with an empty form.
+  return <EventReportSheet key={eventId} eventId={eventId} />;
+}
 
-export default function ReportSheet({
-  eventId,
-  open,
-  onClose,
-}: ReportSheetProps) {
+export const useReportSheetStore = create<{
+  /** Kept after closing so the native dismiss animation has content. */
+  eventId: string | null;
+  open: boolean;
+  openFor: (eventId: string) => void;
+  close: () => void;
+}>((set) => ({
+  eventId: null,
+  open: false,
+  openFor: (eventId) => set({ eventId, open: true }),
+  close: () => set({ open: false }),
+}));
+
+function EventReportSheet({ eventId }: { eventId: string }) {
+  const open = useReportSheetStore((s) => s.open);
+  const onClose = useReportSheetStore((s) => s.close);
   const { options } = useReportOptions();
   const { theme } = useTheme();
   const { isPending, submit } = useReportAction();
