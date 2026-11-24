@@ -904,10 +904,8 @@ jobs:
 
   # Tests on the builds ------------------------------------------------------
 
-  # Both suites share one Compose project name and host ports, so they run
-  # in one job, one after the other (GitLab: resource_group).
-  services-integration:
-    name: Test services integration
+  server-integration:
+    name: Test server integration
     needs: [ changes, service-images ]
     if: >-
       ${{ !cancelled() && needs.service-images.result != 'failure' &&
@@ -938,6 +936,37 @@ jobs:
           name: junit-server-integration
           path: target/nextest/ci/junit.xml
           retention-days: 7
+      - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          mode: save
+          key: server-${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
+
+  moderation-integration:
+    name: Test moderation integration
+    needs: [ changes, service-images ]
+    if: >-
+      ${{ !cancelled() && needs.service-images.result != 'failure' &&
+      (fromJSON(needs.changes.outputs.plan).flags.server_integration || fromJSON(needs.changes.outputs.plan).flags.moderation_integration) }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
+    env:
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      RUST_LOG: warn
+      HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
+          environment: global
+      - uses: ./.forgejo/actions/rust-env
+        with:
+          cache: services-integration
       - name: Moderation integration tests
         if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
         run: .forgejo/scripts/integration-moderation.sh
@@ -952,7 +981,7 @@ jobs:
         continue-on-error: true
         with:
           mode: save
-          key: ${{ env.RUST_CACHE_KEY }}
+          key: moderation-${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
   scraper-integration:
