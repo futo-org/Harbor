@@ -17,6 +17,7 @@ import { NavDrawerGestureContext } from './lib/nav-drawer-gesture-context';
 import { navDrawerProgress } from './lib/nav-drawer-progress';
 
 const EDGE_WIDTH = 30;
+const SCREEN_SHADOW = '0 0 24px rgba(0, 0, 0, 0.25)';
 const SCREEN_RADIUS = isIOS ? 48 : 28;
 
 /** Wraps the root stack on native and slides it aside for the drawer;
@@ -56,7 +57,12 @@ export function NavDrawer({ children }: { children: ReactNode }) {
 
   const contentStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: navDrawerProgress.value * width }],
+  }));
+  const radiusStyle = useAnimatedStyle(() => ({
     borderRadius: Math.min(1, navDrawerProgress.value * 4) * SCREEN_RADIUS,
+  }));
+  const edgeStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, navDrawerProgress.value * 4) * 0.6,
   }));
   const panelStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (navDrawerProgress.value - 1) * width }],
@@ -75,29 +81,51 @@ export function NavDrawer({ children }: { children: ReactNode }) {
           importantForAccessibility={open ? 'no-hide-descendants' : 'auto'}
           style={[
             Atoms.flex_1,
-            Atoms.overflow_hidden,
-            { borderCurve: 'continuous' },
+            { borderCurve: 'continuous', boxShadow: SCREEN_SHADOW },
             contentStyle,
+            radiusStyle,
           ]}
         >
-          <NavDrawerGestureContext value={pan}>
-            {children}
-          </NavDrawerGestureContext>
           <Animated.View
-            pointerEvents={open ? 'auto' : 'none'}
             style={[
-              StyleSheet.absoluteFill,
-              theme.atoms.backdrop.modal,
-              backdropStyle,
+              Atoms.flex_1,
+              Atoms.overflow_hidden,
+              { borderCurve: 'continuous' },
+              radiusStyle,
             ]}
           >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close menu"
-              onPress={hide}
-              style={Atoms.flex_1}
-            />
+            <NavDrawerGestureContext value={pan}>
+              {children}
+            </NavDrawerGestureContext>
+            <Animated.View
+              pointerEvents={open ? 'auto' : 'none'}
+              style={[
+                StyleSheet.absoluteFill,
+                theme.atoms.backdrop.modal,
+                backdropStyle,
+              ]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close menu"
+                onPress={hide}
+                style={Atoms.flex_1}
+              />
+            </Animated.View>
           </Animated.View>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                borderCurve: 'continuous',
+                borderWidth: StyleSheet.hairlineWidth,
+              },
+              theme.atoms.outline,
+              radiusStyle,
+              edgeStyle,
+            ]}
+          />
         </Animated.View>
         <Animated.View
           testID="nav-drawer"
