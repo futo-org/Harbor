@@ -56,7 +56,7 @@ export class Mp4Encoder {
     if (!supported) {
       throw new TranscodeError(
         'unsupported',
-        `This browser can't encode H.264 (${codecString}) at ${width}×${height}.`,
+        `This browser can't encode H.264 (${codecString}) at ${width}x${height}.`,
       );
     }
     const encoder = new Mp4Encoder(codecString, bitrate);
