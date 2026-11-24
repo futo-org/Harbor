@@ -782,10 +782,10 @@ importers:
         version: link:../rs-core-wasm
       better-sqlite3:
         specifier: ^13.0.0
-        version: 13.1.1
+        version: 13.2.0
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+        version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
       pg:
         specifier: ^8.22.0
         version: 8.23.1
@@ -813,7 +813,7 @@ importers:
         version: link:../..
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+        version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
       ejs:
         specifier: ^3.1.10
         version: 3.1.10
@@ -835,7 +835,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+        version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
       pg:
         specifier: ^8.16.0
         version: 8.23.1
@@ -857,7 +857,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+        version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
     devDependencies:
       '@polycentric/js-core':
         specifier: workspace:*
@@ -894,7 +894,7 @@ importers:
         version: 0.31.0-7
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.4(22f794ea5569965d27b67148e2baa96d)
+        version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
       fast-text-encoding:
         specifier: ^1.0.6
         version: 1.0.6
@@ -6668,8 +6668,8 @@ packages:
   batch@0.6.1:
     resolution: {integrity: sha512-x+VAiMRL6UPkx+kudNvxTl6hB2XNNCG2r+7wixVfIYwu/2HKRXimwQyaumLjMveWvT2Hkd/cAJw+QBMfJ/EKVw==}
 
-  better-sqlite3@13.1.1:
-    resolution: {integrity: sha512-JjyLCATp+VLxZVFyWkicyzKYwpEFLCrV4MmshW97xv3JXdhw5jBDcsbEWRGm2L/96E+k7rtjON8q9nml05h3Pw==}
+  better-sqlite3@13.2.0:
+    resolution: {integrity: sha512-Z8Q/9x/uNyKxA1v4FNodyItRVRw1TeKBrmj32JhxhR0ceNcBY+wMobt/Bv7M7TzwPAXjnZRtNaEsATnUZSKWZQ==}
     engines: {node: '>=22'}
 
   bidi-js@1.1.0:
@@ -21091,7 +21091,7 @@ snapshots:
 
   batch@0.6.1: {}
 
-  better-sqlite3@13.1.1:
+  better-sqlite3@13.2.0:
     dependencies:
       node-addon-api: 8.9.2
 
@@ -22287,13 +22287,13 @@ snapshots:
 
   dotenv@18.0.10: {}
 
-  drizzle-orm@0.45.4(22f794ea5569965d27b67148e2baa96d):
+  drizzle-orm@0.45.4(f324e1ec92d7156deefb92dc8d9a97e2):
     optionalDependencies:
       '@op-engineering/op-sqlite': 15.2.5(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@opentelemetry/api': 1.10.0
       '@types/better-sqlite3': 9.6.0
       '@types/pg': 8.23.1
-      better-sqlite3: 13.1.1
+      better-sqlite3: 13.2.0
       expo-sqlite: 58.0.15(@babel/core@7.29.13(supports-color@8.1.1))(@expo/dom-webview@58.0.2)(@expo/log-box@58.0.14)(@expo/metro-runtime@58.0.16)(expo@58.0.22)(react-native-webview@14.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(typescript@5.9.3)
       pg: 8.23.1
 
