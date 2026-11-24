@@ -25,5 +25,5 @@ rand = { version = "0.10", default-features = false, features = ["std", "std_rng
 reqwest = { version = "0.13", default-features = false }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["process"] }
 tonic = { workspace = true, features = ["transport"] }

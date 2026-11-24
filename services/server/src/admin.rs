@@ -1,4 +1,6 @@
-//! Operator commands. Without `--yes` they only report what would change.
+//! Operator commands.
+
+use std::time::Duration;
 
 use crate::config;
 use crate::cron::{blob_index, blob_prune};
@@ -13,7 +15,7 @@ use crate::service::identity::service as identity_service;
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
        server prune-content [--yes]
        server sync-blob-index
-       server prune-blobs [--dry-run]";
+       server prune-blobs [--dry-run] [--grace-period-secs <secs>]";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
@@ -124,8 +126,34 @@ pub async fn sync_blob_index(_: Vec<String>) {
 }
 
 pub async fn blob_prune(args: Vec<String>) {
-    let grace_period = config::get().blob_prune_grace;
-    let dry_run = args.iter().any(|arg| arg == "--dry-run");
+    let mut grace_period = config::get().blob_prune_grace;
+    let mut dry_run = false;
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        match &*arg {
+            "--dry-run" => dry_run = true,
+            "--grace-period-secs" => {
+                if let Some(arg) = args.next() {
+                    match arg.parse() {
+                        Ok(value) => grace_period = Duration::from_secs(value),
+                        Err(err) => {
+                            eprintln!(
+                                "failed to parse argument to --grace-period: {err}"
+                            );
+                            return;
+                        }
+                    }
+                } else {
+                    eprintln!("missing argument to --grace-period");
+                    return;
+                }
+            }
+            arg => {
+                eprintln!("unexpected argument '{arg}'");
+                return;
+            }
+        }
+    }
 
     let mut db = connect().await;
     let Some(filestore) = filestore().await else {

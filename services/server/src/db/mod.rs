@@ -1,4 +1,6 @@
-use sea_orm::sea_query::Values;
+use std::time::Duration;
+
+use sea_orm::sea_query::{Expr, Values};
 use sea_orm::{DbErr, ExecResult, QueryResult, RuntimeErr, Statement};
 use sea_query_sqlx::SqlxValues;
 use sqlx::Executor;
@@ -315,4 +317,18 @@ fn sqlx_query(
 
 fn into_seaorm_error(err: sqlx::Error) -> DbErr {
     DbErr::Query(RuntimeErr::SqlxError(err.into()))
+}
+
+/// Create a interval with microsecond precision (Postgres doesn't support
+/// nanosecond precision).
+pub(crate) fn interval(duration: Duration) -> Expr {
+    let secs = duration.as_secs();
+    let micros = duration.subsec_micros();
+    // SAFETY: we're passing a potentially user defined value directly in the
+    // query, not via a parameter. Normally this would be unsafe w.r.t. SQL
+    // injection, but the `Duration` type ensures that the value is always a
+    // number. The only safety concern we have is that the Postgres can't handle
+    // large interval, but it safely errors out with a "interval field value out
+    // of range" error.
+    Expr::cust(format!("'{secs} seconds {micros} microseconds'::interval"))
 }
