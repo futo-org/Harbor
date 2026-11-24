@@ -11,6 +11,7 @@ import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
 import { ReportSheet } from '@/src/features/moderation/ReportSheet';
 import { EventInfoSheet } from '@/src/features/core/event-info/EventInfoSheet';
+import { ReactionDetailsSheet } from '@/src/features/reaction/ReactionDetailsSheet';
 import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
@@ -215,6 +216,7 @@ export default function RootLayout() {
                   <ModerationWarningSheet />
                   <ReportSheet />
                   <EventInfoSheet />
+                  <ReactionDetailsSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

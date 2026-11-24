@@ -22,17 +22,26 @@ import usePostReactions, {
   type ReactionInfo,
 } from './usePostReactions';
 import { countReactionsFrom, type ReactionCount } from './util';
+import { create } from 'zustand';
 
 const MAX_SKELETONS = 6;
 
 /** Key extractor for the reactions list flashlist */
 const keyExtractor = (item: ReactionInfo) => `${item.identity}-${item.emoji}`;
 
-type ReactionDetailsSheetProps = {
-  post: PostData;
+export const useReactionDetailsSheetStore = create<{
+  /** A post snapshot from opening. Kept after closing so the native dismiss
+   * animation has content. */
+  post: PostData | null;
   open: boolean;
-  onClose: () => void;
-};
+  openFor: (post: PostData) => void;
+  close: () => void;
+}>((set) => ({
+  post: null,
+  open: false,
+  openFor: (post) => set({ post, open: true }),
+  close: () => set({ open: false }),
+}));
 
 /** All of the data for a single tab in the sheet. */
 type TabData = {
@@ -111,19 +120,23 @@ function tabLabel(tab: TabData): string {
 /**
  * Sheet that lists the reactions for a post.
  */
-export default function ReactionDetailsSheet({
-  post,
-  open,
-  onClose,
-}: ReactionDetailsSheetProps) {
+export function ReactionDetailsSheet() {
+  const post = useReactionDetailsSheetStore((s) => s.post);
+  const open = useReactionDetailsSheetStore((s) => s.open);
+  const onClose = useReactionDetailsSheetStore((s) => s.close);
   const insets = useSafeAreaInsets();
-  const { isLoading, groups, all } = usePostReactions(open ? post : undefined);
+  const { isLoading, groups, all } = usePostReactions(
+    open && post ? post : undefined,
+  );
 
-  const reactionCounts = useMemo(() => countReactionsFrom(post), [post]);
+  const reactionCounts = useMemo(
+    () => (post ? countReactionsFrom(post) : []),
+    [post],
+  );
 
   const tabData = useMemo(
-    () => deriveTabs(groups, all, reactionCounts, post.upvoteCount),
-    [groups, all, reactionCounts, post.upvoteCount],
+    () => deriveTabs(groups, all, reactionCounts, post?.upvoteCount),
+    [groups, all, reactionCounts, post?.upvoteCount],
   );
 
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
