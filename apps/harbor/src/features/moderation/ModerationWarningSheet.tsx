@@ -15,10 +15,7 @@ import { Switch, View } from 'react-native';
 import { useLabeler } from './useLabeler';
 import { useModerationWarningStore } from './useModerationWarningStore';
 
-/**
- * Confirms revealing labelled content, and can stop warning for its labels.
- * Mounted once at the root; opened via `useModerationWarningStore`.
- */
+/** Confirms revealing labelled content, and can stop warning for its labels. */
 export function ModerationWarningSheet() {
   const { theme } = useTheme();
   const setModeration = useSettings((s) => s.setModeration);

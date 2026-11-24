@@ -44,7 +44,6 @@ const CATEGORY_BUTTON_COUNT = emojiCategories.length + 0.5;
  * Emoji picker sheet with a search input, a category rail and a scrollable
  * grid, using `FlashList` over the emoji set from `pickerEmojis`. While a
  * search query is entered the rail is hidden and the grid shows the matches.
- * Mounted once at the root; opened per post via `useEmojiPickerStore`.
  */
 export function EmojiPickerSheet() {
   const { theme } = useTheme();

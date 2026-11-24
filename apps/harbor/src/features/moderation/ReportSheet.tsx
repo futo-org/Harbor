@@ -11,14 +11,6 @@ import useReportAction from './hooks/useReportAction';
 import { create } from 'zustand';
 import type { v2 } from '@polycentric/react-native';
 
-/** Mounted once at the root; opened via `useReportSheetStore`. */
-export function ReportSheet() {
-  const eventId = useReportSheetStore((s) => s.eventId);
-  if (!eventId) return null;
-  // Each reported event starts with an empty form.
-  return <EventReportSheet key={eventId} eventId={eventId} />;
-}
-
 export const useReportSheetStore = create<{
   /** Kept after closing so the native dismiss animation has content. */
   eventId: string | null;
@@ -31,6 +23,13 @@ export const useReportSheetStore = create<{
   openFor: (eventId) => set({ eventId, open: true }),
   close: () => set({ open: false }),
 }));
+
+export function ReportSheet() {
+  const eventId = useReportSheetStore((s) => s.eventId);
+  if (!eventId) return null;
+  // Each reported event starts with an empty form.
+  return <EventReportSheet key={eventId} eventId={eventId} />;
+}
 
 function EventReportSheet({ eventId }: { eventId: string }) {
   const open = useReportSheetStore((s) => s.open);
