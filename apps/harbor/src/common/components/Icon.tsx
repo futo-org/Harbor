@@ -35,6 +35,7 @@ export const IconsMap = {
   airplane: defineIcon(MaterialCommunityIcons, 'airplane'),
   alertCircle: defineIcon(Ionicons, 'alert-circle-outline'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
+  arrowUp: defineIcon(Ionicons, 'arrow-up'),
   at: defineIcon(Ionicons, 'at'),
   ban: defineIcon(Ionicons, 'ban'),
   basketball: defineIcon(MaterialCommunityIcons, 'basketball'),
