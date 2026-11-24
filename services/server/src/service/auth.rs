@@ -4,14 +4,11 @@ use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
 use polycentric_common::jwt;
-use polycentric_common::models::protos_v2::{PublicKey, PutEventsRequest};
+use polycentric_common::models::protos_v2::PublicKey;
 use tonic::Status;
 
-use crate::config;
-use crate::db::{Connection, DbConn};
+use crate::db::DbConn;
 use crate::service::context::ServiceContext;
-use crate::service::identity::chain;
-use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::cached_identity_content;
 
 /// The verified identity of a request, available via request extensions.
@@ -114,22 +111,6 @@ fn grpc_error_response(status: Status, request: &Request) -> Response {
     response
 }
 
-/// Verify `token`'s signature, audience and expiry. Its issuer is only a
-/// claim until the signing key is checked against that identity.
-fn verify_token(
-    token: &str,
-    allow_hosts: &[String],
-) -> Result<jwt::VerifiedJwt, Status> {
-    let unauthenticated =
-        |e: jwt::JwtError| Status::unauthenticated(format!("Auth Token: {e}"));
-
-    let verified = jwt::verify_jwt(token).map_err(unauthenticated)?;
-    verified
-        .validate(allow_hosts, now_secs())
-        .map_err(unauthenticated)?;
-    Ok(verified)
-}
-
 /// Verify `token` and return the identity it authenticates.
 #[tracing::instrument(name = "auth.verify_token", skip_all)]
 async fn verify_auth_token(
@@ -137,7 +118,13 @@ async fn verify_auth_token(
     token: &str,
     allow_hosts: &[String],
 ) -> Result<AuthenticatedIdentity, Status> {
-    let verified = verify_token(token, allow_hosts)?;
+    let unauthenticated =
+        |e: jwt::JwtError| Status::unauthenticated(format!("Auth Token: {e}"));
+
+    let verified = jwt::verify_jwt(token).map_err(unauthenticated)?;
+    verified
+        .validate(allow_hosts, now_secs())
+        .map_err(unauthenticated)?;
 
     // The signing key must be in the issuer's identity document. Our copy
     // may be stale (pairing), so fail as a precondition, not a rejection.
@@ -158,64 +145,6 @@ async fn verify_auth_token(
     Ok(AuthenticatedIdentity {
         identity: verified.claims.iss,
         public_key: verified.signed_by,
-    })
-}
-
-/// How a `put_events` request is authenticated.
-pub enum PutEventsAuth {
-    /// No token was sent.
-    None,
-    /// The identity the request is authenticated as.
-    Identity(String),
-    /// The token's key is not authorized by the identity it claims.
-    Denied(Status),
-}
-
-/// Authenticate a `put_events` request. Unlike the middleware this counts
-/// the request's identity events: on a first sync the token's key is only
-/// known from those.
-pub async fn authenticate_put_events<C: Connection>(
-    db: &mut C,
-    request: &tonic::Request<PutEventsRequest>,
-) -> Result<PutEventsAuth, Status> {
-    if let Some(auth) = authenticated(request) {
-        return Ok(PutEventsAuth::Identity(auth.identity));
-    }
-    let Some(token) = request
-        .metadata()
-        .get("authorization")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-    else {
-        return Ok(PutEventsAuth::None);
-    };
-    let verified = verify_token(token, &config::get().allow_hosts)?;
-
-    let identity = verified.claims.iss;
-    let stored = IdentityRepository::list_identity_events_for_identities(
-        db,
-        vec![identity.clone()],
-    )
-    .await
-    .map_err(|err| {
-        tracing::error!(error = %err, "failed to load identity events");
-        Status::internal("internal server error")
-    })?;
-    let content = chain::validated_chain_head_with(
-        &identity,
-        &stored,
-        &request.get_ref().event_bundles,
-    );
-    Ok(match content {
-        Some(content) if content.authorizes_signer(&verified.signed_by) => {
-            PutEventsAuth::Identity(identity)
-        }
-        Some(_) => PutEventsAuth::Denied(Status::permission_denied(
-            "auth token's key is not authorized by the identity",
-        )),
-        None => PutEventsAuth::Denied(Status::failed_precondition(
-            "no identity content for target — sync identity events first",
-        )),
     })
 }
 

@@ -51,38 +51,6 @@ async fn put_events_without_auth_token_is_still_accepted() {
     assert!(response.errors.is_empty(), "response: {response:?}");
 }
 
-/// Without a token a request is still one identity's.
-#[tokio::test]
-async fn put_events_without_auth_token_rejects_mixed_identities() {
-    let mut alice = TestClient::new().await;
-    let mut bob = TestClient::new().await;
-    let alice_events = alice.take_pending_events();
-    let bob_events = bob.take_pending_events();
-    let alice_count = alice_events.len();
-    let bob_count = bob_events.len();
-    let event_bundles = alice_events.into_iter().chain(bob_events).collect();
-
-    let response = alice
-        .event_sync_client()
-        .put_events(PutEventsRequest { event_bundles })
-        .await
-        .expect("put_events failed")
-        .into_inner();
-    assert_eq!(response.errors.len(), bob_count, "response: {response:?}");
-    for error in &response.errors {
-        assert!(
-            error.event_bundle_index as usize >= alice_count,
-            "response: {response:?}"
-        );
-        assert!(
-            error
-                .message
-                .contains("event is not from the request's identity"),
-            "response: {response:?}"
-        );
-    }
-}
-
 #[tokio::test]
 async fn put_events_rejects_another_identitys_events() {
     let mut alice = TestClient::new().await;
@@ -104,25 +72,6 @@ async fn put_events_rejects_another_identitys_events() {
         .expect("put_events failed")
         .into_inner();
     assert_eq!(response.errors.len(), 2, "response: {response:?}");
-
-    // Nor with a token claiming to be Alice, signed by his key.
-    let event_bundles = {
-        alice.post_text("hello again", current_timestamp() + 2);
-        alice.take_pending_events()
-    };
-    let count = event_bundles.len();
-    let request = as_identity(
-        alice.identity(),
-        bob.signing_key(),
-        PutEventsRequest { event_bundles },
-    );
-    let response = bob
-        .event_sync_client()
-        .put_events(request)
-        .await
-        .expect("put_events failed")
-        .into_inner();
-    assert_eq!(response.errors.len(), count, "response: {response:?}");
 }
 
 #[tokio::test]

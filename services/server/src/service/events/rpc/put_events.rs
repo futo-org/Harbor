@@ -18,9 +18,8 @@ use sea_orm::ActiveValue::{NotSet, Set};
 use tonic::{Code, Status};
 use tracing::Instrument;
 
-use crate::service::auth::PutEventsAuth;
 use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::PublicContext;
+use crate::service::context::{Auth, PublicContext};
 use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
@@ -45,14 +44,8 @@ use crate::service::proto::{
 )]
 pub async fn handle(
     mut ctx: PublicContext,
-    auth: PutEventsAuth,
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
-    let (mut identity, denied) = match auth {
-        PutEventsAuth::None => (None, None),
-        PutEventsAuth::Identity(identity) => (Some(identity), None),
-        PutEventsAuth::Denied(status) => (None, Some(status)),
-    };
     let mut errors: Vec<PutEventError> = Vec::new();
     let mut all_blobs = HashSet::<Blob>::new();
     let mut warnings: Vec<PutEventError> = Vec::new();
@@ -63,8 +56,6 @@ pub async fn handle(
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         match process_event(
             &mut ctx,
-            &mut identity,
-            denied.as_ref(),
             event_bundle,
             &mut banned_cache,
             &mut app_cache,
@@ -139,7 +130,6 @@ pub async fn handle(
 
 /// Validate and persist an event, adding its blobs to `all_blobs`.
 /// Returns its key and whether it was newly stored.
-#[allow(clippy::too_many_arguments)]
 #[tracing::instrument(
     skip_all,
     err(level = "warn"),
@@ -154,8 +144,6 @@ pub async fn handle(
 )]
 async fn process_event(
     ctx: &mut PublicContext,
-    identity: &mut Option<String>,
-    denied: Option<&Status>,
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
     app_cache: &mut HashMap<Application, i32>,
@@ -200,16 +188,13 @@ async fn process_event(
         .record("event.collection", key.collection)
         .record("event.sequence", key.sequence);
 
-    // A request only puts one identity's events: the one it is authenticated
-    // as, or without a token that of its first event.
-    match identity {
-        Some(identity) if *identity != key.identity => {
-            return Err(Status::permission_denied(
-                "event is not from the request's identity",
-            ));
-        }
-        Some(_) => {}
-        None => *identity = Some(key.identity.clone()),
+    // An authenticated request only puts its own identity's events.
+    if let Some(identity) = ctx.auth.identity()
+        && identity != key.identity
+    {
+        return Err(Status::permission_denied(
+            "event is not from the request's identity",
+        ));
     }
 
     // Early banned check based on the cache.
@@ -309,11 +294,6 @@ async fn process_event(
         .sig_matches(&signed_event.signature, &signed_event.event_bytes)
     {
         return Err(Status::unauthenticated("signed event signature invalid"));
-    }
-
-    // Checked after validation, so that those errors are reported first.
-    if let Some(status) = denied {
-        return Err(status.clone());
     }
 
     // Start a transaction to ensure all processing of a single event is handled

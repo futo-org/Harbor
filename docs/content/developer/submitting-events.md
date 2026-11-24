@@ -24,16 +24,10 @@ server.
 `authorization: Bearer <token>` header. When one is sent, the server only
 accepts events of the identity the token is for.
 
-The token's key must be one the identity authorizes. The identity events in
-the request count towards that, which allows a first sync, or a freshly
-paired device, to put the identity events that make its key known to the
-server. Otherwise none of the events are accepted.
-
 Requests without a token are still accepted for now, so that older clients
-keep working. Their events must all be from one identity: events from any
-other identity than the request's first event are rejected. Servers will
-require the token in the future (a server can already do so with
-`HARBOR_PUT_EVENTS_REQUIRE_AUTH=true`), so clients should always send it.
+keep working. So are requests whose token the server can't match to an
+identity yet, such as a first sync or a freshly paired device. Servers will
+require the token in the future, so clients should always send it.
 
 ## Signed Event
 

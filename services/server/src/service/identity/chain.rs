@@ -4,7 +4,7 @@
 use polycentric_common::models::identity::{IdentityCandidate, resolve_latest};
 
 use crate::data::EventWithContentRow;
-use crate::service::proto::{EventBundle, Identity};
+use crate::service::proto::Identity;
 
 /// Returns the latest valid identity state for `identity` that can be obtained from
 /// the rows provided.
@@ -13,29 +13,6 @@ pub fn validated_chain_head<'a>(
     rows: impl IntoIterator<Item = &'a EventWithContentRow>,
 ) -> Option<Identity> {
     let candidates = rows.into_iter().filter_map(to_identity_candidate);
-
-    resolve_latest(identity, candidates)
-}
-
-/// As [`validated_chain_head`], with the identity events in `bundles` added
-/// to the candidates.
-pub fn validated_chain_head_with<'a>(
-    identity: &str,
-    rows: impl IntoIterator<Item = &'a EventWithContentRow>,
-    bundles: &'a [EventBundle],
-) -> Option<Identity> {
-    let put = bundles.iter().filter_map(|bundle| {
-        let signed_event = bundle.signed_event.as_ref()?;
-        Some(IdentityCandidate {
-            event_bytes: &signed_event.event_bytes,
-            content_bytes: &bundle.serialized_content.as_ref()?.content_bytes,
-            signature: &signed_event.signature,
-        })
-    });
-    let candidates = rows
-        .into_iter()
-        .filter_map(to_identity_candidate)
-        .chain(put);
 
     resolve_latest(identity, candidates)
 }
