@@ -73,7 +73,7 @@ export function EventInfoSheet() {
   // Events opened from links, newest last.
   const [stack, setStack] = useState<EventSource[]>([]);
   useEffect(() => {
-    if (!open) setStack([]);
+    if (open) setStack([]);
   }, [open]);
 
   const current = stack[stack.length - 1] ?? source;

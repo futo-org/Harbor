@@ -6,7 +6,7 @@ import useReportOptions, { type ReportOptions } from './hooks/useReportOptions';
 import { ActivityIndicator, View } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useReportAction from './hooks/useReportAction';
 import { create } from 'zustand';
 import type { v2 } from '@polycentric/react-native';
@@ -26,12 +26,6 @@ export const useReportSheetStore = create<{
 
 export function ReportSheet() {
   const eventId = useReportSheetStore((s) => s.eventId);
-  if (!eventId) return null;
-  // Each reported event starts with an empty form.
-  return <EventReportSheet key={eventId} eventId={eventId} />;
-}
-
-function EventReportSheet({ eventId }: { eventId: string }) {
   const open = useReportSheetStore((s) => s.open);
   const onClose = useReportSheetStore((s) => s.close);
   const { options } = useReportOptions();
@@ -45,13 +39,14 @@ function EventReportSheet({ eventId }: { eventId: string }) {
   const [additionalInfo, setAdditionalInfo] = useState<string>('');
   const [stage, setStage] = useState<'option' | 'additional'>('option');
 
-  const isOption = stage === 'option';
-
-  const reset = () => {
+  useEffect(() => {
+    if (!open) return;
     setStage('option');
     setSelected('');
     setAdditionalInfo('');
-  };
+  }, [open]);
+
+  const isOption = stage === 'option';
 
   /** Go to previous stage or close the sheet. */
   const onBackPress = () => {
@@ -60,7 +55,7 @@ function EventReportSheet({ eventId }: { eventId: string }) {
   };
 
   const onSubmit = async () => {
-    if (!selected) return;
+    if (!selected || !eventId) return;
 
     await submit({
       eventId,
@@ -68,7 +63,6 @@ function EventReportSheet({ eventId }: { eventId: string }) {
       additionalInfo,
     });
 
-    reset();
     onClose();
   };
 
