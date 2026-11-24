@@ -308,7 +308,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest@sha256:5deb20e3ec84781d137231a23ebc3520e012e8e83d59bee25355f7fba1010a12
+    image: redpandadata/console:latest@sha256:aa055a971965606f89c00cc2367e38c95f93f0cb3a4ff96701cbb117af8e23f8
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092
