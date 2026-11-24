@@ -33,6 +33,7 @@ export function NavDrawerContent() {
       <View style={{ gap: Spacing.lg, paddingTop: Spacing['2xl'] }}>
         <NavDrawerDivider />
         <AppFooter
+          showCopyright={false}
           style={[Atoms.px_lg, { columnGap: Spacing.lg, rowGap: Spacing.sm }]}
         />
       </View>
