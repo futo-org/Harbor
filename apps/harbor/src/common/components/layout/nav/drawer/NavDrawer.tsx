@@ -68,7 +68,7 @@ export function NavDrawer({ children }: { children: ReactNode }) {
     transform: [{ translateX: (navDrawerProgress.value - 1) * width }],
   }));
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: navDrawerProgress.value,
+    opacity: navDrawerProgress.value * 0.5,
   }));
 
   return (
@@ -78,10 +78,27 @@ export function NavDrawer({ children }: { children: ReactNode }) {
         style={[Atoms.flex_1, theme.atoms.box.primary.bg]}
       >
         <Animated.View
+          testID="nav-drawer"
+          pointerEvents={open ? 'auto' : 'none'}
+          accessibilityElementsHidden={!open}
+          accessibilityViewIsModal={open}
+          onAccessibilityEscape={hide}
+          importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+          style={[
+            Atoms.absolute,
+            { top: 0, bottom: 0, left: 0, width },
+            theme.atoms.box.primary.bg,
+            panelStyle,
+          ]}
+        >
+          <NavDrawerContent />
+        </Animated.View>
+        <Animated.View
           importantForAccessibility={open ? 'no-hide-descendants' : 'auto'}
           style={[
             Atoms.flex_1,
             { borderCurve: 'continuous', boxShadow: SCREEN_SHADOW },
+            theme.atoms.box.primary.bg,
             contentStyle,
             radiusStyle,
           ]}
@@ -101,7 +118,7 @@ export function NavDrawer({ children }: { children: ReactNode }) {
               pointerEvents={open ? 'auto' : 'none'}
               style={[
                 StyleSheet.absoluteFill,
-                theme.atoms.backdrop.modal,
+                theme.atoms.box.primary.bg,
                 backdropStyle,
               ]}
             >
@@ -126,22 +143,6 @@ export function NavDrawer({ children }: { children: ReactNode }) {
               edgeStyle,
             ]}
           />
-        </Animated.View>
-        <Animated.View
-          testID="nav-drawer"
-          pointerEvents={open ? 'auto' : 'none'}
-          accessibilityElementsHidden={!open}
-          accessibilityViewIsModal={open}
-          onAccessibilityEscape={hide}
-          importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
-          style={[
-            Atoms.absolute,
-            { top: 0, bottom: 0, left: 0, width },
-            theme.atoms.box.primary.bg,
-            panelStyle,
-          ]}
-        >
-          <NavDrawerContent />
         </Animated.View>
       </View>
     </GestureDetector>
