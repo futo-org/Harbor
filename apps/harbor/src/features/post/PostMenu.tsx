@@ -9,9 +9,8 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
-import { useState } from 'react';
 import { View } from 'react-native';
-import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
+import { useEventInfoSheetStore } from '@/src/features/core/event-info/EventInfoSheet';
 import { useReportSheetStore } from '../moderation/ReportSheet';
 import { buildPostLink } from './buildPostLink';
 import usePostActions from './hooks/usePostActions';
@@ -30,7 +29,7 @@ export default function PostMenu({ post }: PostMenuProps) {
   const { copyToClipboard } = useCopyToClipboard({ showToast: true });
 
   const openReportSheet = useReportSheetStore((s) => s.openFor);
-  const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
+  const openEventInfoSheet = useEventInfoSheetStore((s) => s.openFor);
 
   const onDeletePress = async () => {
     // Wait for confirm
@@ -55,70 +54,61 @@ export default function PostMenu({ post }: PostMenuProps) {
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
-          {({ pressed, hovered }) => (
-            <View
-              style={[
-                Atoms.px_xs,
-                Atoms.rounded_full,
-                // overflow:hidden forces a rounded clip on native — without it the
-                // press background renders with square corners.
-                Atoms.overflow_hidden,
-                (hovered || pressed) && theme.atoms.box.raised.bg,
-              ]}
-            >
-              <Icon name="more" color="muted" size={16} />
-            </View>
-          )}
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
-          {/* Copy Link */}
-          <DropdownMenu.Item
-            onPress={() => copyToClipboard(buildPostLink(post))}
+    <DropdownMenu>
+      <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
+        {({ pressed, hovered }) => (
+          <View
+            style={[
+              Atoms.px_xs,
+              Atoms.rounded_full,
+              // overflow:hidden forces a rounded clip on native — without it the
+              // press background renders with square corners.
+              Atoms.overflow_hidden,
+              (hovered || pressed) && theme.atoms.box.raised.bg,
+            ]}
           >
-            <Icon name="copy" color="muted" size={16} />
-            <Text variant="secondary" fontWeight="bold">
-              Copy Link
+            <Icon name="more" color="muted" size={16} />
+          </View>
+        )}
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        {/* Copy Link */}
+        <DropdownMenu.Item onPress={() => copyToClipboard(buildPostLink(post))}>
+          <Icon name="copy" color="muted" size={16} />
+          <Text variant="secondary" fontWeight="bold">
+            Copy Link
+          </Text>
+        </DropdownMenu.Item>
+        {/* Info */}
+        <DropdownMenu.Item
+          onPress={() => openEventInfoSheet({ signedEvent: post.signedEvent })}
+        >
+          <Icon name="infoOutline" color="muted" size={16} />
+          <Text variant="secondary" fontWeight="bold">
+            Post info
+          </Text>
+        </DropdownMenu.Item>
+        {/* Delete  */}
+        {isPostAuthor && (
+          <DropdownMenu.Item onPress={onDeletePress}>
+            <Icon name="trashBin" color="danger" size={16} />
+            <Text variant="secondary" fontWeight="bold" color="danger">
+              Delete
             </Text>
           </DropdownMenu.Item>
-          {/* Info */}
-          <DropdownMenu.Item onPress={() => setShowInfoSheet(true)}>
-            <Icon name="infoOutline" color="muted" size={16} />
+        )}
+        {/* Report */}
+        {!isPostAuthor && (
+          <DropdownMenu.Item
+            onPress={() => withIdentity(() => openReportSheet(post.id))}
+          >
+            <Icon name="flag" color="muted" size={16} />
             <Text variant="secondary" fontWeight="bold">
-              Post info
+              Report
             </Text>
           </DropdownMenu.Item>
-          {/* Delete  */}
-          {isPostAuthor && (
-            <DropdownMenu.Item onPress={onDeletePress}>
-              <Icon name="trashBin" color="danger" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="danger">
-                Delete
-              </Text>
-            </DropdownMenu.Item>
-          )}
-          {/* Report */}
-          {!isPostAuthor && (
-            <DropdownMenu.Item
-              onPress={() => withIdentity(() => openReportSheet(post.id))}
-            >
-              <Icon name="flag" color="muted" size={16} />
-              <Text variant="secondary" fontWeight="bold">
-                Report
-              </Text>
-            </DropdownMenu.Item>
-          )}
-        </DropdownMenu.Content>
-      </DropdownMenu>
-
-      {/* Modals */}
-      <EventInfoSheet
-        source={{ signedEvent: post.signedEvent }}
-        open={showInfoSheet}
-        onClose={() => setShowInfoSheet(false)}
-      />
-    </>
+        )}
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }

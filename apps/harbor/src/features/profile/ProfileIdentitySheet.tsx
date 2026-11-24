@@ -20,10 +20,10 @@ import {
   type v2,
 } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
-import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
+import { useEventInfoSheetStore } from '@/src/features/core/event-info/EventInfoSheet';
 import { useIdentityState } from './hooks/useIdentityState';
 
 type KeyEntry = {
@@ -42,7 +42,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const isSelf = selfKey === identityKey;
   const deviceKey = client.currentKeyPair?.publicKey;
-  const [showInfoSheet, setShowInfoSheet] = useState(false);
+  const openEventInfoSheet = useEventInfoSheetStore((s) => s.openFor);
 
   const keys = useMemo<KeyEntry[]>(() => {
     if (!state) return [];
@@ -67,11 +67,6 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
       <Sheet.Header
         title="Identity"
         onClose={() => router.canGoBack() && router.back()}
-      />
-      <EventInfoSheet
-        source={{ identity: identityKey, collection: COLLECTION.IDENTITY }}
-        open={showInfoSheet}
-        onClose={() => setShowInfoSheet(false)}
       />
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
@@ -100,7 +95,12 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             </Text>
             <CopyableValue value={identityKey} label="identity key" />
             <Pressable
-              onPress={() => setShowInfoSheet(true)}
+              onPress={() =>
+                openEventInfoSheet({
+                  identity: identityKey,
+                  collection: COLLECTION.IDENTITY,
+                })
+              }
               accessibilityRole="button"
               accessibilityLabel="Identity info"
               style={[

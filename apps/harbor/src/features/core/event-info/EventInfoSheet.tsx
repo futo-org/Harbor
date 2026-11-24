@@ -31,6 +31,7 @@ import {
   tryOrNull,
   useSignedEvent,
 } from './useSignedEvent';
+import { create } from 'zustand';
 
 const MONO: TextStyle = { fontFamily: 'monospace' };
 
@@ -51,18 +52,24 @@ const COLLECTION_NAMES: Record<number, string> = {
   [COLLECTION.VERIFICATIONS]: 'Verifications',
 };
 
-type EventInfoSheetProps = {
+export const useEventInfoSheetStore = create<{
+  /** Kept after closing so the native dismiss animation has content. */
   source: EventSource | null;
   open: boolean;
-  onClose: () => void;
-};
+  openFor: (source: EventSource) => void;
+  close: () => void;
+}>((set) => ({
+  source: null,
+  open: false,
+  openFor: (source) => set({ source, open: true }),
+  close: () => set({ open: false }),
+}));
 
 /** Signature, fields, identity document and vector clock of an event. */
-export default function EventInfoSheet({
-  source,
-  open,
-  onClose,
-}: EventInfoSheetProps) {
+export function EventInfoSheet() {
+  const source = useEventInfoSheetStore((s) => s.source);
+  const open = useEventInfoSheetStore((s) => s.open);
+  const onClose = useEventInfoSheetStore((s) => s.close);
   // Events opened from links, newest last.
   const [stack, setStack] = useState<EventSource[]>([]);
   useEffect(() => {

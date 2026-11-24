@@ -7,7 +7,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { COLLECTION } from '@polycentric/react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
-import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
+import { useEventInfoSheetStore } from '@/src/features/core/event-info/EventInfoSheet';
 import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
@@ -41,7 +41,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
   const removeBlock = useBlocks((s) => s.removeBlock);
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
-  const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
+  const openEventInfoSheet = useEventInfoSheetStore((s) => s.openFor);
   const openReportSheet = useReportSheetStore((s) => s.openFor);
   // Reports on an identity target its first event.
   const profileEventId = useProfile(identityKey ?? null).eventId;
@@ -93,7 +93,11 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
     key: 'info',
     icon: 'infoOutline',
     label: 'Profile info',
-    onPress: () => setShowInfoSheet(true),
+    onPress: () =>
+      openEventInfoSheet({
+        identity: identityKey,
+        collection: COLLECTION.PROFILE,
+      }),
   });
 
   return (
@@ -140,11 +144,6 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
         identityKey={identityKey}
         open={showBanSheet}
         onClose={() => setShowBanSheet(false)}
-      />
-      <EventInfoSheet
-        source={{ identity: identityKey, collection: COLLECTION.PROFILE }}
-        open={showInfoSheet}
-        onClose={() => setShowInfoSheet(false)}
       />
     </>
   );
