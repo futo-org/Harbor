@@ -1,4 +1,6 @@
+import { InlineLink } from '@/src/common/components/primitives/InlineLink';
 import { Text } from '@/src/common/components/primitives/Text';
+import { Routes } from '@/src/common/constants';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { LabelPill } from '@/src/features/moderation/LabelPill';
@@ -9,12 +11,15 @@ import { useProfileModeration } from './hooks/useProfileModeration';
 type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
   fallbackName?: string | null;
+  /** Links the name, not the label pill, to the profile. */
+  linkToProfile?: boolean;
 };
 
 /** Every display name in the app renders through this. */
 export function Username({
   identity,
   fallbackName,
+  linkToProfile = false,
   numberOfLines = 1,
   variant = 'body',
   style,
@@ -52,7 +57,11 @@ export function Username({
           numberOfLines={numberOfLines}
           style={[Atoms.flex_shrink_1, style]}
         >
-          {name}
+          {linkToProfile && identity ? (
+            <InlineLink href={Routes.tabs.profile(identity)}>{name}</InlineLink>
+          ) : (
+            name
+          )}
         </Text>
       ) : null}
       {revealed ? (

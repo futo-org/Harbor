@@ -12,9 +12,9 @@ import { urlHost } from '@/src/common/util/anywhere-url';
 import { isBrowserExtension } from '@/src/common/util/platform';
 import { Username } from '@/src/features/profile/Username';
 import { v2 } from '@polycentric/react-native';
-import { type ExternalPathString, Link, router } from 'expo-router';
-import { createContext, useCallback, useContext, useMemo } from 'react';
-import { Pressable, View } from 'react-native';
+import { type ExternalPathString, Link } from 'expo-router';
+import { createContext, useContext, useMemo } from 'react';
+import { View } from 'react-native';
 
 /** The address of the page a list's posts are all about, if it is such a list. */
 export const AnywhereUrlContext = createContext<string | undefined>(undefined);
@@ -143,16 +143,10 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
     }
   }, [parentId]);
 
-  const handlePress = useCallback(() => {
-    if (!parentIdentity) return;
-    router.navigate(Routes.tabs.profile(parentIdentity));
-  }, [parentIdentity]);
-
   if (!parentIdentity) return null;
 
   return (
-    <Pressable
-      onPress={handlePress}
+    <View
       style={[
         Atoms.flex_row,
         Atoms.align_center,
@@ -169,7 +163,12 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
       >
         Replying to{' '}
       </Text>
-      <Username identity={parentIdentity} variant="secondary" color="accent" />
-    </Pressable>
+      <Username
+        identity={parentIdentity}
+        variant="secondary"
+        color="accent"
+        linkToProfile
+      />
+    </View>
   );
 }

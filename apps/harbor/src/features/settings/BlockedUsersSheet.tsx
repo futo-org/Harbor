@@ -1,6 +1,5 @@
 import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
-import { Routes } from '@/src/common/constants';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import useBlocks from '@/src/features/block/hooks/useBlocks';
@@ -15,18 +14,13 @@ export default function BlockedUsersSheet() {
 
   const blocked = Array.from(blocks.keys());
 
-  // The profile is outside this sheet's stack, so close the sheet first.
-  const openProfile = (identity: string) => {
+  const closeSheet = () => {
     if (router.canGoBack()) router.back();
-    router.navigate(Routes.tabs.profile(identity));
   };
 
   return (
     <Sheet detents={[0.5, 1]} dismissible>
-      <Sheet.Header
-        title="Blocked Users"
-        onClose={() => router.canGoBack() && router.back()}
-      />
+      <Sheet.Header title="Blocked Users" onClose={closeSheet} />
       <Sheet.Content style={[Atoms.p_0]}>
         {blocked.length === 0 ? (
           <Text variant="secondary" color="muted" style={[Atoms.p_lg]}>
@@ -37,7 +31,9 @@ export default function BlockedUsersSheet() {
             <ProfileRow
               key={identity}
               identity={identity}
-              onPress={() => openProfile(identity)}
+              linkToProfile
+              // The profile is outside this sheet's stack, so close the sheet first.
+              onPress={closeSheet}
               style={[
                 theme.atoms.box.primary.border,
                 index < blocked.length - 1 && Atoms.border_b,

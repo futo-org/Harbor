@@ -88,10 +88,8 @@ export function SidebarSearch() {
             <ProfileRow
               key={entry.identity}
               identity={entry.identity}
-              onPress={() => {
-                setQuery('');
-                router.navigate(Routes.tabs.profile(entry.identity));
-              }}
+              linkToProfile
+              onPress={() => setQuery('')}
             />
           ))}
         </View>

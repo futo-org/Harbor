@@ -11,3 +11,4 @@ export * from './PillButton';
 export * from './Text';
 export * from './TextInput';
 export * from './ListItem';
+export * from './InlineLink';

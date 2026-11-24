@@ -1,11 +1,10 @@
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
-import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from './FollowButton';
@@ -82,7 +81,7 @@ function IdentityRow({ identity }: { identity: string }) {
   return (
     <ProfileRow
       identity={identity}
-      onPress={() => router.navigate(Routes.tabs.profile(identity))}
+      linkToProfile
       style={[theme.atoms.box.primary.border, Atoms.border_b]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />

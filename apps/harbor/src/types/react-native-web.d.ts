@@ -10,6 +10,7 @@ declare module 'react-native' {
 
   interface PressableProps {
     href?: string;
+    hrefAttrs?: { target?: '_blank' };
   }
 
   interface TextProps {

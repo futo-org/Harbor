@@ -1,5 +1,9 @@
 import { ImageGrid } from '@/src/common/components/composites';
-import { ProfileAvatar, Text } from '@/src/common/components/primitives';
+import {
+  InlineLink,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
@@ -12,7 +16,9 @@ import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
-import { router } from 'expo-router';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
+import { isWeb } from '@/src/common/util/platform';
+import type { Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -62,18 +68,16 @@ export function PostContentQuote({
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
-  const handlePress = useCallback(() => {
-    if (!post) return;
-
-    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
-    if (route) router.navigate(route);
-  }, [post]);
+  const postRoute = post
+    ? eventRoute({ ...post, collection: COLLECTION.FEED })
+    : null;
+  const cardLinkProps = useCardLinkPress(postRoute);
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
 
   return (
     <Pressable
-      onPress={handlePress}
+      {...cardLinkProps}
       style={[
         Atoms.p_md,
         Atoms.rounded_md,
@@ -82,7 +86,7 @@ export function PostContentQuote({
         Atoms.border,
       ]}
     >
-      <AuthorRow post={post} />
+      <AuthorRow post={post} postRoute={postRoute} />
       {hasWarnContent && !warnDismissed ? (
         <PostWarnOverlay
           labels={warnLabels}
@@ -118,12 +122,19 @@ function QuoteUnavailable() {
 }
 
 /** Author and time info at the top. */
-function AuthorRow({ post }: { post: PostData }) {
+function AuthorRow({
+  post,
+  postRoute,
+}: {
+  post: PostData;
+  postRoute: Href | null;
+}) {
   return (
     <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
       <ProfileAvatar
         identityKey={post.identity}
         size="xs"
+        linkToProfile
         style={Atoms.mr_md}
       />
       <PostAuthor identity={post.identity} />
@@ -133,7 +144,15 @@ function AuthorRow({ post }: { post: PostData }) {
             ·
           </Text>
           <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
-            <TimeAgo since={post.createdAt} />
+            {/* Same target as the card: on native it would only take the
+                card's press feedback. */}
+            {isWeb && postRoute ? (
+              <InlineLink href={postRoute}>
+                <TimeAgo since={post.createdAt} />
+              </InlineLink>
+            ) : (
+              <TimeAgo since={post.createdAt} />
+            )}
           </Text>
         </>
       ) : null}

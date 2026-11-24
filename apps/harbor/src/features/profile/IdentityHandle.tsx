@@ -1,4 +1,6 @@
+import { InlineLink } from '@/src/common/components/primitives/InlineLink';
 import { Text } from '@/src/common/components/primitives/Text';
+import { Routes } from '@/src/common/constants';
 import { Atoms, createThemedStyles } from '@/src/common/theme';
 import type { ComponentProps } from 'react';
 import Animated from 'react-native-reanimated';
@@ -8,11 +10,14 @@ const AnimatedText = Animated.createAnimatedComponent(Text);
 
 type IdentityHandleProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
+  /** Links the handle to the profile. */
+  linkToProfile?: boolean;
 };
 
 /** Every identity alias or shortened id in the app renders through this. */
 export function IdentityHandle({
   identity,
+  linkToProfile = false,
   variant = 'secondary',
   color = 'muted',
   numberOfLines = 1,
@@ -35,7 +40,16 @@ export function IdentityHandle({
         handle.kind === 'alias-pending' && styles.handlePending,
       ]}
     >
-      {handle.text}
+      {linkToProfile && identity ? (
+        <InlineLink
+          href={Routes.tabs.profile(identity)}
+          underlineOnHover={false}
+        >
+          {handle.text}
+        </InlineLink>
+      ) : (
+        handle.text
+      )}
     </AnimatedText>
   );
 }

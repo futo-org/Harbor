@@ -48,7 +48,7 @@ export function ProfileVerifiesList({
       keyExtractor={(claim) =>
         `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
       }
-      renderItem={({ item }) => <ClaimListItem claim={item} />}
+      renderItem={({ item }) => <ClaimListItem claim={item} linkToClaim />}
       ListEmptyComponent={
         requested.isLoading || pending ? (
           <ClaimSkeletonList count={3} />

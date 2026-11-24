@@ -1,7 +1,7 @@
 import { Text } from '@/src/common/components';
 import { Routes } from '@/src/common/constants';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import type { ClaimVerificationStatus } from '../utils/claim-status';
@@ -16,9 +16,15 @@ import Icon from '@/src/common/components/Icon';
 
 export function ClaimListItem({
   claim,
+  linkToClaim = false,
   onPress,
 }: {
   claim: DecodedClaim & { status?: ClaimVerificationStatus };
+  /**
+   * A plain click navigates to the claim, after `onPress`. On web,
+   * Cmd/Ctrl-click and middle-click open it in a new tab instead.
+   */
+  linkToClaim?: boolean;
   onPress?: () => void;
 }) {
   const { theme } = useTheme();
@@ -30,19 +36,20 @@ export function ClaimListItem({
   // TODO: Make this more sophisticated
   const isVerified = (claim.status?.verifiedCount || 0) > 0;
 
+  const cardLinkProps = useCardLinkPress(
+    linkToClaim
+      ? Routes.tabs.verification(
+          claim.identity,
+          claim.keyFingerprint,
+          claim.sequence.toString(),
+        )
+      : null,
+    onPress,
+  );
+
   return (
     <Pressable
-      onPress={
-        onPress ??
-        (() =>
-          router.navigate(
-            Routes.tabs.verification(
-              claim.identity,
-              claim.keyFingerprint,
-              claim.sequence.toString(),
-            ),
-          ))
-      }
+      {...cardLinkProps}
       style={({ hovered, pressed }) => [
         Atoms.flex_1,
         Atoms.flex_row,

@@ -5,6 +5,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
 import { urlHost } from '@/src/common/util/anywhere-url';
+import { isWeb } from '@/src/common/util/platform';
 import { Linking, Pressable, View } from 'react-native';
 
 /** Open-Graph standard image ratio (1200×630). */
@@ -13,9 +14,9 @@ const OG_ASPECT = 1.91;
 export const COMPACT_IMAGE_WIDTH = 96;
 
 /**
- * Open-Graph style preview card for a `Link` attached to a post.
- * Tapping opens the URL; the tap is stopped from also triggering the surrounding
- * post-card press (same pattern as ImageGrid).
+ * Open-Graph style preview card for a `Link` attached to a post. On web it's
+ * an anchor opening the URL in a new tab; on native a press opens it. Either
+ * way the press doesn't reach the surrounding post card.
  *
  * Metadata fields are best-effort — proto3 leaves unset strings empty, so each
  * is rendered only when present.
@@ -94,10 +95,18 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
 
   return (
     <Pressable
-      onPress={(e) => {
-        e.stopPropagation?.();
-        void Linking.openURL(link.url).catch(() => {});
-      }}
+      // The Pressable keeps the click from the post card and lets the browser
+      // follow the link.
+      href={isWeb ? link.url : undefined}
+      hrefAttrs={isWeb ? { target: '_blank' } : undefined}
+      onPress={
+        isWeb
+          ? undefined
+          : (e) => {
+              e.stopPropagation?.();
+              void Linking.openURL(link.url).catch(() => {});
+            }
+      }
       style={({ pressed }) => [
         Atoms.rounded_md,
         Atoms.mt_md,
