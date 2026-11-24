@@ -255,6 +255,7 @@ jobs:
       #    make db_schema
       #    git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -400,11 +401,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-packages
-          path: target/nextest/ci/junit.xml
           retention-days: 7
 
   rust-services:
@@ -433,12 +429,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-services
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
 
   js-packages:
     name: Test JS packages
@@ -457,12 +447,6 @@ jobs:
           install-args: --filter @polycentric/js-core...
       - name: js-core
         run: pnpm --filter @polycentric/js-core test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-js-core
-          path: packages/js-core/junit.xml
-          retention-days: 7
 
   scraper:
     name: Test scraper
@@ -482,12 +466,6 @@ jobs:
         run: pnpm --filter @polycentric/scraper build
       - name: Tests
         run: pnpm --filter @polycentric/scraper test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   app:
     name: Test app
@@ -503,12 +481,6 @@ jobs:
           install-args: --filter polycentric-app...
       - name: Tests
         run: pnpm --filter polycentric-app test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-app
-          path: apps/harbor/junit.xml
-          retention-days: 7
 
   app-typecheck:
     name: Typecheck app code
@@ -904,14 +876,10 @@ jobs:
 
   # Tests on the builds ------------------------------------------------------
 
-  # Both suites share one Compose project name and host ports, so they run
-  # in one job, one after the other (GitLab: resource_group).
-  services-integration:
-    name: Test services integration
+  server-integration:
+    name: Test server integration
     needs: [ changes, service-images ]
-    if: >-
-      ${{ !cancelled() && needs.service-images.result != 'failure' &&
-      (fromJSON(needs.changes.outputs.plan).flags.server_integration || fromJSON(needs.changes.outputs.plan).flags.moderation_integration) }}
+    if: ${{ !cancelled() && needs.service-images.result != 'failure' && fromJSON(needs.changes.outputs.plan).flags.server_integration }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
@@ -928,25 +896,40 @@ jobs:
           environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
-          cache: services-integration
+          cache: server-integration
       - name: Server integration tests
-        if: fromJSON(needs.changes.outputs.plan).flags.server_integration && needs.service-images.result == 'success'
         run: .forgejo/scripts/integration-server.sh --ci
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.server_integration
+      - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
+        continue-on-error: true
         with:
-          name: junit-server-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
+          mode: save
+          key: ${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
+
+  moderation-integration:
+    name: Test moderation integration
+    needs: [ changes, service-images ]
+    if: ${{ !cancelled() && needs.service-images.result != 'failure' && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
+    env:
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      RUST_LOG: warn
+      HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
+          environment: global
+      - uses: ./.forgejo/actions/rust-env
+        with:
+          cache: moderation-integration
       - name: Moderation integration tests
-        if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
         run: .forgejo/scripts/integration-moderation.sh
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration
-        with:
-          name: junit-moderation-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -975,12 +958,6 @@ jobs:
           install-args: --filter @polycentric/scraper...
       - name: Integration tests
         run: pnpm --filter @polycentric/scraper test:integration
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper-integration
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   # VERIFIER_BOT_ENV_VARS is the base64 .env content (GitLab: a file variable).
   verifier-bot:
@@ -1011,12 +988,6 @@ jobs:
         run: if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env; fi
       - name: Tests
         run: pnpm --filter @polycentric/verifier-bot test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-verifier-bot-tests
-          path: services/verifier-bot/junit.xml
-          retention-days: 7
 
   # Drives the web image this run built, started as a job service, against
   # this run's server image, which e2e-web.sh starts with Compose.
@@ -1175,7 +1146,8 @@ jobs:
       - web-image
       - browser-extension
       - browser-extension-safari
-      - services-integration
+      - server-integration
+      - moderation-integration
       - scraper-integration
       - verifier-bot
       - web-e2e
