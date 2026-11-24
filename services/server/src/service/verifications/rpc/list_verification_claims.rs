@@ -80,6 +80,7 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db)
             .await
@@ -117,6 +118,7 @@ mod tests {
     async fn returns_claims_without_verification_state() {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![claim_row(1, "alice")]])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])

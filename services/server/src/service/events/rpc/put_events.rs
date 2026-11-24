@@ -22,7 +22,9 @@ use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::{Auth, PublicContext};
 use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
-use crate::service::identity::repository::Query as IdentityRepository;
+use crate::service::identity::repository::{
+    Mutation as IdentityMutation, Query as IdentityRepository,
+};
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
@@ -313,7 +315,6 @@ async fn process_event(
         #[allow(clippy::collapsible_if)] // Easier to understand this way.
         if let Err(err) = authorize_event_signer(
             &mut tx,
-            &ctx.proof_cache,
             &key.identity,
             &PublicKey {
                 key_type: signed_by.key_type,
@@ -368,17 +369,23 @@ async fn process_event(
     .await
     {
         Ok(true) => {
+            if key.collection == collections::IDENTITY
+                && let Err(err) = IdentityMutation::rebuild_identity_document(
+                    &mut tx,
+                    &key.identity,
+                )
+                .await
+            {
+                tracing::error!(error = %err, "failed to rebuild identity document");
+                if let Err(err) = tx.rollback().await {
+                    tracing::warn!(error = %err, "failed to rollback transaction");
+                }
+                return Err(Status::internal("internal server error"));
+            }
             tx.commit().await.map_err(|err| {
                 tracing::error!(error = %err, "failed to commit transaction");
                 Status::internal("internal server error")
             })?;
-
-            ctx.proof_cache
-                .invalidate_canonical(&key.identity, key.collection)
-                .await;
-            if key.collection == collections::IDENTITY {
-                ctx.proof_cache.invalidate_identity(&key.identity).await;
-            }
 
             let producer = ctx.kafka_producer.clone();
             let topic = common_kafka::prefixed("events");

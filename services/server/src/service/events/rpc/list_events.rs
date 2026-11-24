@@ -155,8 +155,8 @@ async fn view(
     let mut tombstone_bundles: Vec<EventBundle> =
         deletes_by_target.into_values().flatten().collect();
 
-    attach_proofs(ctx, &mut event_bundles).await?;
-    attach_proofs(ctx, &mut tombstone_bundles).await?;
+    attach_proofs(ctx, event_bundles.iter_mut().chain(&mut tombstone_bundles))
+        .await?;
 
     let mut event_hints = identity_events
         .into_iter()

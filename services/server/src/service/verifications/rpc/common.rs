@@ -186,13 +186,13 @@ pub(crate) mod claim_bundles {
             });
         }
 
+        let mut bundles = Vec::new();
         for bundle in &mut claim_bundles {
-            if let Some(claim) = bundle.claim.as_mut() {
-                attach_proofs(ctx, std::slice::from_mut(claim)).await?;
-            }
-            attach_proofs(ctx, &mut bundle.targets).await?;
-            attach_proofs(ctx, &mut bundle.verifies).await?;
+            bundles.extend(bundle.claim.as_mut());
+            bundles.extend(&mut bundle.targets);
+            bundles.extend(&mut bundle.verifies);
         }
+        attach_proofs(ctx, bundles).await?;
         Ok(View {
             claim_bundles,
             event_hints: hydration.identity_profile_hints(),

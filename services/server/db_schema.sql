@@ -514,6 +514,20 @@ CREATE TABLE public.deleted_event (
 
 
 --
+-- Name: event_proof; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_proof (
+    event_id bigint NOT NULL,
+    identity text NOT NULL,
+    signature bytea NOT NULL,
+    target_signature bytea NOT NULL,
+    leaf_index bigint NOT NULL,
+    audit_path bytea NOT NULL
+);
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -612,6 +626,16 @@ CREATE SEQUENCE public.identity_audit_log_id_seq
 --
 
 ALTER SEQUENCE public.identity_audit_log_id_seq OWNED BY public.identity_audit_log.id;
+
+
+--
+-- Name: identity_document; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.identity_document (
+    identity text NOT NULL,
+    event_id bigint NOT NULL
+);
 
 
 --
@@ -1009,6 +1033,14 @@ ALTER TABLE ONLY public.deleted_event
 
 
 --
+-- Name: event_proof event_proof_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_proof
+    ADD CONSTRAINT event_proof_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1030,6 +1062,14 @@ ALTER TABLE ONLY public.follow
 
 ALTER TABLE ONLY public.identity_audit_log
     ADD CONSTRAINT identity_audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: identity_document identity_document_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.identity_document
+    ADD CONSTRAINT identity_document_pkey PRIMARY KEY (identity);
 
 
 --
@@ -1257,6 +1297,20 @@ CREATE INDEX content_verification_verify_claim_event_key_idx ON public.content_v
 --
 
 CREATE INDEX event_identity ON public.events USING btree (identity);
+
+
+--
+-- Name: event_proof_identity_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_proof_identity_idx ON public.event_proof USING btree (identity);
+
+
+--
+-- Name: event_proof_signature_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_proof_signature_idx ON public.event_proof USING btree (signature);
 
 
 --

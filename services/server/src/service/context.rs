@@ -1,5 +1,5 @@
-//! Shared service context — DB connection plus long-lived caches that
-//! handlers borrow rather than reconstruct per-request.
+//! Shared service context that handlers borrow rather than reconstruct
+//! per-request.
 
 use std::sync::Arc;
 
@@ -11,14 +11,12 @@ use crate::db::DbConn;
 use crate::service::auth::{
     AuthenticatedIdentity, authenticated, authenticated_identity,
 };
-use crate::service::proofs::cache::ProofCache;
 
 pub struct ServiceContext {
     /// Read/write database connection pool.
     pub db: DatabaseConnection,
     /// Read-only database connection pool.
     pub ro_db: DatabaseConnection,
-    pub proof_cache: Arc<ProofCache>,
     pub kafka_producer: FutureProducer,
 }
 
@@ -31,7 +29,6 @@ impl ServiceContext {
         Arc::new(Self {
             db,
             ro_db,
-            proof_cache: ProofCache::new(),
             kafka_producer,
         })
     }
@@ -44,7 +41,6 @@ impl ServiceContext {
         let auth = authenticated_identity(request);
         RequestContext::new(
             &self.ro_db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             auth.map(Identity),
         )
@@ -59,7 +55,6 @@ impl ServiceContext {
         let auth = authenticated_identity(request);
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             auth.map(Identity),
         )
@@ -74,7 +69,6 @@ impl ServiceContext {
         let auth = authenticated_identity(request).ok_or_else(auth_error)?;
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             Identity(auth),
         )
@@ -89,7 +83,6 @@ impl ServiceContext {
         let auth = authenticated_identity(request).ok_or_else(auth_error)?;
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             Identity(auth),
         )
@@ -102,20 +95,13 @@ impl ServiceContext {
         request: &tonic::Request<T>,
     ) -> Result<RequestContext<AuthenticatedIdentity>, Status> {
         let auth = authenticated(request).ok_or_else(auth_error)?;
-        RequestContext::new(
-            &self.db,
-            self.proof_cache.clone(),
-            self.kafka_producer.clone(),
-            auth,
-        )
-        .await
+        RequestContext::new(&self.db, self.kafka_producer.clone(), auth).await
     }
 
     /// Create a worker request context with read-write database access.
     pub(crate) async fn worker_rw(&self) -> Result<WorkerContext, Status> {
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             (), // No auth information.
         )
@@ -126,7 +112,6 @@ impl ServiceContext {
     pub(crate) async fn test_public(&self, identity: &str) -> PublicContext {
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             Some(Identity(identity.into())),
         )
@@ -138,7 +123,6 @@ impl ServiceContext {
     pub(crate) async fn test_auth(&self, identity: &str) -> AuthContext {
         RequestContext::new(
             &self.db,
-            self.proof_cache.clone(),
             self.kafka_producer.clone(),
             Identity(identity.into()),
         )
@@ -179,8 +163,6 @@ pub(crate) type WorkerContext = RequestContext<()>;
 pub(crate) struct RequestContext<Auth> {
     /// Read/write or read-only database connection.
     pub(crate) db: DbConn,
-    /// Cache for identities proofs.
-    pub(crate) proof_cache: Arc<ProofCache>,
     /// Message sending to kafka.
     pub(crate) kafka_producer: FutureProducer,
     /// Authentication information, see [`Auth`].
@@ -190,14 +172,12 @@ pub(crate) struct RequestContext<Auth> {
 impl<Auth> RequestContext<Auth> {
     async fn new(
         pool: &DatabaseConnection,
-        proof_cache: Arc<ProofCache>,
         kafka_producer: FutureProducer,
         auth: Auth,
     ) -> Result<RequestContext<Auth>, Status> {
         let db = DbConn::from_pool(pool).await?;
         Ok(RequestContext {
             db,
-            proof_cache,
             kafka_producer,
             auth,
         })

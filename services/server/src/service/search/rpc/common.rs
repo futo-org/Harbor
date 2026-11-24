@@ -181,18 +181,20 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    attach_proofs(ctx, &mut tombstone_bundles).await?;
-
     let mut results = assemble_results(live_rows, &stats);
+    let mut label_bundles = assemble_bundles(label_events, &stats);
+    let mut bundles: Vec<&mut EventBundle> = tombstone_bundles
+        .iter_mut()
+        .chain(&mut label_bundles)
+        .collect();
     // SAFETY: we've just assembled the result above where the event_bundle is
     // always Some, hence it's safe to unwrap.
-    let results_iter = results
-        .iter_mut()
-        .map(|result| result.event_bundle.as_mut().unwrap());
-    attach_proofs(ctx, results_iter).await?;
-
-    let mut label_bundles = assemble_bundles(label_events, &stats);
-    attach_proofs(ctx, &mut label_bundles).await?;
+    bundles.extend(
+        results
+            .iter_mut()
+            .map(|result| result.event_bundle.as_mut().unwrap()),
+    );
+    attach_proofs(ctx, bundles).await?;
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.

@@ -167,13 +167,12 @@ async fn hydrate(
     let fetched_keys: Vec<_> =
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
     let mut fetched_bundles = rows_into_bundles(fetched);
-    attach_proofs(ctx, &mut fetched_bundles).await?;
+    let mut label_bundles = rows_into_bundles(label_rows.clone());
+    attach_proofs(ctx, fetched_bundles.iter_mut().chain(&mut label_bundles))
+        .await?;
 
     let bundles: HashMap<TargetEventKey, EventBundle> =
         fetched_keys.into_iter().zip(fetched_bundles).collect();
-
-    let mut label_bundles = rows_into_bundles(label_rows.clone());
-    attach_proofs(ctx, &mut label_bundles).await?;
 
     let mut event_hints = identity_events
         .into_iter()

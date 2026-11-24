@@ -9,7 +9,7 @@ use tonic::Status;
 
 use crate::db::DbConn;
 use crate::service::context::ServiceContext;
-use crate::service::identity::service::cached_identity_content;
+use crate::service::identity::service::identity_content;
 
 /// The verified identity of a request, available via request extensions.
 #[derive(Debug, Clone)]
@@ -129,12 +129,8 @@ async fn verify_auth_token(
     // The signing key must be in the issuer's identity document. Our copy
     // may be stale (pairing), so fail as a precondition, not a rejection.
     let mut db = DbConn::from_pool(&ctx.ro_db).await?;
-    let identity_content = cached_identity_content(
-        &mut db,
-        &ctx.proof_cache,
-        &verified.claims.iss,
-    )
-    .await?;
+    let identity_content =
+        identity_content(&mut db, &verified.claims.iss).await?;
     drop(db);
     if !identity_content.authorizes_signer(&verified.signed_by) {
         return Err(Status::failed_precondition(
@@ -287,11 +283,8 @@ mod tests {
     #[tokio::test]
     async fn a_signer_the_stored_identity_does_not_authorize_falls_through_unauthenticated()
      {
-        use crate::service::proto::content::ContentBody;
-        use crate::service::proto::{Content, Identity};
-        use chrono::DateTime;
-        use entity::{content, event};
-        use polycentric_common::models::collections;
+        use crate::service::proto::Identity;
+        use entity::{content_identity, identity_document};
         use prost::Message;
 
         // Identity document that doesn't know the minting key yet, as
@@ -306,39 +299,22 @@ mod tests {
             ..Default::default()
         };
         let iss = identity_content.derive_hex_key();
-        let content = Content {
-            content_body: Some(ContentBody::Identity(identity_content)),
-        };
-
-        let now = DateTime::from_timestamp_secs(1).unwrap().fixed_offset();
-        let event = event::Model {
-            id: 1,
-            collection: collections::IDENTITY as i16,
+        let document = identity_document::Model {
             identity: iss.clone(),
-            public_key_type: KeyType::Ed25519 as i32 as i16,
-            public_key: vec![0xbb; 32],
-            sequence: 1,
-            content_digest_type: Some(1),
-            content_digest_bytes: Some(vec![1]),
-            signature: vec![1],
-            previous_signature: vec![],
-            previous_root: vec![],
-            application_id: None,
-            event_bytes: vec![1],
-            created_at: now,
-            synced_at: now,
-            content_type: None,
+            event_id: 1,
         };
-        let content_row = content::Model {
-            id: 1,
-            digest_type: 1,
-            digest_bytes: vec![1],
-            serialized_bytes: content.encode_to_vec(),
-            synced_at: now,
+        let content = content_identity::Model {
+            content_id: 1,
+            identity: iss.clone(),
+            identity_bytes: identity_content.encode_to_vec(),
+            rotation_keys: serde_json::json!([]),
+            signing_keys: serde_json::json!([]),
+            revocation_bounds: serde_json::json!([]),
+            servers: None,
         };
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![(event, content_row)]])
+            .append_query_results([vec![(document, Some(content))]])
             .into_connection();
         let response = app(db)
             .await

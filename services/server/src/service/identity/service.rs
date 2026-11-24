@@ -2,7 +2,6 @@
 //! feed/list/thread responses. Split into per-data-source functions
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use polycentric_common::models::collections;
@@ -15,34 +14,20 @@ use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::RequestContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::{self as FeedsRepository};
-use crate::service::identity::chain;
 use crate::service::identity::repository::{
     Erased, Mutation as IdentityMutation, Query as IdentityRepo,
 };
-use crate::service::proofs::cache::ProofCache;
-use crate::service::proto::{ContentDigest, PublicKey};
-
-const ALL_COLLECTIONS: [i32; 8] = [
-    collections::IDENTITY,
-    collections::FEED,
-    collections::PROFILE,
-    collections::INTERACTIONS,
-    collections::SOCIAL_GRAPH,
-    collections::REPORTS,
-    collections::LABELS,
-    collections::VERIFICATIONS,
-];
+use crate::service::proto::{ContentDigest, Identity, PublicKey};
 
 /// Events erased per transaction. Keeps each transaction short so a deadlock
 /// with the tally cron or a worker only costs one batch.
 const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
-/// and drops its cached chain state. Used by bans and the operator command.
+/// and rebuilds its identity document. Used by bans and the operator command.
 pub async fn erase_identity(
     db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
-    proof_cache: Option<&ProofCache>,
     identity: &str,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
@@ -83,16 +68,10 @@ pub async fn erase_identity(
         let mut txn = db.begin().await?;
         IdentityMutation::erase_derived(&mut txn, &[identity.to_string()])
             .await?;
+        IdentityMutation::rebuild_identity_document(&mut txn, identity).await?;
         txn.commit().await
     };
     retry_deadlocks_inline!(run);
-
-    if let Some(cache) = proof_cache {
-        cache.invalidate_identity(identity).await;
-        for collection in ALL_COLLECTIONS {
-            cache.invalidate_canonical(identity, collection).await;
-        }
-    }
     Ok(total)
 }
 
@@ -100,28 +79,25 @@ pub async fn erase_identity(
 /// bans.
 pub async fn erase_event(
     db: &mut DbConn,
-    proof_cache: Option<&ProofCache>,
     key: &TargetEventKey,
 ) -> Result<Erased, DbErr> {
     let mut run = async || {
         let mut tx = db.begin().await?;
         let batch = IdentityMutation::erase_event(&mut tx, key).await?;
+        if key.collection as i32 == collections::IDENTITY {
+            IdentityMutation::rebuild_identity_document(&mut tx, &key.identity)
+                .await?;
+        }
         tx.commit().await?;
         Ok(batch)
     };
     let batch = retry_deadlocks_inline!(run);
-
-    if let Some(cache) = proof_cache {
-        cache
-            .invalidate_canonical(&key.identity, key.collection as i32)
-            .await;
-    }
     Ok(batch.erased)
 }
 
 /// Erases every event `public_key` signed and the rows derived from
 /// `identities` (the ones it signed for), in one transaction. For the
-/// operator command; a running server's caches are not invalidated.
+/// operator command.
 pub async fn erase_signed_by(
     db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
@@ -134,6 +110,10 @@ pub async fn erase_signed_by(
             IdentityMutation::erase_events_signed_by(&mut tx, public_key)
                 .await?;
         IdentityMutation::erase_derived(&mut tx, identities).await?;
+        for identity in identities {
+            IdentityMutation::rebuild_identity_document(&mut tx, identity)
+                .await?;
+        }
         tx.commit().await?;
         Ok(batch)
     })
@@ -261,20 +241,14 @@ pub async fn list_identity_and_profile_events<A>(
 }
 
 /// Fetch the latest identity events (rotation/signing key chain) for
-/// each identity in `identities`, and warm the proof cache from
-/// whichever Identity content payload is freshest per identity.
+/// each identity in `identities`.
 pub async fn list_identity_events<A>(
     ctx: &mut RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows = IdentityRepo::list_identity_events_for_identities(
-        &mut ctx.db,
-        identities,
-    )
-    .await
-    .map_err(map_db_err)?;
-    warm_identity_cache(ctx, &rows).await;
-    Ok(rows)
+    IdentityRepo::list_identity_events_for_identities(&mut ctx.db, identities)
+        .await
+        .map_err(map_db_err)
 }
 
 /// Fetch the latest profile event (display name, avatar, banner)
@@ -291,53 +265,17 @@ pub async fn list_profile_events<A>(
     .map_err(map_db_err)
 }
 
-/// Pass our the identity events through to the proof cache
-/// probably a better place for this
-///
-/// `rows` from `list_identity_events_for_identities` are an identity's
-/// complete IDENTITY-collection chain, so each identity's chain is
-/// validated in memory (no extra queries) and only the validated head is
-/// cached. Caching raw events instead would let a forged, unauthorized
-/// IDENTITY event poison the cache and impersonate the identity for
-/// everything that reads it (auth, event-write authorization, proofs).
-async fn warm_identity_cache<A>(
-    ctx: &RequestContext<A>,
-    rows: &[EventWithContentRow],
-) {
-    let mut by_identity: HashMap<&str, Vec<&EventWithContentRow>> =
-        HashMap::new();
-    for row in rows {
-        by_identity
-            .entry(row.0.identity.as_str())
-            .or_default()
-            .push(row);
-    }
-    for (identity, identity_rows) in by_identity {
-        if let Some(content) =
-            chain::validated_chain_head(identity, identity_rows)
-        {
-            ctx.proof_cache
-                .warm_identity_content(identity, content)
-                .await;
-        }
-    }
-}
-
 fn map_db_err(e: sea_orm::DbErr) -> Status {
     tracing::error!(error = %e, "identity hints db error");
     Status::internal("internal server error")
 }
 
-/// The latest valid identity document for `identity`, via the proof cache.
-pub async fn cached_identity_content<C: Connection>(
+/// The latest valid identity document for `identity`.
+pub async fn identity_content<C: Connection>(
     db: &mut C,
-    proof_cache: &ProofCache,
     identity: &str,
-) -> Result<polycentric_common::models::protos_v2::Identity, Status> {
-    if let Some(content) = proof_cache.identity_content(identity).await {
-        return Ok(content);
-    }
-    let loaded = IdentityRepo::latest_valid_identity_content(db, identity)
+) -> Result<Identity, Status> {
+    IdentityRepo::latest_valid_identity_content(db, identity)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "identity content db error");
@@ -347,11 +285,7 @@ pub async fn cached_identity_content<C: Connection>(
             Status::failed_precondition(
                 "no identity content for target — sync identity events first",
             )
-        })?;
-    proof_cache
-        .warm_identity_content(identity, loaded.clone())
-        .await;
-    Ok(loaded)
+        })
 }
 
 /// Verify that `signer` is permitted to sign an event in
@@ -360,42 +294,34 @@ pub async fn cached_identity_content<C: Connection>(
 /// TODO: share this rule set with `rs-core::client::validate_event`.
 pub async fn authorize_event_signer<C: Connection>(
     db: &mut C,
-    proof_cache: &ProofCache,
     target_identity: &str,
     signer: &PublicKey,
     collection: i32,
     signature: &[u8],
 ) -> Result<(), Status> {
-    let identity_content =
-        cached_identity_content(db, proof_cache, target_identity).await?;
+    let identity_content = identity_content(db, target_identity).await?;
 
     if identity_content.authorizes_signer(signer) {
         return Ok(());
     }
 
-    let target = identity_content
+    if identity_content
         .revocation_target_for(signer, collection)
-        .ok_or_else(|| {
-            Status::permission_denied(
-                "signer is revoked or not authorized by target identity",
-            )
-        })?;
+        .is_none()
+    {
+        return Err(Status::permission_denied(
+            "signer is revoked or not authorized by target identity",
+        ));
+    }
 
-    let canonical =
-        proof_cache
-        .canonical(db, target_identity, collection)
+    // Events within the committed bound have a stored proof.
+    let within_bound = IdentityRepo::has_event_proof(db, signature)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "authorize_event_signer canonical error");
+            tracing::error!(error = %e, "authorize_event_signer proof error");
             Status::internal("internal server error")
         })?;
-
-    let leaf_count = target.leaf_count as usize;
-    if canonical.len() < leaf_count
-        || !canonical[..leaf_count]
-            .iter()
-            .any(|s| s.as_slice() == signature)
-    {
+    if !within_bound {
         return Err(Status::permission_denied(
             "signer revoked and signature is not within the committed bound",
         ));

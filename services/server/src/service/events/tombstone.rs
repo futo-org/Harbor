@@ -239,7 +239,6 @@ async fn is_tombstone_authorized<Auth>(
 
     match authorize_event_signer(
         &mut ctx.db,
-        &ctx.proof_cache,
         &key.identity,
         signer,
         key.collection,

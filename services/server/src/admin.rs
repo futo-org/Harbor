@@ -71,7 +71,6 @@ pub async fn delete_events(args: Vec<String>) {
         None => identity_service::erase_identity(
             &mut db,
             filestore.as_ref(),
-            None,
             &identities[0],
         )
         .await

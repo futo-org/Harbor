@@ -31,12 +31,10 @@ pub async fn handle(
         sequence: target.sequence as i64,
     };
 
-    let erased = erase_event(&mut ctx.db, Some(&ctx.proof_cache), &key)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "delete_content erase error");
-            Status::internal("internal server error")
-        })?;
+    let erased = erase_event(&mut ctx.db, &key).await.map_err(|e| {
+        tracing::error!(error = %e, "delete_content erase error");
+        Status::internal("internal server error")
+    })?;
     repository::Mutation::resolve_reports_on_target(
         &mut ctx.db,
         &key,

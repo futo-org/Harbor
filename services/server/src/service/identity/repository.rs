@@ -1,5 +1,13 @@
-use ::entity::{ban, content, event, identity_audit_log, moderator};
+use ::entity::{
+    ban, content, content_identity, event, event_proof, identity_audit_log,
+    identity_document, moderator,
+};
+use std::collections::BTreeSet;
+
+use polycentric_common::merkle;
 use polycentric_common::models::collections;
+use prost::Message;
+use sea_orm::sea_query::Func;
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;
@@ -10,6 +18,8 @@ use crate::service::identity::chain;
 use crate::service::proto::{ContentDigest, Identity, PublicKey};
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
+/// Events read, and proofs written, per query when rebuilding proofs.
+const EVENT_PAGE: u64 = 1000;
 
 #[derive(Debug, Clone)]
 pub struct AuthorizedKey {
@@ -56,20 +66,65 @@ impl Query {
         Ok(keys)
     }
 
-    /// Fetch an identity's IDENTITY-collection events and return its
-    /// validated chain head, or `None` when no valid genesis exists. The
-    /// chain walk itself is the pure `chain::validated_chain_head`.
+    /// The identity's latest valid document, read from `identity_document`.
     #[tracing::instrument(skip_all)]
     pub async fn latest_valid_identity_content<C: Connection>(
         db: &mut C,
         identity: &str,
     ) -> Result<Option<Identity>, DbErr> {
-        let rows = Self::list_identity_events_for_identities(
-            db,
-            vec![identity.to_string()],
-        )
-        .await?;
-        Ok(chain::validated_chain_head(identity, &rows))
+        let head: RelationDef =
+            identity_document::Entity::belongs_to(event::Entity)
+                .from(identity_document::Column::EventId)
+                .to(event::Column::Id)
+                .into();
+        let document: RelationDef =
+            content::Entity::belongs_to(content_identity::Entity)
+                .from(content::Column::Id)
+                .to(content_identity::Column::ContentId)
+                .into();
+        let row = identity_document::Entity::find_by_id(identity)
+            .select_also(content_identity::Entity)
+            .join(JoinType::InnerJoin, head)
+            .join(JoinType::InnerJoin, content_join())
+            .join(JoinType::InnerJoin, document)
+            .one(db)
+            .await?;
+        let Some((_, Some(content))) = row else {
+            return Ok(None);
+        };
+        Identity::decode(content.identity_bytes.as_slice())
+            .map(Some)
+            .map_err(|err| {
+                DbErr::Custom(format!("undecodable identity document: {err}"))
+            })
+    }
+
+    /// Whether a proof is stored for the event with `signature`.
+    #[tracing::instrument(skip_all)]
+    pub async fn has_event_proof<C: Connection>(
+        db: &mut C,
+        signature: &[u8],
+    ) -> Result<bool, DbErr> {
+        let proofs = event_proof::Entity::find()
+            .filter(event_proof::Column::Signature.eq(signature))
+            .count(db)
+            .await?;
+        Ok(proofs > 0)
+    }
+
+    /// Stored proofs for the events with `signatures`.
+    #[tracing::instrument(skip_all)]
+    pub async fn event_proofs<C: Connection>(
+        db: &mut C,
+        signatures: Vec<Vec<u8>>,
+    ) -> Result<Vec<event_proof::Model>, DbErr> {
+        if signatures.is_empty() {
+            return Ok(Vec::new());
+        }
+        event_proof::Entity::find()
+            .filter(event_proof::Column::Signature.is_in(signatures))
+            .all(db)
+            .await
     }
 
     /// True when `public_key` is a rotation key on the latest identity state.
@@ -356,6 +411,101 @@ impl Mutation {
         Ok(())
     }
 
+    /// Rebuilds the identity's document and its revoked keys' event proofs.
+    #[tracing::instrument(skip_all)]
+    pub async fn rebuild_identity_document<C: Connection>(
+        db: &mut C,
+        identity: &str,
+    ) -> Result<(), DbErr> {
+        lock_identity(db, identity).await?;
+        event_proof::Entity::delete_many()
+            .filter(event_proof::Column::Identity.eq(identity))
+            .exec(db)
+            .await?;
+        identity_document::Entity::delete_by_id(identity)
+            .exec(db)
+            .await?;
+
+        let rows = Query::list_identity_events_for_identities(
+            db,
+            vec![identity.to_string()],
+        )
+        .await?;
+        let Some((event_id, document)) =
+            chain::validated_chain_head(identity, &rows)
+        else {
+            return Ok(());
+        };
+        identity_document::Entity::insert(identity_document::ActiveModel {
+            identity: ActiveValue::Set(identity.to_string()),
+            event_id: ActiveValue::Set(event_id),
+        })
+        .exec_without_returning(db)
+        .await?;
+
+        let collections: BTreeSet<i32> = document
+            .revocation_bounds
+            .iter()
+            .flat_map(|bound| &bound.targets)
+            .map(|target| target.collection)
+            .collect();
+        for collection in collections {
+            // Page through the collection, keeping only what the tree needs.
+            let mut ids = Vec::new();
+            let mut after = 0;
+            let mut events = Vec::new();
+            loop {
+                let page = event::Entity::find()
+                    .filter(event::Column::Collection.eq(collection as i16))
+                    .filter(event::Column::Identity.eq(identity))
+                    .filter(event::Column::Id.gt(after))
+                    .order_by_asc(event::Column::Id)
+                    .limit(EVENT_PAGE)
+                    .all(db)
+                    .await?;
+                let Some(last) = page.last() else {
+                    break;
+                };
+                after = last.id;
+                for event in page {
+                    // Events that do not decode are not leaves.
+                    let Some(order) = merkle::canonical_key(
+                        &event.event_bytes,
+                        &event.signature,
+                    ) else {
+                        continue;
+                    };
+                    let signer = PublicKey {
+                        key_type: event.public_key_type as i32,
+                        key: event.public_key,
+                    };
+                    ids.push(event.id);
+                    events.push((signer, order));
+                }
+            }
+            let proofs: Vec<_> =
+                merkle::revocation_proofs(&document, collection, &events)
+                    .into_iter()
+                    .map(|(event, proof)| event_proof::ActiveModel {
+                        event_id: ActiveValue::Set(ids[event]),
+                        identity: ActiveValue::Set(identity.to_string()),
+                        signature: ActiveValue::Set(events[event].1.2.clone()),
+                        target_signature: ActiveValue::Set(
+                            proof.target_signature,
+                        ),
+                        leaf_index: ActiveValue::Set(proof.leaf_index as i64),
+                        audit_path: ActiveValue::Set(proof.audit_path.concat()),
+                    })
+                    .collect();
+            for chunk in proofs.chunks(EVENT_PAGE as usize) {
+                event_proof::Entity::insert_many(chunk.to_vec())
+                    .exec_without_returning(db)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
     /// Moves all events of `identity` to the [`deleted_event`] table.
     #[tracing::instrument(skip_all)]
     pub async fn delete_identity<C: Connection>(
@@ -594,6 +744,21 @@ impl Mutation {
     }
 }
 
+/// Serialises rebuilds of `identity` until the transaction ends.
+async fn lock_identity<C: Connection>(
+    db: &mut C,
+    identity: &str,
+) -> Result<(), DbErr> {
+    let lock = sea_query::Query::select()
+        .expr(
+            Func::cust("pg_advisory_xact_lock")
+                .arg(Func::cust("hashtextextended").arg(identity).arg(0_i64)),
+        )
+        .to_owned();
+    db.execute(&lock).await?;
+    Ok(())
+}
+
 const ORPHAN_CONTENT: &str = "NOT EXISTS (\
     SELECT 1 FROM events e \
     WHERE e.content_digest_type = c.digest_type \
@@ -607,6 +772,7 @@ const CACHE_EVENT_ID_COLUMNS: &[(&str, &str)] = &[
     ("quote", "event_id"),
     ("reply", "event_id"),
     ("profile", "event_id"),
+    ("event_proof", "event_id"),
 ];
 
 /// Cache tables and the columns in them that hold identities.

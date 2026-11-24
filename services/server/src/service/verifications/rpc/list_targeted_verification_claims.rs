@@ -106,6 +106,7 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db)
             .await
@@ -152,6 +153,7 @@ mod tests {
                 target_row(3, "alice", &["bob"]),
                 target_row(2, "alice", &["bob"]),
             ]])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])

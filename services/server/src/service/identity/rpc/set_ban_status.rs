@@ -39,17 +39,12 @@ pub async fn handle(
     );
 
     if req.banned {
-        erase_identity(
-            &mut ctx.db,
-            None,
-            Some(&ctx.proof_cache),
-            &req.target_identity,
-        )
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "set_ban_status erase error");
-            Status::internal("internal server error")
-        })?;
+        erase_identity(&mut ctx.db, None, &req.target_identity)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "set_ban_status erase error");
+                Status::internal("internal server error")
+            })?;
         moderation_repo::Mutation::resolve_reports_by_author(
             &mut ctx.db,
             &req.target_identity,

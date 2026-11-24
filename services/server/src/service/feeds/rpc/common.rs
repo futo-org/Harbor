@@ -312,13 +312,16 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    attach_proofs(ctx, &mut tombstone_bundles).await?;
-
     let mut event_bundles = assemble_bundles(live_rows, &stats);
-    attach_proofs(ctx, &mut event_bundles).await?;
-
     let mut label_bundles = assemble_bundles(label_events, &stats);
-    attach_proofs(ctx, &mut label_bundles).await?;
+    attach_proofs(
+        ctx,
+        tombstone_bundles
+            .iter_mut()
+            .chain(&mut event_bundles)
+            .chain(&mut label_bundles),
+    )
+    .await?;
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.
