@@ -15,7 +15,7 @@ import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandl
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { Username } from '@/src/features/profile/Username';
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, {
@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from '../follow/FollowButton';
+import { FollowCounts } from './FollowCounts';
 import { IdentityHandle } from './IdentityHandle';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
@@ -236,54 +237,6 @@ function IdentityKeyText({ value }: { value: string }) {
       <Text variant="secondary" color="muted" style={{ flexShrink: 0 }}>
         {value.slice(-KEY_TAIL_LENGTH)}
       </Text>
-    </View>
-  );
-}
-
-// Following / followers counts linking to their lists.
-function FollowCounts({
-  identityKey,
-  following,
-  followers,
-}: {
-  identityKey: string;
-  following: number;
-  followers: number;
-}) {
-  const counts: {
-    label: string;
-    count: number;
-    route: Href;
-  }[] = [
-    {
-      label: 'Following',
-      count: following,
-      route: Routes.tabs.profileFollowing(identityKey),
-    },
-    {
-      label: 'Followers',
-      count: followers,
-      route: Routes.tabs.profileFollowers(identityKey),
-    },
-  ];
-
-  return (
-    <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.mt_sm]}>
-      {counts.map(({ label, count, route }) => (
-        <Pressable
-          key={label}
-          accessibilityRole="link"
-          onPress={() => router.navigate(route)}
-          style={({ pressed }) => [pressed && Atoms.faded]}
-        >
-          <Text variant="secondary" color="muted" selectable={false}>
-            <Text variant="secondary" fontWeight="semibold">
-              {count}
-            </Text>{' '}
-            {label}
-          </Text>
-        </Pressable>
-      ))}
     </View>
   );
 }

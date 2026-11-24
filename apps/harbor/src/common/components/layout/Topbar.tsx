@@ -6,8 +6,10 @@ import { Pressable, View } from 'react-native';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '../../theme';
+import { isWeb } from '../../util/platform';
 import { TOPBAR_HEIGHT } from '../metrics';
 import { ProfileAvatar, Text } from '../primitives';
+import { useNavDrawerStore } from './nav/drawer/hooks/useNavDrawerStore';
 
 const SIDE_WIDTH = 32;
 
@@ -77,14 +79,17 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               identityKey={identityKey ?? ''}
               size="sm"
               containerProps={{ hitSlop: Spacing['lg'] }}
+              accessibilityLabel={isWeb ? undefined : 'Open menu'}
               onPress={
-                identityKey
-                  ? () =>
-                      router.navigate({
-                        pathname: '/[identityId]',
-                        params: { identityId: identityKey },
-                      })
-                  : undefined
+                !isWeb
+                  ? useNavDrawerStore.getState().show
+                  : identityKey
+                    ? () =>
+                        router.navigate({
+                          pathname: '/[identityId]',
+                          params: { identityId: identityKey },
+                        })
+                    : undefined
               }
             />
           ))}

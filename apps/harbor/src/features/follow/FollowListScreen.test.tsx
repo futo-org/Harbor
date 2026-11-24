@@ -135,6 +135,7 @@ jest.mock('expo-router', () => ({
   },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
   useFocusEffect: () => undefined,
+  useIsFocused: () => true,
 }));
 
 jest.mock('@/src/features/follow/FollowingBadge', () => ({

@@ -1,0 +1,121 @@
+import { useIsTabRoot } from '@/src/common/lib/navigation/useIsTabRoot';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { isIOS } from '@/src/common/util/platform';
+import { usePathname } from 'expo-router';
+import { type ReactNode, useEffect } from 'react';
+import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { NavDrawerContent } from './NavDrawerContent';
+import { useNavDrawerPan } from './hooks/useNavDrawerPan';
+import { useNavDrawerStore } from './hooks/useNavDrawerStore';
+import { useNavDrawerWidth } from './hooks/useNavDrawerWidth';
+import { NavDrawerGestureContext } from './lib/nav-drawer-gesture-context';
+import { navDrawerProgress } from './lib/nav-drawer-progress';
+
+const EDGE_WIDTH = 30;
+const SCREEN_RADIUS = isIOS ? 48 : 28;
+
+/** Wraps the root stack on native and slides it aside for the drawer;
+    opened by the topbar avatar or a drag to the right on a tab root. */
+export function NavDrawer({ children }: { children: ReactNode }) {
+  const { theme } = useTheme();
+  const width = useNavDrawerWidth();
+
+  const open = useNavDrawerStore((s) => s.open);
+  const hide = useNavDrawerStore((s) => s.hide);
+  const pagerOffFirstPage = useNavDrawerStore((s) => (s.pager?.page ?? 0) > 0);
+  const pathname = usePathname();
+  const isTabRoot = useIsTabRoot();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: closes the drawer on every route change
+  useEffect(() => {
+    hide();
+  }, [pathname, hide]);
+
+  useEffect(() => {
+    navDrawerProgress.value = withTiming(open ? 1 : 0, { duration: 200 });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      hide();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open, hide]);
+
+  const pan = useNavDrawerPan({
+    enabled: open || isTabRoot,
+    edgeWidth: !open && pagerOffFirstPage ? EDGE_WIDTH : undefined,
+  });
+
+  const contentStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: navDrawerProgress.value * width }],
+    borderRadius: Math.min(1, navDrawerProgress.value * 4) * SCREEN_RADIUS,
+  }));
+  const panelStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (navDrawerProgress.value - 1) * width }],
+  }));
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: navDrawerProgress.value,
+  }));
+
+  return (
+    <GestureDetector gesture={pan}>
+      <View
+        collapsable={false}
+        style={[Atoms.flex_1, theme.atoms.box.primary.bg]}
+      >
+        <Animated.View
+          importantForAccessibility={open ? 'no-hide-descendants' : 'auto'}
+          style={[
+            Atoms.flex_1,
+            Atoms.overflow_hidden,
+            { borderCurve: 'continuous' },
+            contentStyle,
+          ]}
+        >
+          <NavDrawerGestureContext value={pan}>
+            {children}
+          </NavDrawerGestureContext>
+          <Animated.View
+            pointerEvents={open ? 'auto' : 'none'}
+            style={[
+              StyleSheet.absoluteFill,
+              theme.atoms.backdrop.modal,
+              backdropStyle,
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close menu"
+              onPress={hide}
+              style={Atoms.flex_1}
+            />
+          </Animated.View>
+        </Animated.View>
+        <Animated.View
+          testID="nav-drawer"
+          pointerEvents={open ? 'auto' : 'none'}
+          accessibilityElementsHidden={!open}
+          accessibilityViewIsModal={open}
+          onAccessibilityEscape={hide}
+          importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+          style={[
+            Atoms.absolute,
+            { top: 0, bottom: 0, left: 0, width },
+            theme.atoms.box.primary.bg,
+            panelStyle,
+          ]}
+        >
+          <NavDrawerContent />
+        </Animated.View>
+      </View>
+    </GestureDetector>
+  );
+}
