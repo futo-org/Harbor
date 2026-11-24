@@ -1,4 +1,5 @@
 import { Atoms, Spacing } from '@/src/common/theme';
+import { isIOS } from '@/src/common/util/platform';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppFooter } from '../../AppFooter';
@@ -18,7 +19,9 @@ export function NavDrawerContent() {
           minHeight: '100%',
           paddingHorizontal: Spacing.md,
           paddingTop: insets.top,
-          paddingBottom: Math.max(insets.bottom * 0.75, Spacing.md),
+          paddingBottom: isIOS
+            ? Math.max(insets.bottom * 0.75, Spacing.md)
+            : insets.bottom + Spacing.md,
         },
       ]}
     >
