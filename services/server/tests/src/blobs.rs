@@ -334,9 +334,9 @@ async fn verification_claim_with_three_images() {
 }
 
 macro_rules! image_fn {
-    ( $( $name: ident . $ext: ident: $width: expr, $height: expr $(;)* )+ ) => {
+    ( $( $vis: vis $name: ident . $ext: ident: $width: expr, $height: expr $(;)* )+ ) => {
         $(
-        fn $name() -> (Image, &'static [u8]) {
+        $vis fn $name() -> (Image, &'static [u8]) {
             const BYTES: &[u8] = include_bytes!(concat!("../images/", stringify!($name), ".", stringify!($ext)));
             let image = Image {
                 blob: Some(Blob {
@@ -357,23 +357,49 @@ macro_rules! image_fn {
 }
 
 image_fn!(
-    avatar.jpg: 256, 256;
-    banner.svg: 2048, 2048;
-    post0.png: 512, 512;
-    post1.png: 512, 512;
-    post2.png: 512, 512;
-    verification0.png: 1152, 1152;
-    verification1.png: 512, 512;
-    verification2.png: 512, 512;
+    avatar.jpg: 100, 100;
+    banner.svg: 100, 100;
+    post0.png: 100, 100;
+    post1.png: 100, 100;
+    post2.png: 100, 100;
+    verification0.png: 100, 100;
+    verification1.png: 100, 100;
+    verification2.png: 100, 100;
 );
 
-async fn test_blob_upload(blob: &Blob, bytes: &[u8]) {
-    upload(blob, bytes).await.expect("failed to upload blob");
+/// NOTE: image data is invalid.
+pub(crate) fn random_image() -> (Image, Vec<u8>) {
+    let bytes = crate::random_blob();
+    let image = Image {
+        blob: Some(Blob {
+            digest: Some(content_digest(&bytes)),
+            mime_type: "image/svg+xml".to_owned(),
+            size: bytes.len() as _,
+        }),
+        width: 32,
+        height: 32,
+    };
+    (image, bytes)
+}
 
+pub(crate) async fn test_blob_upload(blob: &Blob, bytes: &[u8]) {
+    upload(blob, bytes).await.expect("failed to upload blob");
+    let got = get_blob(&blob).await.expect("blob is missing");
+    assert_eq!(got, bytes);
+}
+
+pub(crate) async fn get_blob(blob: &Blob) -> Option<Vec<u8>> {
     let response = reqwest::get(blob_url(blob.digest.as_ref().unwrap()))
         .await
-        .expect("GET /blob failed");
-    assert_eq!(response.status(), reqwest::StatusCode::OK);
-    let got = response.bytes().await.expect("failed to read blob");
-    assert_eq!(got.as_ref(), bytes);
+        .expect("failed to get blob");
+    if response.status() != reqwest::StatusCode::OK {
+        return None;
+    }
+    Some(
+        response
+            .bytes()
+            .await
+            .expect("failed to read blob")
+            .to_vec(),
+    )
 }

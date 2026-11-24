@@ -3,6 +3,13 @@ import { Linking, StyleSheet } from 'react-native';
 import type { v2 } from '@polycentric/react-native';
 import { COMPACT_IMAGE_WIDTH, LinkPreviewCard } from './LinkPreviewCard';
 
+let mockIsWeb = false;
+jest.mock('@/src/common/util/platform', () => ({
+  get isWeb() {
+    return mockIsWeb;
+  },
+}));
+
 // The card pulls its colors/atoms from the theme; under test we don't render
 // the real ThemeProvider (it blocks on font + storage loads), so stub the
 // barrel with just what the card touches.
@@ -49,6 +56,7 @@ const makeLink = (overrides: Partial<v2.Link> = {}): v2.Link =>
 describe('LinkPreviewCard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsWeb = false;
   });
 
   it('renders the host, title, and description', async () => {
@@ -107,7 +115,21 @@ describe('LinkPreviewCard', () => {
     expect(queryAllByText(/.+/)).toHaveLength(1);
   });
 
-  it('opens the url when pressed', async () => {
+  it('on web, renders an anchor that opens the url in a new tab', async () => {
+    mockIsWeb = true;
+    const { toJSON } = await render(
+      <LinkPreviewCard link={makeLink({ url: 'https://example.com/path' })} />,
+    );
+
+    expect(toJSON()).toMatchObject({
+      props: {
+        href: 'https://example.com/path',
+        hrefAttrs: { target: '_blank' },
+      },
+    });
+  });
+
+  it('on native, opens the url when pressed', async () => {
     const openURL = jest
       .spyOn(Linking, 'openURL')
       .mockResolvedValue(true as never);

@@ -1,5 +1,12 @@
 //! Tests for banned identities.
 
+use std::sync::Once;
+use std::time::Duration;
+
+use tokio::time::sleep;
+
+use crate::blobs::{get_blob, random_image, test_blob_upload};
+use crate::search_users::expect_searched_users;
 use crate::*;
 
 #[tokio::test]
@@ -14,9 +21,13 @@ async fn ban_after_identity_creation() {
     let event_bundles = take(&mut client.pending);
     let response = client
         .event_sync_client
-        .put_events(PutEventsRequest {
-            event_bundles: event_bundles.clone(),
-        })
+        .put_events(as_identity(
+            &client.identity,
+            &client.key,
+            PutEventsRequest {
+                event_bundles: event_bundles.clone(),
+            },
+        ))
         .await
         .expect("put_events failed")
         .into_inner();
@@ -34,9 +45,13 @@ async fn ban_before_identity_creation() {
     let event_bundles = take(&mut client.pending);
     let response = client
         .event_sync_client
-        .put_events(PutEventsRequest {
-            event_bundles: event_bundles.clone(),
-        })
+        .put_events(as_identity(
+            &client.identity,
+            &client.key,
+            PutEventsRequest {
+                event_bundles: event_bundles.clone(),
+            },
+        ))
         .await
         .expect("put_events failed")
         .into_inner();
@@ -139,6 +154,96 @@ async fn banning_removes_posts() {
 }
 
 #[tokio::test]
+#[ignore = "fails on the CI"]
+async fn banning_removes_posts_with_images() {
+    let (banned_post_image, banned_post_image_bytes) = random_image();
+    let banned_post_image_blob = banned_post_image.blob.clone().unwrap();
+
+    let mut banned_client = TestClient::new().await;
+    let post = Post {
+        text: "Hello, World!".to_owned(),
+        images: vec![ImageSet {
+            images: vec![banned_post_image],
+        }],
+        ..Default::default()
+    };
+    banned_client.post(post, current_timestamp());
+    banned_client.submit_events().await;
+    test_blob_upload(&banned_post_image_blob, &banned_post_image_bytes).await;
+    let banned_identity = banned_client.identity().to_owned();
+
+    set_ban_status(&banned_identity, true).await;
+    prune_blob(&[banned_post_image_blob]).await;
+}
+
+#[tokio::test]
+#[ignore = "fails on the CI"]
+async fn banning_removes_verification_claims_with_images() {
+    let (banned_verification_image, banned_verification_image_bytes) =
+        random_image();
+    let banned_verification_image_blob =
+        banned_verification_image.blob.clone().unwrap();
+
+    let mut banned_client = TestClient::new().await;
+    let mut claim = github_verification_claim("test");
+    claim.images = vec![ImageSet {
+        images: vec![banned_verification_image],
+    }];
+    banned_client.verification_claim(claim, current_timestamp());
+    banned_client.submit_events().await;
+    test_blob_upload(
+        &banned_verification_image_blob,
+        &banned_verification_image_bytes,
+    )
+    .await;
+    let banned_identity = banned_client.identity().to_owned();
+
+    set_ban_status(&banned_identity, true).await;
+    prune_blob(&[banned_verification_image_blob]).await;
+}
+
+#[tokio::test]
+#[ignore = "fails on the CI"]
+async fn banning_removes_profile_updates_with_avatars_and_banners() {
+    let (banned_avatar_image, banned_avatar) = random_image();
+    let banned_avatar_blob = banned_avatar_image.blob.clone().unwrap();
+    let (banned_banner_image, banned_banner) = random_image();
+    let banned_banner_blob = banned_banner_image.blob.clone().unwrap();
+
+    let mut banned_client = TestClient::new().await;
+    let profile_name = "Bad Bot".to_owned();
+    let profile_update = ProfileUpdate {
+        name: Some(profile_name.clone()),
+        avatar: Some(ImageSet {
+            images: vec![banned_avatar_image],
+        }),
+        banner: Some(ImageSet {
+            images: vec![banned_banner_image],
+        }),
+        description: None,
+        alias: None,
+    };
+    banned_client.profile_update(profile_update, current_timestamp());
+    banned_client.submit_events().await;
+    test_blob_upload(&banned_avatar_blob, &banned_avatar).await;
+    test_blob_upload(&banned_banner_blob, &banned_banner).await;
+    let banned_identity = banned_client.identity().to_owned();
+
+    set_ban_status(&banned_identity, true).await;
+    prune_blob(&[banned_avatar_blob, banned_banner_blob]).await;
+
+    expect_searched_users(
+        SearchUsersRequest {
+            query: profile_name,
+            sort_by: None,
+            page_params: None,
+        },
+        Vec::new(),
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn banning_removes_reactions() {
     let mut banned_client = TestClient::new().await;
 
@@ -184,7 +289,6 @@ async fn banning_removes_reactions() {
         .await
         .unwrap()
         .into_inner();
-    dbg!(&response.event_bundles);
     assert_eq!(response.event_bundles.len(), 1);
     assert_eq!(
         response.event_bundles[0]
@@ -200,7 +304,6 @@ async fn banning_removes_reactions() {
 // repost
 // quote
 // reply
-// profile
 // block
 // notifications?
 // attributed_to_reaction
@@ -226,4 +329,92 @@ async fn set_ban_status(identity: &str, banned: bool) {
         .set_ban_status(request)
         .await
         .unwrap();
+
+    if banned {
+        let response = moderator
+            .event_sync_client()
+            .list_events(ListEventsRequest {
+                size: Some(1),
+                filters: Some(ListEventsFilters {
+                    identity: identity.to_owned(),
+                    ..Default::default()
+                }),
+            })
+            .await
+            .expect("list_events failed")
+            .into_inner();
+        assert!(
+            response.event_bundles.is_empty()
+                && response.event_hints.is_empty()
+        );
+    }
+}
+
+async fn prune_blob(blobs: &[Blob]) {
+    // Build the admin CLI tool once and use the created binary below.
+    static BUILD: Once = Once::new();
+    BUILD.call_once(|| {
+        std::process::Command::new("cargo")
+            .args(["build", "--quiet", "--bin", "server"])
+            .current_dir("..")
+            .status()
+            .expect("failed to build server");
+    });
+
+    let mut output;
+    let mut i = 0;
+    loop {
+        i += 1;
+
+        let mut blob_exists = false;
+        for blob in blobs {
+            if get_blob(blob).await.is_some() {
+                blob_exists = true;
+                break;
+            }
+        }
+        if !blob_exists {
+            // Another prune call already removed the blob(s).
+            return;
+        }
+
+        output = tokio::process::Command::new("../../target/debug/server")
+            .args(["prune-blobs", "--grace-period-secs", "0"])
+            .current_dir("..")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .await
+            .expect("failed to prune blobs via admin CLI");
+
+        if String::from_utf8_lossy(&output.stdout).contains("skip") {
+            // If we skipped the pruning (e.g. when another process is holding
+            // the lock) we need to try again to ensure the blob(s) the caller
+            // cares about are pruned.
+            sleep(Duration::from_millis(50)).await;
+            continue;
+        }
+
+        if output.status.success() {
+            for blob in blobs {
+                if get_blob(blob).await.is_some() {
+                    panic!("blob still existing after pruning {blob:?}");
+                }
+            }
+
+            return;
+        }
+
+        if i >= 3 {
+            break;
+        }
+    }
+
+    use std::io::Write;
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    let stderr = std::io::stderr();
+    let mut stderr = stderr.lock();
+    _ = stdout.write_all(&output.stdout);
+    _ = stderr.write_all(&output.stderr);
+    panic!("running prune blob admin CLI failed");
 }

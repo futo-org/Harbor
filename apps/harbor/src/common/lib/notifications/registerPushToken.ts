@@ -35,6 +35,21 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
   if (!granted) return null;
 
+  return fetchPushToken();
+}
+
+/** The device's push token, without asking for permission. */
+export async function getPushToken(): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+  if (!Device.isDevice && !__DEV__) return null;
+
+  const { granted } = await Notifications.getPermissionsAsync();
+  if (!granted) return null;
+
+  return fetchPushToken();
+}
+
+async function fetchPushToken(): Promise<string | null> {
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId;

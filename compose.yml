@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18@sha256:2ea8630df176ad090ec92136dee850397c5af8781e4bcf2e4162593691c61bbc
+    image: postgres:18@sha256:a47637053e65dc7112aeb7353feb8b87954982ad5fd4524908c284d90d71b5e3
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -227,7 +227,7 @@ services:
       start_period: 10s
 
   rustfs-init:
-    image: rustfs/rc:latest@sha256:7e93fd410a8fe51514f89373e093392c92095b98dc6140335fcfe956810c4c80
+    image: rustfs/rc:latest@sha256:3c080aff53f0d3b06554fd08711d05c80be40bd7e56001874d7df5e18d5ec88a
     depends_on:
       rustfs:
         condition: service_healthy
@@ -263,7 +263,7 @@ services:
       - kafka-data:/var/lib/kafka/data
 
   valkey:
-    image: valkey/valkey:9@sha256:3add1a336a920ea54770a001ab6feb3da5fceea96a40373a3a2cd469b815f0b7
+    image: valkey/valkey:9@sha256:1c2b25b09f354c66fe994733acdf12fcfd4bdf6f3bd92b88a93a70378d884056
     command: [ "valkey-server", "--save", "", "--appendonly", "no" ]
     ports:
       - 6379:6379
@@ -308,7 +308,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest@sha256:5deb20e3ec84781d137231a23ebc3520e012e8e83d59bee25355f7fba1010a12
+    image: redpandadata/console:latest@sha256:aa055a971965606f89c00cc2367e38c95f93f0cb3a4ff96701cbb117af8e23f8
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092

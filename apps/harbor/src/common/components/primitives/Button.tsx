@@ -180,7 +180,7 @@ const textColorMap: Record<ButtonVariant, TextColor> = {
   primary: 'light',
   secondary: 'accent',
   tertiary: 'primary',
-  destructive: 'danger',
+  destructive: 'light',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
@@ -198,7 +198,7 @@ function getVariantStyle(
     case 'tertiary':
       return [transparent.bg, outline];
     case 'destructive':
-      return [box.danger.bg_subtle, box.danger.border_subtle];
+      return [box.danger.bg, box.danger.border];
   }
 }
 
@@ -215,6 +215,6 @@ function getHoverVariantStyle(
     case 'tertiary':
       return box.raised.bg;
     case 'destructive':
-      return box.danger.bg_subtle_hover;
+      return box.danger.bg_hover;
   }
 }

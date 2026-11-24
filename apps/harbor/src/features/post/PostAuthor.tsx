@@ -1,17 +1,16 @@
-import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, createThemedStyles } from '@/src/common/theme';
 import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandle';
 import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
-import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
+import { type StyleProp, View, type ViewStyle } from 'react-native';
 
 type PostAuthorProps = {
   identity: string | null;
-  onNamePress?: () => void;
   // Puts the handle under the name instead of after it
   stacked?: boolean;
 };
 
+/** The author's name and handle, both linked to their profile. */
 export function PostAuthor({ stacked = false, ...props }: PostAuthorProps) {
   return stacked ? (
     <StackedNameAndHandle {...props} />
@@ -20,24 +19,20 @@ export function PostAuthor({ stacked = false, ...props }: PostAuthorProps) {
   );
 }
 
-function StackedNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
+function StackedNameAndHandle({ identity }: PostAuthorProps) {
   return (
     <>
-      <AuthorName
-        identity={identity}
-        onPress={onNamePress}
-        style={Atoms.flex_shrink_1}
-      />
+      <AuthorName identity={identity} style={Atoms.flex_shrink_1} />
       {identity ? (
         <View style={Atoms.self_start}>
-          <IdentityHandle identity={identity} />
+          <IdentityHandle identity={identity} linkToProfile />
         </View>
       ) : null}
     </>
   );
 }
 
-function InlineNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
+function InlineNameAndHandle({ identity }: PostAuthorProps) {
   const styles = useStyles();
   const isHandleHash = useIdentityHandle(identity).kind === 'hash';
 
@@ -45,12 +40,12 @@ function InlineNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
     <>
       <AuthorName
         identity={identity}
-        onPress={onNamePress}
         style={isHandleHash ? styles.nameBeforeHash : styles.nameBeforeAlias}
       />
       {identity ? (
         <IdentityHandle
           identity={identity}
+          linkToProfile
           style={isHandleHash ? styles.hash : styles.alias}
         />
       ) : null}
@@ -60,30 +55,20 @@ function InlineNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
 
 function AuthorName({
   identity,
-  onPress,
   style,
 }: {
   identity: string | null;
-  onPress?: () => void;
   style: StyleProp<ViewStyle>;
 }) {
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
-
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
-      style={style}
-    >
+    <View style={style}>
       <Username
         identity={identity}
+        linkToProfile
         variant="secondary"
         fontWeight="bold"
-        style={hovered && onPress && Atoms.text_underline}
       />
-    </Pressable>
+    </View>
   );
 }
 

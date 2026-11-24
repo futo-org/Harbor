@@ -1,11 +1,15 @@
-import { ProfileAvatar, Text } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
+import {
+  InlineLink,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
+import { isWeb } from '@/src/common/util/platform';
 import { COLLECTION } from '@polycentric/react-native';
-import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';
@@ -47,16 +51,10 @@ export const Post = memo(function Post({
 
   const authorIdentity = post.identity ?? null;
 
-  const handlePress = useCallback(() => {
-    if (disablePress) return;
-    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
-    if (route) router.navigate(route);
-  }, [disablePress, post]);
-
-  const handleAuthorPress = useCallback(() => {
-    if (!authorIdentity) return;
-    router.navigate(Routes.tabs.profile(authorIdentity));
-  }, [authorIdentity]);
+  const postRoute = disablePress
+    ? null
+    : eventRoute({ ...post, collection: COLLECTION.FEED });
+  const cardLinkProps = useCardLinkPress(postRoute);
 
   const shownAt = post.createdAt;
   const fullTimestamp = useMemo(() => {
@@ -80,11 +78,7 @@ export const Post = memo(function Post({
   const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
 
   const avatar = authorIdentity ? (
-    <ProfileAvatar
-      identityKey={authorIdentity}
-      size="md"
-      onPress={handleAuthorPress}
-    />
+    <ProfileAvatar identityKey={authorIdentity} size="md" linkToProfile />
   ) : null;
 
   const authorRow = (
@@ -92,7 +86,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthor identity={authorIdentity} onNamePress={handleAuthorPress} />
+        <PostAuthor identity={authorIdentity} />
 
         {shownAt ? (
           <>
@@ -105,7 +99,15 @@ export const Post = memo(function Post({
               ·
             </Text>
             <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
-              <TimeAgo since={shownAt} />
+              {/* Same target as the card: on native it would only take the
+                  card's press feedback. */}
+              {isWeb && postRoute ? (
+                <InlineLink href={postRoute}>
+                  <TimeAgo since={shownAt} />
+                </InlineLink>
+              ) : (
+                <TimeAgo since={shownAt} />
+              )}
             </Text>
           </>
         ) : null}
@@ -144,7 +146,7 @@ export const Post = memo(function Post({
         !hideBottomBorder && [theme.atoms.box.primary.border, Atoms.border_b],
         pressed && theme.atoms.box.primary.bg_hover,
       ]}
-      onPress={handlePress}
+      {...cardLinkProps}
       disabled={disablePress}
     >
       <PostHeader
@@ -158,11 +160,7 @@ export const Post = memo(function Post({
           <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
-              <PostAuthor
-                identity={authorIdentity}
-                onNamePress={handleAuthorPress}
-                stacked
-              />
+              <PostAuthor identity={authorIdentity} stacked />
             </View>
             <PostMenu post={post} />
           </View>

@@ -54,7 +54,7 @@ const touches = (...patterns) =>
 
 // Source rules (GitLab `changes:`) ------------------------------------------
 
-const CARGO = /^Cargo\.(toml|lock)$/;
+const CARGO = /^Cargo\.lock$/;
 const LOCK = /^pnpm-lock\.yaml$/;
 const CHARTS = 'deploy/charts/';
 const NODE_ROOT = [

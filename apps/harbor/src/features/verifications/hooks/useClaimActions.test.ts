@@ -102,11 +102,15 @@ describe('deleteClaim', () => {
 
   it('does not throw when the push fails', async () => {
     mockClient.sync.mockRejectedValueOnce(new Error('offline'));
+    // Suppress the console warning that we expect from cluttering the output
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     await expect(
       deleteClaim(mockClient as never, CLAIM_ID),
     ).resolves.toBeUndefined();
     expect(mockClient.createEvent).toHaveBeenCalled();
+
+    warn.mockRestore();
   });
 });
 

@@ -3,6 +3,7 @@ import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import { Atoms, useTheme } from '@/src/common/theme';
@@ -14,8 +15,7 @@ import { getPlatformFromClaim } from '@/src/features/verifications/utils/platfor
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
 import { COLLECTION } from '@polycentric/react-native';
-import { type Href, router } from 'expo-router';
-import { useCallback } from 'react';
+import type { Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type {
   MentionNotification,
@@ -126,21 +126,14 @@ function InteractionNotification({
 
   const quoted = quotedPost(notification);
 
-  const handlePress = useCallback(() => {
-    router.navigate(
-      notificationRoute(notification) ??
-        Routes.tabs.profile(notification.fromIdentity),
-    );
-  }, [notification]);
-
-  const openProfile = useCallback(
-    () => router.navigate(Routes.tabs.profile(notification.fromIdentity)),
-    [notification.fromIdentity],
+  const cardLinkProps = useCardLinkPress(
+    notificationRoute(notification) ??
+      Routes.tabs.profile(notification.fromIdentity),
   );
 
   return (
     <Pressable
-      onPress={handlePress}
+      {...cardLinkProps}
       style={[Atoms.p_md, theme.atoms.box.primary.border, Atoms.border_b]}
     >
       <EventSummary
@@ -148,14 +141,14 @@ function InteractionNotification({
           <ProfileAvatar
             identityKey={notification.fromIdentity}
             size="md"
-            onPress={openProfile}
+            linkToProfile
           />
         }
         title={
           <Username
             identity={notification.fromIdentity}
             fontWeight="bold"
-            onPress={openProfile}
+            linkToProfile
           />
         }
         action={summary(notification)}

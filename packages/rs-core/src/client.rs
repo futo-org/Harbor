@@ -13,8 +13,8 @@ use polycentric_common::{
 use crate::lock::LockRecover;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
-    identity_store::IdentityStore, keys::EventKey, label_store::LabelStore, meta_store::MetaStore,
-    pairing_store::PairingStore,
+    identity_store::IdentityStore, keys::EventKey, label_store::LabelStore,
+    merkle_tree_store::MerkleTreeStore, meta_store::MetaStore, pairing_store::PairingStore,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -45,6 +45,7 @@ pub struct PolycentricClient {
     label_store: LabelStore,
     identity_store: IdentityStore,
     pairing_store: PairingStore,
+    merkle_tree_store: MerkleTreeStore,
 }
 
 impl PolycentricClient {
@@ -107,6 +108,11 @@ impl PolycentricClient {
         let event_key = EventKey::from_signed_event(&signed_event)?;
         let identity =
             (event_key.collection == collections::IDENTITY).then(|| event_key.identity.clone());
+
+        // Keep the Merkle tree in step with the store.
+        if self.event_store.get(&event_key).is_none() {
+            self.merkle_tree_store.insert(&event_key, &signed_event);
+        }
 
         // Do the insertion
         let inserted = self.event_store.insert_at(signed_event, event_key);
@@ -414,31 +420,17 @@ impl PolycentricClient {
             .unwrap_or(1)
     }
 
-    /// Canonically-ordered signatures in `(identity, collection)`.
-    /// Delegates to [`polycentric_common::merkle::canonical_signatures`]
-    /// so client and server agree on the ordering.
-    fn canonical_signatures(&self, identity: &str, collection: i32) -> Vec<Vec<u8>> {
-        polycentric_common::merkle::canonical_signatures(
-            self.event_store
-                .by_identity_and_collection(identity, collection)
-                .map(|(_, se)| (se.event_bytes.as_slice(), se.signature.as_slice())),
-        )
-    }
-
     /// Merkle root over canonically-ordered signatures in `(identity, collection)`.
     pub fn previous_root(&self, identity: &str, collection: i32) -> Vec<u8> {
-        let leaves = self.canonical_signatures(identity, collection);
-        polycentric_common::merkle::merkle_tree_hash(&leaves)
-            .map(|h| h.to_vec())
-            .unwrap_or_default()
+        self.merkle_tree_store
+            .root(identity, collection, &self.event_store)
     }
 
     /// Signature of the canonically-latest event in `(identity, collection)`,
     /// or empty if none.
     pub fn previous_signature(&self, identity: &str, collection: i32) -> Vec<u8> {
-        self.canonical_signatures(identity, collection)
-            .pop()
-            .unwrap_or_default()
+        self.merkle_tree_store
+            .last_signature(identity, collection, &self.event_store)
     }
 
     /// Build a vector clock for a single collection within an identity.
@@ -918,12 +910,18 @@ mod tests {
                         .map(|(collection, (_, signed))| {
                             let inner = Event::decode(signed.event_bytes.as_slice())
                                 .expect("head event decodes");
-                            let leaf_count = client
-                                .canonical_signatures(&id_string, collection)
-                                .into_iter()
-                                .position(|s| s == signed.signature)
-                                .map(|p| p as u64)
-                                .unwrap_or(0);
+                            let leaf_count = polycentric_common::merkle::canonical_signatures(
+                                client
+                                    .event_store
+                                    .by_identity_and_collection(&id_string, collection)
+                                    .map(|(_, se)| {
+                                        (se.event_bytes.as_slice(), se.signature.as_slice())
+                                    }),
+                            )
+                            .into_iter()
+                            .position(|s| s == signed.signature)
+                            .map(|p| p as u64)
+                            .unwrap_or(0);
                             EventProofTarget {
                                 collection,
                                 signature: signed.signature.clone(),
@@ -1422,6 +1420,96 @@ mod tests {
         client
             .validate_event(&b_prior, &[])
             .expect("B's prior event remains valid after revocation");
+    }
+
+    /// The cached root and last signature must always equal a fresh rebuild
+    /// from the event store, however events arrive.
+    #[test]
+    fn kept_merkle_tree_follows_copied_events() {
+        use polycentric_common::merkle;
+
+        // Two identities, each with one signing key.
+        let mut client = PolycentricClient::new();
+        let (a, b) = (keypair(1), keypair(2));
+        let (c, d) = (keypair(3), keypair(4));
+        let first = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+        let second = add_identity_event(
+            &mut client,
+            &c,
+            None,
+            1,
+            vec![c.public.clone()],
+            vec![d.public.clone()],
+        );
+
+        // Three trees, as (identity, signer, collection): they must not mix.
+        let trees = [(&first, &b, 2), (&first, &b, 3), (&second, &d, 2)];
+
+        // Expected: root and last signature rebuilt from the event store.
+        let rebuilt = |client: &PolycentricClient, identity: &str, collection| {
+            let signatures = merkle::canonical_signatures(
+                client
+                    .event_store
+                    .by_identity_and_collection(identity, collection)
+                    .map(|(_, se)| (se.event_bytes.as_slice(), se.signature.as_slice())),
+            );
+            let root = merkle::merkle_tree_hash(&signatures);
+            (
+                root.map(|h| h.to_vec()).unwrap_or_default(),
+                signatures.last().cloned().unwrap_or_default(),
+            )
+        };
+        // Actual: what the client answers from its cache.
+        let cached = |client: &PolycentricClient, identity: &str, collection| {
+            (
+                client.previous_root(identity, collection),
+                client.previous_signature(identity, collection),
+            )
+        };
+        let assert_cache_matches_rebuild = |client: &PolycentricClient| {
+            for (identity, _, collection) in trees {
+                assert_eq!(
+                    cached(client, identity, collection),
+                    rebuilt(client, identity, collection),
+                    "identity={identity} collection={collection}"
+                );
+            }
+        };
+
+        // Ten events per tree: sequences 1..=10, which is their canonical order.
+        let events: Vec<_> = (1..=10)
+            .flat_map(|sequence| trees.map(|tree| (tree, sequence)))
+            .collect();
+
+        for step in 0..events.len() {
+            // Stepping by 7 visits all 30 once, scrambled: trees interleave
+            // and some events sort before ones already copied.
+            let ((identity, signer, collection), sequence) = events[step * 7 % events.len()];
+            let event = sign_event(
+                signer,
+                identity,
+                collection,
+                sequence,
+                1,
+                vec![0, sequence],
+                dummy_post_digest(),
+            );
+            client.copy_event(event).unwrap();
+
+            // Check only every fourth copy: a tree is cached when first read,
+            // so some are first built with several events already stored.
+            if step % 4 == 0 {
+                assert_cache_matches_rebuild(&client);
+            }
+        }
+        assert_cache_matches_rebuild(&client);
     }
 
     #[test]

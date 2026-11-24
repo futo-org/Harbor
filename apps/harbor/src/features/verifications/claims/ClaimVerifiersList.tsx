@@ -1,9 +1,7 @@
 import { Text } from '@/src/common/components';
-import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { router } from 'expo-router';
 import { View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import type { ClaimVerifier } from '../utils/claim-status';
@@ -78,7 +76,7 @@ function VerifierRow({
       key={verifier.identity}
       identity={verifier.identity}
       size="sm"
-      onPress={() => router.navigate(Routes.tabs.profile(verifier.identity))}
+      linkToProfile
       trailing={
         canRemove ? (
           <ClaimVerifierMenu

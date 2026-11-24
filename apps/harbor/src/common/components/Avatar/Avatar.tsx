@@ -3,6 +3,7 @@ import { Atoms, createThemedStyles } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
 import {
   Pressable,
+  type PressableProps,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -54,7 +55,10 @@ export function useAvatarSizeRequest(
   return { displayPixels, minPixels };
 }
 
-interface AvatarProps extends Omit<ImageProps, 'source'> {
+interface AvatarProps
+  extends Omit<ImageProps, 'source'>,
+    // Set by `<Link asChild>`, making the pressable avatar an anchor.
+    Pick<PressableProps, 'href' | 'role'> {
   source?: ImageProps['source'];
   /**
    * Forces the image to clear + reload when it changes — set this when an
@@ -82,6 +86,11 @@ export function Avatar({
   size: sizeProp = 'md',
   containerProps,
   onPress,
+  href,
+  role,
+  // Also set by `<Link asChild>`. Kept off the image: the Pressable's own
+  // click handling calls the link's `onPress`.
+  onClick: _,
   ...imageProps
 }: AvatarProps) {
   const styles = useStyles();
@@ -130,7 +139,9 @@ export function Avatar({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      role={role}
       {...containerProps}
+      href={href}
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}

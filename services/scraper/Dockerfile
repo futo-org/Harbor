@@ -1,5 +1,5 @@
 # Stage 1: Base - Node
-FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS base
+FROM node:26-trixie-slim@sha256:615a27817f7b9508f0de73eb1cc8fc8894ab122bee56c1a7a568b72cd1032067 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -10,7 +10,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 # the feed is unreachable or returns garbage, so the egress set can't silently
 # ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
 # bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
-FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS bogons
+FROM debian:trixie-slim@sha256:8aa5a7bf5a1955bddbe7d74fcdd0b91ab30e74362a8b73af672b0481b35b44a0 AS bogons
 ARG BOGONS_REV=2026-06-22
 RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
   && apt-get update \

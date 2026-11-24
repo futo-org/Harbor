@@ -1,6 +1,6 @@
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION } from '../constants';
 import { MemoryStorageDriver } from '../memory-storage';
 import {
@@ -193,6 +193,24 @@ describe('EventStore', () => {
         'invalid content',
       );
       expect(await store.getAll(OWNER)).toEqual([]);
+    });
+
+    it('adds content when the event is inserted between its get and insert', async () => {
+      // Insert event without content.
+      await store.persist(OWNER, makeEvent());
+
+      // Mock `get()` to behave as if the event is missing on the first read.
+      vi.spyOn(repository, 'get').mockResolvedValueOnce(null);
+
+      // Insert event with content.
+      // It will think that the event is not present, and then find out
+      // when inserting that there is an event there.
+      // Then, it will insert just the content.
+      await store.persist(OWNER, makeEvent(), content);
+
+      const row = await store.get(OWNER, makeEventKey());
+      expect(row?.contentStatus).toBe('present');
+      expect(row?.contentBytes).toEqual(content);
     });
   });
 
