@@ -977,7 +977,7 @@ importers:
         version: 2.27.19(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper:
         specifier: ^5.50.6
-        version: 5.58.6(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+        version: 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper-description:
         specifier: ^5.50.6
         version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -3778,6 +3778,10 @@ packages:
 
   '@metascraper/helpers@5.58.4':
     resolution: {integrity: sha512-3pyzjvl+2IjDoZpBhwmFJVyiTKq0wPk6d8tiL+MjeI07++VNutSyGIQZdcQK3cYhs3u+HL2Z+BH4rBQlGJ2yfg==}
+    engines: {node: '>= 22.13'}
+
+  '@metascraper/helpers@5.58.7':
+    resolution: {integrity: sha512-4mLJsY7WV9EDY//ibLrDolH1yf3MFs/v6m1FET+pSkTw5w+dgXgW1M/Qxv9plzgj55JCd4JBbbL5ublzBwVBWw==}
     engines: {node: '>= 22.13'}
 
   '@module-federation/error-codes@0.22.0':
@@ -10042,8 +10046,8 @@ packages:
     resolution: {integrity: sha512-e1buTcAR9cLKa2SuRrJ7+c/Zmguv0MPkUTUo+YrwkwIASFFeVOyOWrwmrPeReK0fpcvfDcc6acruNW8S++DaDg==}
     engines: {node: '>= 22'}
 
-  metascraper@5.58.6:
-    resolution: {integrity: sha512-pAyeLuxiY3MRst2UBD0jjGCm7VFBF8hX4ogNbWnRF9iK3qFTYEQWqUqBTzsnd9628wlJRFi6hZtdw8C0wKr34g==}
+  metascraper@5.58.7:
+    resolution: {integrity: sha512-BlLnBeqAkiL8gGi2wgnIyRsJpHewE4psWhMIMdORDBDoeDstg5tlupllFTM/BDLIh92wFJRLoJYZLty3cv+YaA==}
     engines: {node: '>= 22'}
 
   methods@1.1.2:
@@ -12707,8 +12711,8 @@ packages:
   tldts-core@6.1.86:
     resolution: {integrity: sha512-Je6p7pkk+KMzMv2XXKmAE3McmolOQFdxkKw0R8EYNr7sELW46JqnNeTX8ybPiQgvg1ymCoF8LXs5fzFaZvJPTA==}
 
-  tldts-core@7.4.18:
-    resolution: {integrity: sha512-KI2PKvCmvQI/xD6ypPqkU0i7oxNXR/O58RLRaHR4svsgVUQ2JE/XC8BtMbG6PSehD27I8sZJRcC1ASnCy6lp3g==}
+  tldts-core@7.5.5:
+    resolution: {integrity: sha512-rEJz/8cJFY/bdF354gl14yxavbrIbvM+FcbkYVQ6CSCMQTJdUFUIm39TTWSiGPvcpQh7/F6qHrD3SkwwdgtDCw==}
 
   tldts-experimental@7.4.10:
     resolution: {integrity: sha512-l+FUGTqw3cYLnM6uL45IhdIG1ue9N7ZnMe9ZFC0S3/ROTL6xkJrUFQvsjfqSD9YzywDvgWj9uRZTXib3v3bnHw==}
@@ -12719,6 +12723,10 @@ packages:
 
   tldts@7.4.18:
     resolution: {integrity: sha512-somxA8xKAUzlAxl0TX/jMSYIbRNFIVGnI96pVGJPeMc5BsHmfVXn6mOJT6U++ELnl04eGfzpfcEuZe8WiASkXg==}
+    hasBin: true
+
+  tldts@7.5.5:
+    resolution: {integrity: sha512-Hy6IImaWALzJOgCIss4gIFi4G0M9lqk95pFKCUVxQPZw+biZ1Pv6f28JpYgahpJB+BufA0HYsIU/aP/WIx3KRg==}
     hasBin: true
 
   tmpl@1.0.5:
@@ -18016,6 +18024,38 @@ snapshots:
       re2: 1.27.0
       smartquotes: 2.3.2
       tldts: 7.4.18
+      url-regex-safe: 4.0.0(re2@1.27.0)
+      video-extensions: 2.0.0
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - canvas
+      - debug
+
+  '@metascraper/helpers@5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))':
+    dependencies:
+      audio-extensions: 0.0.0
+      chrono-node: 2.10.3
+      condense-whitespace: 3.0.0
+      data-uri-utils: 1.0.15
+      debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
+      entities: 8.1.0
+      file-extension: 4.0.5
+      has-values: 2.0.1
+      image-extensions: 1.1.0
+      is-relative-url: 4.1.1
+      is-uri: 1.2.14
+      iso-639-3: 3.0.1
+      isostring: 0.0.1
+      jsdom: 30.1.3(@noble/hashes@2.4.0)
+      jsonrepair: 3.15.0
+      lodash: 4.18.1
+      memoize-one: 6.0.0
+      microsoft-capitalize: 1.0.8
+      mime: 4.1.1
+      normalize-url: 9.0.1
+      re2: 1.27.0
+      smartquotes: 2.3.2
+      tldts: 7.5.5
       url-regex-safe: 4.0.0(re2@1.27.0)
       video-extensions: 2.0.0
     transitivePeerDependencies:
@@ -23869,7 +23909,7 @@ snapshots:
     dependencies:
       '@kikobeats/got': 11.8.9
       '@kikobeats/time-span': 1.0.13
-      '@metascraper/helpers': 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+      '@metascraper/helpers': 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       cheerio: 1.2.0
       content-type: 3.1.1
       css-url-regex: 4.0.0
@@ -25429,9 +25469,9 @@ snapshots:
       - canvas
       - debug
 
-  metascraper@5.58.6(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
+  metascraper@5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
-      '@metascraper/helpers': 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+      '@metascraper/helpers': 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       cheerio: 1.2.0
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       whoops: 5.1.4
@@ -28698,11 +28738,11 @@ snapshots:
 
   tldts-core@6.1.86: {}
 
-  tldts-core@7.4.18: {}
+  tldts-core@7.5.5: {}
 
   tldts-experimental@7.4.10:
     dependencies:
-      tldts-core: 7.4.18
+      tldts-core: 7.5.5
 
   tldts@6.1.86:
     dependencies:
@@ -28710,7 +28750,11 @@ snapshots:
 
   tldts@7.4.18:
     dependencies:
-      tldts-core: 7.4.18
+      tldts-core: 7.5.5
+
+  tldts@7.5.5:
+    dependencies:
+      tldts-core: 7.5.5
 
   tmpl@1.0.5: {}
 
@@ -28732,11 +28776,11 @@ snapshots:
 
   tough-cookie@6.0.2:
     dependencies:
-      tldts: 7.4.18
+      tldts: 7.5.5
 
   tough-cookie@6.1.0:
     dependencies:
-      tldts: 7.4.18
+      tldts: 7.5.5
 
   tr46@0.0.3: {}
 
