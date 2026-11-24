@@ -19,6 +19,8 @@ pub const VERIFICATION_CLAIM: i32 = 12;
 pub const VERIFICATION_VERIFY: i32 = 13;
 pub const VERIFICATION_TARGET: i32 = 14;
 pub const ATTRIBUTED_TO_REACTION: i32 = 15;
+pub const CALENDAR_EVENT: i32 = 16;
+pub const CALENDAR_EVENT_RSVP: i32 = 17;
 
 /// Returns the content type ID of `body`.
 pub fn of(body: &ContentBody) -> i32 {
@@ -37,5 +39,7 @@ pub fn of(body: &ContentBody) -> i32 {
         ContentBody::VerificationVerify(_) => VERIFICATION_VERIFY,
         ContentBody::VerificationTarget(_) => VERIFICATION_TARGET,
         ContentBody::AttributedToReaction(_) => ATTRIBUTED_TO_REACTION,
+        ContentBody::CalendarEvent(_) => CALENDAR_EVENT,
+        ContentBody::CalendarEventRsvp(_) => CALENDAR_EVENT_RSVP,
     }
 }

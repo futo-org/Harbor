@@ -115,6 +115,18 @@ export interface Content {
          */
         verificationTarget: VerificationTarget;
     } | {
+        oneofKind: "calendarEvent";
+        /**
+         * @generated from protobuf field: polycentric.v2.CalendarEvent calendar_event = 16
+         */
+        calendarEvent: CalendarEvent;
+    } | {
+        oneofKind: "calendarEventRsvp";
+        /**
+         * @generated from protobuf field: polycentric.v2.CalendarEventRsvp calendar_event_rsvp = 17
+         */
+        calendarEventRsvp: CalendarEventRsvp;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -391,6 +403,120 @@ export interface Labels {
     labelValues: string[];
 }
 /**
+ * @generated from protobuf message polycentric.v2.CalendarEvent
+ */
+export interface CalendarEvent {
+    /**
+     * Any random id for this event
+     *
+     * @generated from protobuf field: string id = 1
+     */
+    id: string;
+    /**
+     * @generated from protobuf field: string title = 2
+     */
+    title: string;
+    /**
+     * @generated from protobuf field: optional string description = 3
+     */
+    description?: string;
+    /**
+     * Start, in milliseconds since the Unix epoch (UTC)
+     *
+     * @generated from protobuf field: uint64 start_at = 4
+     */
+    startAt: bigint;
+    /**
+     * End, in milliseconds since the Unix epoch (UTC)
+     *
+     * @generated from protobuf field: optional uint64 end_at = 5
+     */
+    endAt?: bigint;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.CalendarEventLocation location = 6
+     */
+    location?: CalendarEventLocation;
+    /**
+     * Labels the creator / client applies themselves
+     *
+     * @generated from protobuf field: repeated string labels = 7
+     */
+    labels: string[];
+    /**
+     * start_at / end_at are UTC midnights; show the date only
+     *
+     * @generated from protobuf field: bool all_day = 8
+     */
+    allDay: boolean;
+    /**
+     * Cover image
+     *
+     * @generated from protobuf field: optional polycentric.v2.ImageSet image = 9
+     */
+    image?: ImageSet;
+    /**
+     * Display hint only: IANA timezone of the venue, e.g. "Europe/Lisbon"
+     *
+     * @generated from protobuf field: optional string timezone = 10
+     */
+    timezone?: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.CalendarEventLocation
+ */
+export interface CalendarEventLocation {
+    /**
+     * Venue or place name
+     *
+     * @generated from protobuf field: string name = 1
+     */
+    name: string;
+    /**
+     * @generated from protobuf field: optional string address = 2
+     */
+    address?: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.GeoPoint point = 3
+     */
+    point?: GeoPoint;
+    /**
+     * Join link for online events
+     *
+     * @generated from protobuf field: optional string url = 4
+     */
+    url?: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GeoPoint
+ */
+export interface GeoPoint {
+    /**
+     * WGS84 degrees
+     *
+     * @generated from protobuf field: double latitude = 1
+     */
+    latitude: number;
+    /**
+     * @generated from protobuf field: double longitude = 2
+     */
+    longitude: number;
+}
+/**
+ * @generated from protobuf message polycentric.v2.CalendarEventRsvp
+ */
+export interface CalendarEventRsvp {
+    /**
+     * Calendar event being responded to
+     *
+     * @generated from protobuf field: polycentric.v2.EventKey event_key = 1
+     */
+    eventKey?: EventKey;
+    /**
+     * @generated from protobuf field: polycentric.v2.CalendarEventRsvpStatus status = 2
+     */
+    status: CalendarEventRsvpStatus;
+}
+/**
  * *
  * gRPC requests
  *
@@ -515,6 +641,27 @@ export enum ReportCategory {
      */
     HATE = 11
 }
+/**
+ * @generated from protobuf enum polycentric.v2.CalendarEventRsvpStatus
+ */
+export enum CalendarEventRsvpStatus {
+    /**
+     * @generated from protobuf enum value: CALENDAR_EVENT_RSVP_STATUS_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: CALENDAR_EVENT_RSVP_STATUS_GOING = 1;
+     */
+    GOING = 1,
+    /**
+     * @generated from protobuf enum value: CALENDAR_EVENT_RSVP_STATUS_MAYBE = 2;
+     */
+    MAYBE = 2,
+    /**
+     * @generated from protobuf enum value: CALENDAR_EVENT_RSVP_STATUS_NOT_GOING = 3;
+     */
+    NOT_GOING = 3
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class Content$Type extends MessageType<Content> {
     constructor() {
@@ -532,7 +679,9 @@ class Content$Type extends MessageType<Content> {
             { no: 11, name: "labels", kind: "message", oneof: "contentBody", T: () => Labels },
             { no: 12, name: "verification_claim", kind: "message", oneof: "contentBody", T: () => VerificationClaim },
             { no: 13, name: "verification_verify", kind: "message", oneof: "contentBody", T: () => VerificationVerify },
-            { no: 14, name: "verification_target", kind: "message", oneof: "contentBody", T: () => VerificationTarget }
+            { no: 14, name: "verification_target", kind: "message", oneof: "contentBody", T: () => VerificationTarget },
+            { no: 16, name: "calendar_event", kind: "message", oneof: "contentBody", T: () => CalendarEvent },
+            { no: 17, name: "calendar_event_rsvp", kind: "message", oneof: "contentBody", T: () => CalendarEventRsvp }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -631,6 +780,18 @@ class Content$Type extends MessageType<Content> {
                         verificationTarget: VerificationTarget.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).verificationTarget)
                     };
                     break;
+                case /* polycentric.v2.CalendarEvent calendar_event */ 16:
+                    message.contentBody = {
+                        oneofKind: "calendarEvent",
+                        calendarEvent: CalendarEvent.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).calendarEvent)
+                    };
+                    break;
+                case /* polycentric.v2.CalendarEventRsvp calendar_event_rsvp */ 17:
+                    message.contentBody = {
+                        oneofKind: "calendarEventRsvp",
+                        calendarEventRsvp: CalendarEventRsvp.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).calendarEventRsvp)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -685,6 +846,12 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.AttributedToReaction attributed_to_reaction = 15; */
         if (message.contentBody.oneofKind === "attributedToReaction")
             AttributedToReaction.internalBinaryWrite(message.contentBody.attributedToReaction, writer.tag(15, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.CalendarEvent calendar_event = 16; */
+        if (message.contentBody.oneofKind === "calendarEvent")
+            CalendarEvent.internalBinaryWrite(message.contentBody.calendarEvent, writer.tag(16, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.CalendarEventRsvp calendar_event_rsvp = 17; */
+        if (message.contentBody.oneofKind === "calendarEventRsvp")
+            CalendarEventRsvp.internalBinaryWrite(message.contentBody.calendarEventRsvp, writer.tag(17, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1505,6 +1672,297 @@ class Labels$Type extends MessageType<Labels> {
  * @generated MessageType for protobuf message polycentric.v2.Labels
  */
 export const Labels = new Labels$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class CalendarEvent$Type extends MessageType<CalendarEvent> {
+    constructor() {
+        super("polycentric.v2.CalendarEvent", [
+            { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "start_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 5, name: "end_at", kind: "scalar", opt: true, T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 6, name: "location", kind: "message", T: () => CalendarEventLocation },
+            { no: 7, name: "labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "all_day", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 9, name: "image", kind: "message", T: () => ImageSet },
+            { no: 10, name: "timezone", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<CalendarEvent>): CalendarEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.id = "";
+        message.title = "";
+        message.startAt = 0n;
+        message.labels = [];
+        message.allDay = false;
+        if (value !== undefined)
+            reflectionMergePartial<CalendarEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CalendarEvent): CalendarEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string id */ 1:
+                    message.id = reader.string();
+                    break;
+                case /* string title */ 2:
+                    message.title = reader.string();
+                    break;
+                case /* optional string description */ 3:
+                    message.description = reader.string();
+                    break;
+                case /* uint64 start_at */ 4:
+                    message.startAt = reader.uint64().toBigInt();
+                    break;
+                case /* optional uint64 end_at */ 5:
+                    message.endAt = reader.uint64().toBigInt();
+                    break;
+                case /* optional polycentric.v2.CalendarEventLocation location */ 6:
+                    message.location = CalendarEventLocation.internalBinaryRead(reader, reader.uint32(), options, message.location);
+                    break;
+                case /* repeated string labels */ 7:
+                    message.labels.push(reader.string());
+                    break;
+                case /* bool all_day */ 8:
+                    message.allDay = reader.bool();
+                    break;
+                case /* optional polycentric.v2.ImageSet image */ 9:
+                    message.image = ImageSet.internalBinaryRead(reader, reader.uint32(), options, message.image);
+                    break;
+                case /* optional string timezone */ 10:
+                    message.timezone = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: CalendarEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string id = 1; */
+        if (message.id !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.id);
+        /* string title = 2; */
+        if (message.title !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.title);
+        /* optional string description = 3; */
+        if (message.description !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.description);
+        /* uint64 start_at = 4; */
+        if (message.startAt !== 0n)
+            writer.tag(4, WireType.Varint).uint64(message.startAt);
+        /* optional uint64 end_at = 5; */
+        if (message.endAt !== undefined)
+            writer.tag(5, WireType.Varint).uint64(message.endAt);
+        /* optional polycentric.v2.CalendarEventLocation location = 6; */
+        if (message.location)
+            CalendarEventLocation.internalBinaryWrite(message.location, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string labels = 7; */
+        for (let i = 0; i < message.labels.length; i++)
+            writer.tag(7, WireType.LengthDelimited).string(message.labels[i]);
+        /* bool all_day = 8; */
+        if (message.allDay !== false)
+            writer.tag(8, WireType.Varint).bool(message.allDay);
+        /* optional polycentric.v2.ImageSet image = 9; */
+        if (message.image)
+            ImageSet.internalBinaryWrite(message.image, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
+        /* optional string timezone = 10; */
+        if (message.timezone !== undefined)
+            writer.tag(10, WireType.LengthDelimited).string(message.timezone);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.CalendarEvent
+ */
+export const CalendarEvent = new CalendarEvent$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class CalendarEventLocation$Type extends MessageType<CalendarEventLocation> {
+    constructor() {
+        super("polycentric.v2.CalendarEventLocation", [
+            { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "address", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "point", kind: "message", T: () => GeoPoint },
+            { no: 4, name: "url", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<CalendarEventLocation>): CalendarEventLocation {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.name = "";
+        if (value !== undefined)
+            reflectionMergePartial<CalendarEventLocation>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CalendarEventLocation): CalendarEventLocation {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string name */ 1:
+                    message.name = reader.string();
+                    break;
+                case /* optional string address */ 2:
+                    message.address = reader.string();
+                    break;
+                case /* optional polycentric.v2.GeoPoint point */ 3:
+                    message.point = GeoPoint.internalBinaryRead(reader, reader.uint32(), options, message.point);
+                    break;
+                case /* optional string url */ 4:
+                    message.url = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: CalendarEventLocation, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string name = 1; */
+        if (message.name !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.name);
+        /* optional string address = 2; */
+        if (message.address !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.address);
+        /* optional polycentric.v2.GeoPoint point = 3; */
+        if (message.point)
+            GeoPoint.internalBinaryWrite(message.point, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* optional string url = 4; */
+        if (message.url !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.url);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.CalendarEventLocation
+ */
+export const CalendarEventLocation = new CalendarEventLocation$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GeoPoint$Type extends MessageType<GeoPoint> {
+    constructor() {
+        super("polycentric.v2.GeoPoint", [
+            { no: 1, name: "latitude", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
+            { no: 2, name: "longitude", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GeoPoint>): GeoPoint {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.latitude = 0;
+        message.longitude = 0;
+        if (value !== undefined)
+            reflectionMergePartial<GeoPoint>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GeoPoint): GeoPoint {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* double latitude */ 1:
+                    message.latitude = reader.double();
+                    break;
+                case /* double longitude */ 2:
+                    message.longitude = reader.double();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GeoPoint, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* double latitude = 1; */
+        if (message.latitude !== 0)
+            writer.tag(1, WireType.Bit64).double(message.latitude);
+        /* double longitude = 2; */
+        if (message.longitude !== 0)
+            writer.tag(2, WireType.Bit64).double(message.longitude);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GeoPoint
+ */
+export const GeoPoint = new GeoPoint$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class CalendarEventRsvp$Type extends MessageType<CalendarEventRsvp> {
+    constructor() {
+        super("polycentric.v2.CalendarEventRsvp", [
+            { no: 1, name: "event_key", kind: "message", T: () => EventKey },
+            { no: 2, name: "status", kind: "enum", T: () => ["polycentric.v2.CalendarEventRsvpStatus", CalendarEventRsvpStatus, "CALENDAR_EVENT_RSVP_STATUS_"] }
+        ]);
+    }
+    create(value?: PartialMessage<CalendarEventRsvp>): CalendarEventRsvp {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.status = 0;
+        if (value !== undefined)
+            reflectionMergePartial<CalendarEventRsvp>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CalendarEventRsvp): CalendarEventRsvp {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey event_key */ 1:
+                    message.eventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.eventKey);
+                    break;
+                case /* polycentric.v2.CalendarEventRsvpStatus status */ 2:
+                    message.status = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: CalendarEventRsvp, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey event_key = 1; */
+        if (message.eventKey)
+            EventKey.internalBinaryWrite(message.eventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.CalendarEventRsvpStatus status = 2; */
+        if (message.status !== 0)
+            writer.tag(2, WireType.Varint).int32(message.status);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.CalendarEventRsvp
+ */
+export const CalendarEventRsvp = new CalendarEventRsvp$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class SyncContentRequest$Type extends MessageType<SyncContentRequest> {
     constructor() {

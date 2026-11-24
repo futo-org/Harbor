@@ -25,6 +25,8 @@ message Content {
     VerificationClaim verification_claim = 12;
     VerificationVerify verification_verify = 13;
     VerificationTarget verification_target = 14;
+    CalendarEvent calendar_event = 16;
+    CalendarEventRsvp calendar_event_rsvp = 17;
   }
 }
 
@@ -126,8 +128,7 @@ message ProfileUpdate {
 enum ReportCategory {
   // Report categories that have been retired are kept reserved
   reserved 2, 4, 5;
-  reserved "REPORT_CATEGORY_ABUSE", "REPORT_CATEGORY_TERRORISM",
-           "REPORT_CATEGORY_ILLEGAL";
+  reserved "REPORT_CATEGORY_ABUSE", "REPORT_CATEGORY_TERRORISM", "REPORT_CATEGORY_ILLEGAL";
 
   REPORT_CATEGORY_UNSPECIFIED = 0;
   REPORT_CATEGORY_SPAM = 1;
@@ -151,6 +152,54 @@ message Labels {
   // Event that is being labeled
   EventKey event_key = 1;
   repeated string label_values = 2;
+}
+
+message CalendarEvent {
+  // Any random id for this event
+  string id = 1;
+  string title = 2;
+  optional string description = 3;
+  // Start, in milliseconds since the Unix epoch (UTC)
+  uint64 start_at = 4;
+  // End, in milliseconds since the Unix epoch (UTC)
+  optional uint64 end_at = 5;
+  optional CalendarEventLocation location = 6;
+  // Labels the creator / client applies themselves
+  repeated string labels = 7;
+  // start_at / end_at are UTC midnights; show the date only
+  bool all_day = 8;
+  // Cover image
+  optional ImageSet image = 9;
+  // Display hint only: IANA timezone of the venue, e.g. "Europe/Lisbon"
+  optional string timezone = 10;
+}
+
+message CalendarEventLocation {
+  // Venue or place name
+  string name = 1;
+  optional string address = 2;
+  optional GeoPoint point = 3;
+  // Join link for online events
+  optional string url = 4;
+}
+
+message GeoPoint {
+  // WGS84 degrees
+  double latitude = 1;
+  double longitude = 2;
+}
+
+enum CalendarEventRsvpStatus {
+  CALENDAR_EVENT_RSVP_STATUS_UNSPECIFIED = 0;
+  CALENDAR_EVENT_RSVP_STATUS_GOING = 1;
+  CALENDAR_EVENT_RSVP_STATUS_MAYBE = 2;
+  CALENDAR_EVENT_RSVP_STATUS_NOT_GOING = 3;
+}
+
+message CalendarEventRsvp {
+  // Calendar event being responded to
+  EventKey event_key = 1;
+  CalendarEventRsvpStatus status = 2;
 }
 
 /**

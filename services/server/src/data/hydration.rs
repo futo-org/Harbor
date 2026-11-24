@@ -320,7 +320,10 @@ where
             | Some(ContentBody::ProfileUpdate(_))
             | Some(ContentBody::Identity(_))
             | Some(ContentBody::VerificationClaim(_))
+            | Some(ContentBody::CalendarEvent(_))
             | None => {}
+            // Not hydrated yet
+            Some(ContentBody::CalendarEventRsvp(_)) => {}
         }
     }
     (keys, quote_set, repost_set)
