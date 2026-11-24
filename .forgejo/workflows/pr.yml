@@ -894,9 +894,13 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/rust-env
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          cache: server-integration
+          prefix-key: server-integration
+          cache-on-failure: true
+          # TODO: enable this to only save on the main branch. Copied from a
+          # GitHub based flow, not sure if it makes sense for Forgejo.
+          #save-if: ${{ github.ref == 'refs/heads/develop' }}
       - name: Server integration tests
         run: .forgejo/scripts/integration-server.sh --ci
       - uses: ./.forgejo/actions/r2-cache
