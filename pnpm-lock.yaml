@@ -983,7 +983,7 @@ importers:
         version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper-image:
         specifier: ^5.50.6
-        version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+        version: 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper-title:
         specifier: ^5.50.6
         version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -10034,8 +10034,8 @@ packages:
     resolution: {integrity: sha512-uWfbJr7h2FTJKgryAPMGbt5Qr8UMGtl/BsDIehoAZq1sIs+cns4gtJzfclUj22wsEgd5TNJoTXMtMdzVeS2Xdg==}
     engines: {node: '>= 22'}
 
-  metascraper-image@5.58.4:
-    resolution: {integrity: sha512-Ft9XbmVYMjLcf6ohySi8ChVUHt8I5y7XdB8+DYB7QiTarZiAVYojysVzXKj9xhrrpsH/ShFySL3su3uyzSTvLA==}
+  metascraper-image@5.58.7:
+    resolution: {integrity: sha512-QbcamTGlrAZmflQKg8MgFPK8Gy3FUFh54H3bZAiUq7bALBSyiNcIms6ZklcrSGfr1aSloTao37B9mTiZtP7Dxg==}
     engines: {node: '>= 22'}
 
   metascraper-title@5.58.4:
@@ -25445,9 +25445,9 @@ snapshots:
       - canvas
       - debug
 
-  metascraper-image@5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
+  metascraper-image@5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
-      '@metascraper/helpers': 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+      '@metascraper/helpers': 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
