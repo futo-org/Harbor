@@ -38,11 +38,10 @@ COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
 CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     BEGIN ATOMIC
- WITH token_numword AS (
+ WITH tokens_word AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
-           WHERE (ts_token_type.alias = 'numword'::text)
-          LIMIT 1
+           WHERE (ts_token_type.alias = ANY (ARRAY['asciiword'::text, 'word'::text, 'numword'::text, 'hword_numpart'::text, 'hword_part'::text, 'hword_asciipart'::text, 'numhword'::text, 'asciihword'::text, 'hword'::text]))
          ), token_sfloat AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
@@ -57,10 +56,10 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
           SELECT
                  CASE
                      WHEN ((parsed.tokid = ( SELECT token_sfloat.id
-                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
-                        FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
-                     WHEN ((parsed.tokid = ( SELECT token_numword.id
-                        FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
+                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () IN ( SELECT tokens_word.id
+                        FROM tokens_word))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((parsed.tokid IN ( SELECT tokens_word.id
+                        FROM tokens_word)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
                         FROM token_sfloat))) THEN NULL::text
                      WHEN ((parsed.tokid = ( SELECT token_blank.id
                         FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
