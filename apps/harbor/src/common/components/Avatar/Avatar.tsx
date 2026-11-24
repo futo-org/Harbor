@@ -55,7 +55,10 @@ export function useAvatarSizeRequest(
   return { displayPixels, minPixels };
 }
 
-interface AvatarProps extends Omit<ImageProps, 'source'> {
+interface AvatarProps
+  extends Omit<ImageProps, 'source'>,
+    // Set by `<Link asChild>`, making the pressable avatar an anchor.
+    Pick<PressableProps, 'href' | 'role'> {
   source?: ImageProps['source'];
   /**
    * Forces the image to clear + reload when it changes — set this when an
@@ -66,9 +69,6 @@ interface AvatarProps extends Omit<ImageProps, 'source'> {
   size?: AvatarSizePreset | number;
   containerProps?: ViewProps;
   onPress?: () => void;
-  // Set by `<Link asChild>`, making the pressable avatar an anchor.
-  href?: string;
-  role?: PressableProps['role'];
 }
 
 /** Pull a stable string URI out of an Image source for recycling. */
