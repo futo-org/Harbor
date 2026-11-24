@@ -15,6 +15,7 @@ message EventKey {
   // 6 -> Polycentric reports
   // 7 -> Polycentric labels
   // 8 -> Polycentric verifications
+  // 9 -> Polycentric calendar (events and RSVPs)
   int32 collection = 1;
 
   // Identity Key (sha256 hash of the initial Identity content)

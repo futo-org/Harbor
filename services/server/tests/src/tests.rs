@@ -70,6 +70,7 @@ pub const COLLECTION_SOCIAL_GRAPH: i32 = 5;
 pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_CALENDAR: i32 = 9;
 pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
@@ -647,6 +648,8 @@ impl TestClient {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => COLLECTION_VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => COLLECTION_CALENDAR,
         };
         let content = Content {
             content_body: Some(body),

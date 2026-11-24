@@ -3,8 +3,9 @@ use std::fmt;
 use crate::models::protos_v2::content::ContentBody;
 use crate::models::validate::Validate;
 use crate::models::{
-    attributed_to_reaction, block, delete, follow, identity, labels, post, profile_update,
-    reaction, report, repost, verification_claim, verification_target, verification_verify,
+    attributed_to_reaction, block, calendar_event, calendar_event_rsvp, delete, follow, identity,
+    labels, post, profile_update, reaction, report, repost, verification_claim,
+    verification_target, verification_verify,
 };
 
 impl Validate for ContentBody {
@@ -57,6 +58,12 @@ impl Validate for ContentBody {
             ContentBody::VerificationTarget(target) => target.validate_check(errors, |err| {
                 map_err(ValidationError::VerificationTarget(err))
             }),
+            ContentBody::CalendarEvent(event) => {
+                event.validate_check(errors, |err| map_err(ValidationError::CalendarEvent(err)))
+            }
+            ContentBody::CalendarEventRsvp(rsvp) => rsvp.validate_check(errors, |err| {
+                map_err(ValidationError::CalendarEventRsvp(err))
+            }),
         }
     }
 }
@@ -79,6 +86,8 @@ pub enum ValidationError {
     VerificationClaim(verification_claim::ValidationError),
     VerificationVerify(verification_verify::ValidationError),
     VerificationTarget(verification_target::ValidationError),
+    CalendarEvent(calendar_event::ValidationError),
+    CalendarEventRsvp(calendar_event_rsvp::ValidationError),
 }
 
 impl fmt::Display for ValidationError {
@@ -98,6 +107,8 @@ impl fmt::Display for ValidationError {
             ValidationError::VerificationClaim(err) => write!(f, "verification claim {err}"),
             ValidationError::VerificationVerify(err) => write!(f, "verification verify {err}"),
             ValidationError::VerificationTarget(err) => write!(f, "verification target {err}"),
+            ValidationError::CalendarEvent(err) => write!(f, "calendar event {err}"),
+            ValidationError::CalendarEventRsvp(err) => write!(f, "calendar event rsvp {err}"),
         }
     }
 }

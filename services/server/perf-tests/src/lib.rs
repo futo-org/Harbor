@@ -342,6 +342,8 @@ impl Client {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => collections::VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => collections::CALENDAR,
         };
         let content = Content {
             content_body: Some(body),

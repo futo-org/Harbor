@@ -28,6 +28,7 @@ export interface EventKey {
      * 6 -> Polycentric reports
      * 7 -> Polycentric labels
      * 8 -> Polycentric verifications
+     * 9 -> Polycentric calendar (events and RSVPs)
      *
      * @generated from protobuf field: int32 collection = 1
      */
