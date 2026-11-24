@@ -906,7 +906,7 @@ jobs:
         continue-on-error: true
         with:
           mode: save
-          key: server-${{ env.RUST_CACHE_KEY }}
+          key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
   moderation-integration:
@@ -940,7 +940,7 @@ jobs:
         continue-on-error: true
         with:
           mode: save
-          key: moderation-${{ env.RUST_CACHE_KEY }}
+          key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
   scraper-integration:
