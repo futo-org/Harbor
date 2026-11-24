@@ -7,14 +7,14 @@ import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { NavDrawerContent } from './NavDrawerContent';
 import { useNavDrawerPan } from './hooks/useNavDrawerPan';
 import { useNavDrawerStore } from './hooks/useNavDrawerStore';
 import { useNavDrawerWidth } from './hooks/useNavDrawerWidth';
 import { NavDrawerGestureContext } from './lib/nav-drawer-gesture-context';
-import { navDrawerProgress } from './lib/nav-drawer-progress';
+import { DRAWER_SPRING, navDrawerProgress } from './lib/nav-drawer-progress';
 
 const EDGE_WIDTH = 30;
 const SCREEN_SHADOW = '0 0 24px rgba(0, 0, 0, 0.25)';
@@ -38,7 +38,7 @@ export function NavDrawer({ children }: { children: ReactNode }) {
   }, [pathname, hide]);
 
   useEffect(() => {
-    navDrawerProgress.value = withTiming(open ? 1 : 0, { duration: 200 });
+    navDrawerProgress.value = withSpring(open ? 1 : 0, DRAWER_SPRING);
   }, [open]);
 
   useEffect(() => {

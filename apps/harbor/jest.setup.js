@@ -31,6 +31,7 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedScrollHandler: () => () => undefined,
     useAnimatedReaction: () => undefined,
     withTiming: (toValue) => toValue,
+    withSpring: (toValue) => toValue,
     withRepeat: (animation) => animation,
     cancelAnimation: () => undefined,
     Easing: new Proxy({}, { get: () => (value) => value }),

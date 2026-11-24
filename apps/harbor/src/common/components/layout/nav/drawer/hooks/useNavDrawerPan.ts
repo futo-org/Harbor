@@ -1,7 +1,7 @@
 import { usePanGesture } from 'react-native-gesture-handler';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
-import { navDrawerProgress } from '../lib/nav-drawer-progress';
+import { DRAWER_SPRING, navDrawerProgress } from '../lib/nav-drawer-progress';
 import { useNavDrawerStore } from './useNavDrawerStore';
 import { useNavDrawerWidth } from './useNavDrawerWidth';
 
@@ -41,7 +41,10 @@ export function useNavDrawerPan({ enabled, edgeWidth }: NavDrawerPanOptions) {
           : e.velocityX < -FLING_VELOCITY
             ? false
             : navDrawerProgress.value > (open ? 2 / 3 : 1 / 3);
-      navDrawerProgress.value = withTiming(opens ? 1 : 0, { duration: 180 });
+      navDrawerProgress.value = withSpring(opens ? 1 : 0, {
+        ...DRAWER_SPRING,
+        velocity: e.velocityX / width,
+      });
       runOnJS(opens ? show : hide)();
     },
   });
