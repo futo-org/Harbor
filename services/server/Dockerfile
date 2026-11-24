@@ -1,4 +1,4 @@
-FROM rust:1.100-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS chef
+FROM rust:1.100-slim-trixie@sha256:86993c97389ebb5487eb09e88168e2a00b0de29aa08dff9ae896049b9be96ed9 AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
