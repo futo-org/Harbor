@@ -173,6 +173,7 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Starting server and workers…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export HARBOR_TRACES_SCHEDULE_DELAY_MS="${HARBOR_TRACES_SCHEDULE_DELAY_MS:-100}"
+  export RUST_LOG=info,server=debug,common_kafka=debug,common_object_store=debug,polycentric_common=debug
   # server-workers materializes notifications (the mention/reply integration
   # tests poll for them); it is behind the `push` profile in compose.yml.
   export COMPOSE_PROFILES=push
