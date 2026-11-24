@@ -989,7 +989,7 @@ importers:
         version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper-url:
         specifier: ^5.50.6
-        version: 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+        version: 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       prom-client:
         specifier: 'catalog:'
         version: 15.1.3
@@ -10107,8 +10107,8 @@ packages:
     resolution: {integrity: sha512-G0/Vhm3kxNhbF0E19TlyxXa3MeIe5AeRfrf50yCyKEbJspeWVX2E+nskSCt+pibQnYUnHxh942KudUoWrzKW5Q==}
     engines: {node: '>= 22'}
 
-  metascraper-url@5.58.4:
-    resolution: {integrity: sha512-e1buTcAR9cLKa2SuRrJ7+c/Zmguv0MPkUTUo+YrwkwIASFFeVOyOWrwmrPeReK0fpcvfDcc6acruNW8S++DaDg==}
+  metascraper-url@5.58.7:
+    resolution: {integrity: sha512-TZvtb4bzmYPYeJxfcReccDHXY1olH5RTDuZhXtho2FJs+XzPsJPtWkY1dVtu4sOvKcZebPXT/OaOysjcCvpAfA==}
     engines: {node: '>= 22'}
 
   metascraper@5.58.7:
@@ -25575,9 +25575,9 @@ snapshots:
       - canvas
       - debug
 
-  metascraper-url@5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
+  metascraper-url@5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
-      '@metascraper/helpers': 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+      '@metascraper/helpers': 5.58.7(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
