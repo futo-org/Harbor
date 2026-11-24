@@ -16,11 +16,14 @@
     "!android/build",
     "!ios/build",
     "!**/__tests__",
+    "!**/__fixtures__",
     "!**/*.test.ts"
   ],
   "scripts": {
     "typecheck": "tsc",
-    "lint": "biome lint ."
+    "lint": "biome lint .",
+    "test": "vitest",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=junit.xml"
   },
   "keywords": [
     "react-native",
@@ -42,8 +45,11 @@
   "homepage": "https://harbor.social",
   "license": "MIT",
   "devDependencies": {
+    "@vitest/browser-playwright": "5.1.0",
     "expo": "^58.0.21",
-    "typescript": "catalog:"
+    "playwright": "~1.65.1",
+    "typescript": "catalog:",
+    "vitest": "5.1.0"
   },
   "peerDependencies": {
     "expo": ">=58.0.0"

@@ -489,6 +489,30 @@ jobs:
           path: services/scraper/junit.xml
           retention-days: 7
 
+  video-transcoding:
+    name: Test video-transcoding
+    needs: changes
+    if: fromJSON(needs.changes.outputs.plan).flags.video_transcoding
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/setup-pnpm
+        with:
+          install-args: --filter @polycentric/video-transcoding...
+      # The web backend's tests run in headless Chromium (WebCodecs, ImageDecoder).
+      - name: Chromium
+        run: pnpm --filter @polycentric/video-transcoding exec playwright install --with-deps --only-shell chromium
+      - name: Tests
+        run: pnpm --filter @polycentric/video-transcoding test:ci
+      - uses: forgejo/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-video-transcoding
+          path: packages/video-transcoding/junit.xml
+          retention-days: 7
+
   app:
     name: Test app
     needs: changes
@@ -1137,6 +1161,7 @@ jobs:
       - rust-services
       - js-packages
       - scraper
+      - video-transcoding
       - app
       - app-typecheck
       - wasm

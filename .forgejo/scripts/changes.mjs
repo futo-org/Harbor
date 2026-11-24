@@ -118,6 +118,7 @@ const verifierBot = touches(
   CHARTS,
 );
 const app = touches(LOCK, 'apps/harbor/', CHARTS);
+const videoTranscoding = touches(LOCK, 'packages/video-transcoding/');
 // Packages the app's web export, so it is rebuilt with the app as well.
 const browserExtension = touches(LOCK, 'apps/harbor-browser-extension/');
 // What the web image is built from.
@@ -200,6 +201,7 @@ const flags = {
       server || moderation || pushNotifications || otlp || grayjayMigrator,
     scraper,
     app,
+    video_transcoding: videoTranscoding,
     app_typecheck: app || jsSdk || rnSdk || rsCore,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
     build_rn_sdk: rnSdk || rsCore || app,
