@@ -222,6 +222,7 @@ overrides:
 patchedDependencies:
   '@bsky.app/react-native-uitextview@2.7.1': 3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
+  expo-image-manipulator@58.0.16: 80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
   react-remove-scroll@2.7.2: e76968a09dcd0466b9527adb861f3386e4896bdbe7be22205007ea875abc8ba4
 
@@ -384,7 +385,7 @@ importers:
         version: 58.0.18(26996239ff28f192d408ceed058913d9)
       expo-image-manipulator:
         specifier: ~58.0.16
-        version: 58.0.16(0369df9bd959a733f1c64c03f20d4aac)
+        version: 58.0.16(patch_hash=80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2)(0369df9bd959a733f1c64c03f20d4aac)
       expo-image-picker:
         specifier: ~58.0.10
         version: 58.0.10(f4cb0030e0603a5a4a40396ad71a2c44)
@@ -23015,7 +23016,7 @@ snapshots:
       - react-native-worklets
       - typescript
 
-  expo-image-manipulator@58.0.16(0369df9bd959a733f1c64c03f20d4aac):
+  expo-image-manipulator@58.0.16(patch_hash=80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2)(0369df9bd959a733f1c64c03f20d4aac):
     dependencies:
       expo: 58.0.22(41d93b195ce3db3eda1596eac11de455)
       expo-image-loader: 58.0.3(f4cb0030e0603a5a4a40396ad71a2c44)
