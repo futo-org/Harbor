@@ -18,6 +18,8 @@ const SIZES: NonNullable<ButtonProps['size']>[] = ['sm', 'md', 'lg'];
 
 // Width of the containers the Overflow story squeezes buttons into
 const NARROW_CONTAINER_WIDTH = 200;
+// Room between them for the long title to overflow into
+const NARROW_CONTAINER_GAP = 120;
 
 const meta = {
   title: 'Primitives/Button',
@@ -90,7 +92,7 @@ export const AllVariants: Story = {
 
 export const Overflow: Story = {
   args: {
-    title: 'A button title far too long for its container',
+    title: 'A title too long for the box',
   },
   argTypes: {
     // Each case sets it
@@ -98,30 +100,48 @@ export const Overflow: Story = {
   },
   render: (args) => (
     <View style={Atoms.gap_xl}>
-      <NarrowContainer label="Short, no icon">
-        <Button {...args} title="Short" icon={undefined} />
-      </NarrowContainer>
-      <NarrowContainer label="Short, with icon">
-        <Button {...args} title="Short" icon={args.icon ?? 'add'} />
-      </NarrowContainer>
-      <NarrowContainer label="Short, no icon, full width">
-        <Button {...args} title="Short" icon={undefined} fullWidth />
-      </NarrowContainer>
-      <NarrowContainer label="Short, with icon, full width">
-        <Button {...args} title="Short" icon={args.icon ?? 'add'} fullWidth />
-      </NarrowContainer>
-      <NarrowContainer label="Long, no icon">
-        <Button {...args} icon={undefined} />
-      </NarrowContainer>
-      <NarrowContainer label="Long, with icon">
-        <Button {...args} icon={args.icon ?? 'add'} />
-      </NarrowContainer>
-      <NarrowContainer label="Long, no icon, full width">
-        <Button {...args} icon={undefined} fullWidth />
-      </NarrowContainer>
-      <NarrowContainer label="Long, with icon, full width">
-        <Button {...args} icon={args.icon ?? 'add'} fullWidth />
-      </NarrowContainer>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.flex_wrap,
+          Atoms.gap_xl,
+          { columnGap: NARROW_CONTAINER_GAP },
+        ]}
+      >
+        <NarrowContainer label="Short, no icon">
+          <Button {...args} title="Short" icon={undefined} />
+        </NarrowContainer>
+        <NarrowContainer label="Short, with icon">
+          <Button {...args} title="Short" icon={args.icon ?? 'add'} />
+        </NarrowContainer>
+        <NarrowContainer label="Short, no icon, full width">
+          <Button {...args} title="Short" icon={undefined} fullWidth />
+        </NarrowContainer>
+        <NarrowContainer label="Short, with icon, full width">
+          <Button {...args} title="Short" icon={args.icon ?? 'add'} fullWidth />
+        </NarrowContainer>
+      </View>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.flex_wrap,
+          Atoms.gap_xl,
+          { columnGap: NARROW_CONTAINER_GAP },
+        ]}
+      >
+        <NarrowContainer label="Long, no icon">
+          <Button {...args} icon={undefined} />
+        </NarrowContainer>
+        <NarrowContainer label="Long, with icon">
+          <Button {...args} icon={args.icon ?? 'add'} />
+        </NarrowContainer>
+        <NarrowContainer label="Long, no icon, full width">
+          <Button {...args} icon={undefined} fullWidth />
+        </NarrowContainer>
+        <NarrowContainer label="Long, with icon, full width">
+          <Button {...args} icon={args.icon ?? 'add'} fullWidth />
+        </NarrowContainer>
+      </View>
     </View>
   ),
 };

@@ -123,7 +123,6 @@ export function Button({
           height: sizeConfig.height,
           borderRadius,
         },
-        // Icon only: a circle
         iconOnly
           ? { width: sizeConfig.height }
           : { paddingHorizontal: sizeConfig.paddingH },
