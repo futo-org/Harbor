@@ -3,7 +3,8 @@ import type { StorybookConfig } from '@storybook/react-native';
 const main: StorybookConfig = {
   stories: ['../src/**/*.stories.tsx'],
   deviceAddons: [
-    '@storybook/addon-ondevice-controls',
+    // Wraps @storybook/addon-ondevice-controls
+    './controls',
     '@storybook/addon-ondevice-actions',
   ],
 };
