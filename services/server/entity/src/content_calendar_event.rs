@@ -15,9 +15,13 @@ pub struct Model {
     pub start_at: DateTimeWithTimeZone,
     pub end_at: Option<DateTimeWithTimeZone>,
     pub all_day: bool,
+    /// IANA name, for showing the times as the creator set them
+    pub timezone: Option<String>,
+    pub labels: Vec<String>,
 
     pub location_name: Option<String>,
     pub location_address: Option<String>,
+    pub location_url: Option<String>,
     // WGS84 degrees
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
