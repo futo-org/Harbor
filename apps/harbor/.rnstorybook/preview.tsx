@@ -5,17 +5,16 @@ import {
   Spacing,
   themes,
   type ThemeScheme,
-  useTheme,
 } from '@/src/common/theme';
 import type { Preview } from '@storybook/react-native';
 import { type PropsWithChildren, useMemo } from 'react';
 import { View } from 'react-native';
 import { create } from 'zustand';
 
-// Outside the decorator so it survives switching stories. `null` follows the
-// app's theme.
-const useStorySchemeStore = create<{ scheme: ThemeScheme | null }>(() => ({
-  scheme: null,
+// Stories' own scheme, apart from the app's theme. Outside the decorator so it
+// survives switching stories.
+const useStorySchemeStore = create<{ scheme: ThemeScheme }>(() => ({
+  scheme: 'light',
 }));
 
 const preview: Preview = {
@@ -31,15 +30,22 @@ const preview: Preview = {
 export default preview;
 
 function ThemeDecorator({ children }: PropsWithChildren) {
-  const appThemeContext = useTheme();
-  const storyScheme = useStorySchemeStore((state) => state.scheme);
-  const scheme = storyScheme ?? appThemeContext.theme.scheme;
+  const scheme = useStorySchemeStore((state) => state.scheme);
   const theme = themes[scheme];
 
-  // Overrides only the theme: the app's persisted preference stays untouched
+  // Theme switchers in stories (e.g. AppFooter's) switch the stories' scheme;
+  // 'system' does nothing
   const themeContext = useMemo(
-    () => ({ ...appThemeContext, theme }),
-    [appThemeContext, theme],
+    () => ({
+      theme,
+      themePreference: scheme,
+      setThemePreference: (preference: ThemeScheme | 'system') => {
+        if (preference !== 'system') {
+          useStorySchemeStore.setState({ scheme: preference });
+        }
+      },
+    }),
+    [theme, scheme],
   );
 
   return (
