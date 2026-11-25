@@ -51,9 +51,6 @@ jobs:
           sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rust/rs-common\", version = \"${VERSION}\" }#" Cargo.toml
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Verify packaging succeeds
-        run: cargo package -p polycentric-common -p polycentric-core --allow-dirty
-
       - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
         id: auth
 
@@ -63,11 +60,5 @@ jobs:
         run: |
           set -euo pipefail
           for crate in polycentric-common polycentric-core; do
-            status=$(curl --max-time 10 -s -o /dev/null -w '%{http_code}' \
-              -A "harbor-release-ci" "https://crates.io/api/v1/crates/${crate}/${VERSION}")
-            if [ "$status" = 200 ]; then
-              echo "==> ${crate} ${VERSION} is already on crates.io; skipping."
-              continue
-            fi
-            cargo publish -p "${crate}" --allow-dirty --no-verify
+            cargo publish -p "${crate}" --allow-dirty
           done

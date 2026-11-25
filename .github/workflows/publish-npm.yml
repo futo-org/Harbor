@@ -163,16 +163,6 @@ jobs:
         with:
           run_install: false
 
-      - name: Check npm
-        run: |
-          pnpm --version
-          node -e '
-            const [a, b, c] = process.argv[1].split(".").map(Number);
-            if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) {
-              console.error(`npm ${process.argv[1]} is too old for trusted publishing`);
-              process.exit(1);
-            }' "$(npm --version)"
-
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile \
@@ -189,9 +179,7 @@ jobs:
         run: |
           pnpm --filter @polycentric/js-wasm build --profile wasm-release
           wasm=packages/js/drivers/js-wasm/src/generated/wasm/polycentric_core.wasm
-          before=$(stat -c%s "$wasm")
           wasm-opt -Oz -g "$wasm" -o "$wasm"
-          echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
 
       - name: Build JS packages
         run: |
@@ -232,7 +220,7 @@ jobs:
           set -euo pipefail
           # Packages in topological order by dependency relations.
           # Note video-transcoding is WIP and not part of the release set.
-          out_dir="$(mktemp -d)"
+          tmp_dir="$(mktemp -d)"
           for dir in \
             js/drivers/js-wasm \
             js/js-sdk \
@@ -244,11 +232,7 @@ jobs:
             js/react-native-sdk; do
             package_dir="packages/${dir}"
             name=$(node -p "require('./${package_dir}/package.json').name")
-            if npm view "${name}@${VERSION}" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
-              echo "Found ${name}@${VERSION} already on npmjs.org, skipping."
-              continue
-            fi
-            packed=$(cd "${package_dir}" && pnpm pack --pack-destination "$out_dir" | tail -n1)
+            packed=$(cd "${package_dir}" && pnpm pack --pack-destination "$tmp_dir" | tail -n1)
             echo "Publishing ${name}@${VERSION} from ${packed}"
             npm publish "$packed" --access public --tag latest --registry https://registry.npmjs.org
           done
