@@ -2,7 +2,12 @@ use std::fmt;
 
 use crate::models::image_set;
 use crate::models::protos_v2::{CalendarEvent, CalendarEventLocation, GeoPoint};
-use crate::models::validate::{self, SliceConfig, SliceError, StringConfig, StringError, Validate};
+use crate::models::validate::{
+    self, IntConfig, IntError, SliceConfig, SliceError, StringConfig, StringError, Validate,
+};
+
+/// End of the year 9999, in ms since the Unix epoch
+const MAX_TIMESTAMP_MS: i64 = 253_402_300_799_999;
 
 impl Validate for CalendarEvent {
     type Error = ValidationError;
@@ -22,6 +27,7 @@ impl Validate for CalendarEvent {
             all_day: _,
             image,
             timezone,
+            hosts,
         } = self;
         validate::string(
             id,
@@ -54,6 +60,22 @@ impl Validate for CalendarEvent {
                 },
             );
         }
+        for (at, error) in [
+            (Some(*start_at), ValidationError::StartAt as fn(_) -> _),
+            (*end_at, ValidationError::EndAt),
+        ] {
+            if let Some(at) = at {
+                validate::int(
+                    i64::try_from(at).unwrap_or(i64::MAX),
+                    errors,
+                    |err| map_err(error(err)),
+                    IntConfig {
+                        max: Some(MAX_TIMESTAMP_MS),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
         if end_at.is_some_and(|end_at| end_at < *start_at) {
             errors.push(map_err(ValidationError::EndBeforeStart));
         }
@@ -84,6 +106,17 @@ impl Validate for CalendarEvent {
         if let Some(image) = image {
             image.validate_check(errors, |err| map_err(ValidationError::Image(err)));
         }
+        validate::slice2(
+            hosts,
+            errors,
+            |err| map_err(ValidationError::Hosts(err)),
+            |index, error| map_err(ValidationError::HostsItem { index, error }),
+            SliceConfig {
+                max_len: Some(10),
+                ..Default::default()
+            },
+            |host, errors, map_err| validate::identity(host, errors, map_err),
+        );
         if let Some(timezone) = timezone.as_deref() {
             validate::string(
                 timezone,
@@ -153,6 +186,8 @@ pub enum ValidationError {
     Id(StringError),
     Title(StringError),
     Description(StringError),
+    StartAt(IntError),
+    EndAt(IntError),
     EndBeforeStart,
     LocationName(StringError),
     LocationAddress(StringError),
@@ -162,6 +197,8 @@ pub enum ValidationError {
     LabelsItem { index: u32, error: StringError },
     Image(image_set::ValidationError),
     Timezone(StringError),
+    Hosts(SliceError),
+    HostsItem { index: u32, error: StringError },
 }
 
 impl fmt::Display for ValidationError {
@@ -170,6 +207,8 @@ impl fmt::Display for ValidationError {
             ValidationError::Id(err) => write!(f, "id {err}"),
             ValidationError::Title(err) => write!(f, "title {err}"),
             ValidationError::Description(err) => write!(f, "description {err}"),
+            ValidationError::StartAt(err) => write!(f, "start at {err}"),
+            ValidationError::EndAt(err) => write!(f, "end at {err}"),
             ValidationError::EndBeforeStart => write!(f, "end is before start"),
             ValidationError::LocationName(err) => write!(f, "location name {err}"),
             ValidationError::LocationAddress(err) => write!(f, "location address {err}"),
@@ -179,6 +218,8 @@ impl fmt::Display for ValidationError {
             ValidationError::LabelsItem { index, error } => write!(f, "labels {index}-th {error}"),
             ValidationError::Image(err) => write!(f, "image {err}"),
             ValidationError::Timezone(err) => write!(f, "timezone {err}"),
+            ValidationError::Hosts(err) => write!(f, "hosts {err}"),
+            ValidationError::HostsItem { index, error } => write!(f, "hosts {index}-th {error}"),
         }
     }
 }

@@ -1,4 +1,6 @@
+use chrono::DateTime;
 use sea_orm::ColumnTrait;
+use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::{DynIden, Expr, SelectStatement};
 
 pub const EVENT_PREFIX: &str = "event_";
@@ -18,4 +20,10 @@ pub fn select_model_columns(
         let alias = DynIden::from(format!("{prefix}{column}"));
         query.expr_as(Expr::col((table, column)), alias);
     }
+}
+
+/// ms since the Unix epoch to a timestamp. `None` if it's out of range
+pub fn timestamp_from_millis(millis: u64) -> Option<DateTimeWithTimeZone> {
+    let at = DateTime::from_timestamp_millis(i64::try_from(millis).ok()?)?;
+    Some(at.fixed_offset())
 }

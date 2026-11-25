@@ -44,6 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../protos/polycentric/v2/events.proto",
         "../../../protos/polycentric/v2/backup.proto",
         "../../../protos/polycentric/v2/media.proto",
+        "../../../protos/polycentric/v2/calendar.proto",
+        "../../../protos/polycentric/v2/calendar_service.proto",
         "../../../protos/polycentric/v2/content.proto",
         "../../../protos/polycentric/v2/feeds.proto",
         "../../../protos/polycentric/v2/server.proto",
