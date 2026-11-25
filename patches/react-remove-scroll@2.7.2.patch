@@ -1,0 +1,39 @@
+diff --git a/dist/es2015/SideEffect.js b/dist/es2015/SideEffect.js
+index 68552f3da275fc1d7c0c596ddaa37eec52cedc72..fba2e2bee04b41451f1b34bbc077efa50cadfebd 100644
+--- a/dist/es2015/SideEffect.js
++++ b/dist/es2015/SideEffect.js
+@@ -55,7 +55,7 @@ export function RemoveScrollSideCar(props) {
+         // allow drag selection (iOS); check if selection's anchorNode is the same as target or contains target
+         var selection = window.getSelection();
+         var anchorNode = selection && selection.anchorNode;
+-        var isTouchingSelection = anchorNode ? anchorNode === target || anchorNode.contains(target) : false;
++        var isTouchingSelection = "touches" in event && anchorNode && !selection.isCollapsed ? anchorNode === target || anchorNode.contains(target) : false;
+         if (isTouchingSelection) {
+             return false;
+         }
+diff --git a/dist/es2019/SideEffect.js b/dist/es2019/SideEffect.js
+index c0a72030fac42b58916982460517f5e0f57a26c6..3ab5e17e48a2f065816c170998be64515f414bf6 100644
+--- a/dist/es2019/SideEffect.js
++++ b/dist/es2019/SideEffect.js
+@@ -53,7 +53,7 @@ export function RemoveScrollSideCar(props) {
+         // allow drag selection (iOS); check if selection's anchorNode is the same as target or contains target
+         const selection = window.getSelection();
+         const anchorNode = selection && selection.anchorNode;
+-        const isTouchingSelection = anchorNode ? anchorNode === target || anchorNode.contains(target) : false;
++        const isTouchingSelection = "touches" in event && anchorNode && !selection.isCollapsed ? anchorNode === target || anchorNode.contains(target) : false;
+         if (isTouchingSelection) {
+             return false;
+         }
+diff --git a/dist/es5/SideEffect.js b/dist/es5/SideEffect.js
+index a6d45ed0182b8507b75e18665ca4bf768cf40cd3..66225fece5acce325a5bbd835c208b0399a74dbf 100644
+--- a/dist/es5/SideEffect.js
++++ b/dist/es5/SideEffect.js
+@@ -60,7 +60,7 @@ function RemoveScrollSideCar(props) {
+         // allow drag selection (iOS); check if selection's anchorNode is the same as target or contains target
+         var selection = window.getSelection();
+         var anchorNode = selection && selection.anchorNode;
+-        var isTouchingSelection = anchorNode ? anchorNode === target || anchorNode.contains(target) : false;
++        var isTouchingSelection = "touches" in event && anchorNode && !selection.isCollapsed ? anchorNode === target || anchorNode.contains(target) : false;
+         if (isTouchingSelection) {
+             return false;
+         }

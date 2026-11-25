@@ -1,12 +1,12 @@
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   COLLECTION: jest.requireActual(
-    '../../../../../../packages/js-core/src/constants',
+    '../../../../../../packages/js/js-sdk/src/constants',
   ).COLLECTION,
 }));
 
 jest.mock('expo-router', () => ({ router: {} }));
 
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/react-native-sdk';
 import { eventRoute } from './eventRoute';
 
 const IDENTITY = 'identity';
@@ -32,6 +32,12 @@ describe('eventRoute', () => {
     expect(
       eventRoute({ ...key(COLLECTION.FEED), signedBy: undefined }),
     ).toBeNull();
+  });
+
+  it('routes a calendar event to its page', () => {
+    expect(eventRoute(key(COLLECTION.CALENDAR))).toBe(
+      `/${IDENTITY}/event/${FINGERPRINT}/7`,
+    );
   });
 
   it('routes profile and identity updates to the profile', () => {

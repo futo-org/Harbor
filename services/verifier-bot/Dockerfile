@@ -1,15 +1,15 @@
 # Production image (built in CI). Build context is the repo root (see
 # build_services.yml — buildkit `context=.`).
 #
-# The js SDKs (js-core, js-node, js-storage-sqlite) and rs-core-wasm are
+# The js SDKs (js-sdk, node-sdk, js-datastore-sqlite) and js-wasm are
 # built by CI and their `dist/` is pulled into the context as artifacts (the
-# verifier-bot image job `needs: [js-sdks-build, rs-core-wasm-wasm-build]`), so
+# verifier-bot image job `needs: [js-sdks-build, js-wasm-build]`), so
 # this image does NOT build them. For a self-contained local build that builds
-# the SDKs itself, use Dockerfile.dev. rs-core-wasm ships a compiled `.js`
+# the SDKs itself, use Dockerfile.dev. js-wasm ships a compiled `.js`
 # (node export condition), so the bot tsc-compiles to dist/ and runs under node.
 
 # Stage 1: Base — Node
-FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS base
+FROM node:26-trixie-slim@sha256:615a27817f7b9508f0de73eb1cc8fc8894ab122bee56c1a7a568b72cd1032067 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -30,13 +30,13 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY tools tools
-# Prebuilt by CI (js-sdks-build, rs-core-wasm-wasm-build); dist/ arrives via
+# Prebuilt by CI (js-sdks-build, js-wasm-build); dist/ arrives via
 # the job's artifacts.
-COPY packages/js-core packages/js-core
-COPY packages/js-storage-sqlite packages/js-storage-sqlite
-COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
-COPY packages/rs-core-wasm packages/rs-core-wasm
+COPY packages/js/js-sdk packages/js/js-sdk
+COPY packages/js/drivers/js-datastore-sqlite packages/js/drivers/js-datastore-sqlite
+COPY packages/js/drivers/js-datastore-postgres packages/js/drivers/js-datastore-postgres
+COPY packages/js/node-sdk packages/js/node-sdk
+COPY packages/js/drivers/js-wasm packages/js/drivers/js-wasm
 COPY services/verifier-bot services/verifier-bot
 
 # allowUnusedPatches: the workspace's patchedDependencies target frontend
@@ -52,7 +52,7 @@ RUN pnpm --filter @polycentric/verifier-bot --prod \
   deploy /deploy
 
 # Stage 3: Run
-FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS runner
+FROM node:26-trixie-slim@sha256:615a27817f7b9508f0de73eb1cc8fc8894ab122bee56c1a7a568b72cd1032067 AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).
@@ -62,7 +62,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
+# tsc-compiled dist/. js-wasm's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json

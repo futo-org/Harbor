@@ -1108,6 +1108,25 @@ async fn identity_feed_include_reply_to_identity() {
     );
 }
 
+pub(crate) async fn identity_feed(
+    identity: String,
+    expected_events: &[ExpectEvent<'_>],
+    expected_hints: Vec<ExpectHint>,
+) {
+    let response = connect_feeds()
+        .await
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity,
+            page_params: None,
+            omit_labels: Vec::new(),
+        })
+        .await
+        .expect("failed to call get_identity_feed")
+        .into_inner();
+    expect_events(&response.event_bundles, expected_events);
+    expect_hints(&response.event_hints, expected_hints);
+}
+
 #[tokio::test]
 async fn thread_no_labels_returns_post() {
     let mut event = connect_event_sync().await;
@@ -1352,6 +1371,26 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         .expect(
             "Labels event should still be present in event_hints for non-matching omit",
         );
+}
+
+pub(crate) async fn post_thread(
+    post_key: EventKey,
+    expected_events: &[ExpectEvent<'_>],
+    expected_hints: Vec<ExpectHint>,
+) {
+    let response = connect_feeds()
+        .await
+        .get_post_thread(GetPostThreadRequest {
+            event_key: Some(post_key),
+            limit: 0,
+            omit_labels: Vec::new(),
+        })
+        .await
+        .expect("failed to call get_post_thread")
+        .into_inner();
+
+    expect_events(&response.thread, expected_events);
+    expect_hints(&response.event_hints, expected_hints);
 }
 
 #[tokio::test]
@@ -1974,7 +2013,7 @@ async fn following_feed_pagination() {
     assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
-async fn following_feed(for_identity: &str, expected: &[EventKey]) {
+pub(crate) async fn following_feed(for_identity: &str, expected: &[EventKey]) {
     eprintln!("for_identity: {for_identity:?}");
     let request = async {
         let mut feeds = connect_feeds().await;
@@ -2397,7 +2436,10 @@ async fn recommended_feed_includes_metadata() {
     );
 }
 
-async fn recommended_feed(for_identity: &str, expected: &[EventKey]) {
+pub(crate) async fn recommended_feed(
+    for_identity: &str,
+    expected: &[EventKey],
+) {
     eprintln!("for_identity: {for_identity:?}");
     let request = async {
         let mut feeds = connect_feeds().await;

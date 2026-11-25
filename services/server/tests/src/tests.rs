@@ -2,12 +2,11 @@ use std::cmp::min;
 use std::mem::take;
 use std::time::SystemTime;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
-use polycentric_common::jwt::ServerJwtClaims;
+use polycentric_common::jwt::mint_jwt;
 use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::attributed_to::To;
+use polycentric_common::models::protos_v2::calendar_service_client::CalendarServiceClient;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -21,8 +20,7 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
-use rand::distr::Distribution;
-use rand::distr::{Alphabetic, SampleString};
+use rand::distr::{Alphabetic, Distribution, SampleString, StandardUniform};
 use rand::{Rng, RngExt};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -30,6 +28,8 @@ use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
 mod blobs;
+mod calendar;
+mod deleting;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -72,7 +72,8 @@ pub const COLLECTION_SOCIAL_GRAPH: i32 = 5;
 pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
-pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
+pub const COLLECTION_CALENDAR: i32 = 9;
+pub const COLLECTION_MAX: i32 = COLLECTION_CALENDAR;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
@@ -119,6 +120,11 @@ pub fn random_unstemmed_string() -> String {
     }
 
     SampleString::sample_string(&Unstemmed, &mut rand::rng(), 20)
+}
+
+pub fn random_blob() -> Vec<u8> {
+    let mut rng = rand::rng();
+    StandardUniform.sample_iter(&mut rng).take(32).collect()
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
@@ -169,6 +175,13 @@ pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
 pub async fn identity_service()
 -> IdentityServiceClient<tonic::transport::Channel> {
     IdentityServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn calendar_service()
+-> CalendarServiceClient<tonic::transport::Channel> {
+    CalendarServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -590,6 +603,68 @@ impl TestClient {
         self.verification_claim(claim, created_at)
     }
 
+    pub fn calendar_event(
+        &mut self,
+        event: CalendarEvent,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::CalendarEvent(event), created_at)
+    }
+
+    /// One hour event. Negative `starts_in_hours` is in the past
+    pub fn calendar_event_titled(
+        &mut self,
+        title: &str,
+        starts_in_hours: i64,
+        created_at: u64,
+    ) -> Vec<u8> {
+        const HOUR_MS: i64 = 60 * 60 * 1000;
+        let start_at = current_timestamp()
+            .checked_add_signed(starts_in_hours * HOUR_MS)
+            .unwrap();
+        let event = CalendarEvent {
+            id: random_string(),
+            title: title.to_owned(),
+            description: None,
+            start_at,
+            end_at: Some(start_at + HOUR_MS as u64),
+            location: None,
+            labels: Vec::new(),
+            all_day: false,
+            image: None,
+            timezone: None,
+            hosts: Vec::new(),
+        };
+        self.calendar_event(event, created_at)
+    }
+
+    pub fn rsvp(
+        &mut self,
+        to: EventKey,
+        status: CalendarEventRsvpStatus,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let rsvp = CalendarEventRsvp {
+            event_key: Some(to),
+            status: status as i32,
+        };
+        self.push_event_bundle(ContentBody::CalendarEventRsvp(rsvp), created_at)
+    }
+
+    pub async fn delete_self(&self) {
+        let auth_token = self.create_auth_token();
+        let mut request = tonic::Request::new(DeleteIdentityRequest {});
+        request
+            .metadata_mut()
+            .insert("authorization", auth_token.try_into().unwrap());
+
+        identity_service()
+            .await
+            .delete_identity(request)
+            .await
+            .unwrap();
+    }
+
     #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
@@ -630,6 +705,8 @@ impl TestClient {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => COLLECTION_VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => COLLECTION_CALENDAR,
         };
         let content = Content {
             content_body: Some(body),
@@ -731,9 +808,13 @@ impl TestClient {
 
         let response = self
             .event_sync_client
-            .put_events(PutEventsRequest {
-                event_bundles: event_bundles.clone(),
-            })
+            .put_events(as_identity(
+                &self.identity,
+                &self.key,
+                PutEventsRequest {
+                    event_bundles: event_bundles.clone(),
+                },
+            ))
             .await
             .expect("put_events failed")
             .into_inner();
@@ -758,32 +839,32 @@ impl TestClient {
     }
 
     pub fn create_auth_token(&self) -> String {
-        let header = serde_json::json!({
-            "alg": "EdDSA",
-            "typ": "JWT",
-            "kid": hex::encode(self.key.verifying_key().as_bytes()),
-        });
-
-        let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
-        let payload = ServerJwtClaims {
-            iss: self.identity().to_owned(),
-            aud: audience(),
-            iat: now,
-            exp: now + (24 * 60 * 60),
-        };
-
-        let to_sign = format!(
-            "{}.{}",
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
-            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap()),
-        );
-        let signature = self.key.sign(to_sign.as_bytes());
-
-        format!(
-            "Bearer {to_sign}.{}",
-            URL_SAFE_NO_PAD.encode(signature.to_bytes().as_slice()),
-        )
+        auth_token(&self.identity, &self.key)
     }
+
+    pub fn signing_key(&self) -> &SigningKey {
+        &self.key
+    }
+}
+
+/// An `authorization` header value for `identity`, signed by `key`.
+pub fn auth_token(identity: &str, key: &SigningKey) -> String {
+    let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
+    let token = mint_jwt(key, identity, &audience(), now, 24 * 60 * 60);
+    format!("Bearer {token}")
+}
+
+/// `message` as a request authenticated as `identity` with `key`.
+pub fn as_identity<T>(
+    identity: &str,
+    key: &SigningKey,
+    message: T,
+) -> tonic::Request<T> {
+    let mut request = tonic::Request::new(message);
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token(identity, key).parse().unwrap());
+    request
 }
 
 fn github_verification_claim(login: &str) -> VerificationClaim {
@@ -866,6 +947,12 @@ pub enum ExpectEventKind<'a> {
     Repost {
         post: EventKey,
     },
+    ProfileUpdate {
+        name: Option<String>,
+        description: Option<String>,
+        alias: Option<String>,
+        // TODO: add other fields as needed.
+    },
     VerificationClaim {
         schema: VerificationSchema,
         fields: HashMap<&'a str, &'a str>,
@@ -896,6 +983,21 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
             (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
                 let got = repost.post.as_ref().expect("repost is missing key");
                 assert_eq!(got, post);
+            }
+            (
+                ContentBody::ProfileUpdate(update),
+                ExpectEventKind::ProfileUpdate {
+                    name,
+                    description,
+                    alias,
+                },
+            ) => {
+                assert_eq!(update.name.as_deref(), name.as_deref());
+                assert_eq!(
+                    update.description.as_deref(),
+                    description.as_deref()
+                );
+                assert_eq!(update.alias.as_deref(), alias.as_deref());
             }
             (
                 ContentBody::VerificationClaim(claim),
@@ -1356,9 +1458,13 @@ async fn publish_genesis(
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
     let sig = bundle_signature(&bundle);
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
+        .put_events(as_identity(
+            identity,
+            key,
+            PutEventsRequest {
+                event_bundles: vec![bundle],
+            },
+        ))
         .await
         .expect("genesis put failed")
         .into_inner();
@@ -1387,9 +1493,13 @@ async fn publish_post(
     );
     let sig = bundle_signature(&bundle);
     let response = client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
+        .put_events(as_identity(
+            identity,
+            key,
+            PutEventsRequest {
+                event_bundles: vec![bundle],
+            },
+        ))
         .await
         .expect("post put failed")
         .into_inner();

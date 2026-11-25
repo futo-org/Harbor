@@ -1,5 +1,5 @@
 # Stage 1: Base, Node
-FROM node:26-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS base
+FROM node:26-trixie-slim@sha256:615a27817f7b9508f0de73eb1cc8fc8894ab122bee56c1a7a568b72cd1032067 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -7,8 +7,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 FROM base AS build
 WORKDIR /app
 
-# CI populates packages/js-*/dist, packages/react-native/lib, and the
-# packages/rs-core-wasm wasm build from upstream artifacts and sets this
+# CI populates packages/js/{js-sdk,node-sdk,drivers/js-*}/dist, packages/js/react-native-sdk/lib, and the
+# packages/js/drivers/js-wasm wasm build from upstream artifacts and sets this
 # to skip the redundant `pnpm run build`. Local builds leave it unset
 # and fall through to a full workspace build.
 ARG SKIP_WORKSPACE_BUILD=
@@ -21,7 +21,7 @@ COPY packages packages
 COPY tools tools
 # --ignore-scripts: the only dependency allowed to run install scripts is
 # better-sqlite3 (see onlyBuiltDependencies), and it reaches this image only
-# through @polycentric/js-node, which polycentric-app does not depend on.
+# through @polycentric/node-sdk, which polycentric-app does not depend on.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
 # Non symlinked packages and node_modules

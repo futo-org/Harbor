@@ -219,6 +219,15 @@ impl Authoring {
         })
     }
 
+    /// A token to put `identity`'s events to `server`.
+    pub fn auth_token(&self, identity: &str, server: &str) -> String {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        polycentric_common::jwt::mint_jwt(&self.signing_key, identity, server, now, 3600)
+    }
+
     /// The genesis identity document for a legacy system.
     pub fn identity_document(&self, legacy_public: &PublicKey) -> Identity {
         Identity {
@@ -400,14 +409,21 @@ impl Authoring {
 
 /// Push bundles to a single server. Returns the per-event errors the server
 /// reported (empty on full success).
-pub async fn push(server: &str, bundles: Vec<EventBundle>) -> Result<Vec<String>, String> {
+pub async fn push(
+    server: &str,
+    bundles: Vec<EventBundle>,
+    token: &str,
+) -> Result<Vec<String>, String> {
     if bundles.is_empty() {
         return Ok(vec![]);
     }
-    let response = tokio::time::timeout(PUSH_TIMEOUT, core_sync::push_bundles(server, bundles))
-        .await
-        .map_err(|_| format!("push to {server} timed out"))?
-        .map_err(|e| e.to_string())?;
+    let response = tokio::time::timeout(
+        PUSH_TIMEOUT,
+        core_sync::push_bundles_as(server, bundles, token),
+    )
+    .await
+    .map_err(|_| format!("push to {server} timed out"))?
+    .map_err(|e| e.to_string())?;
     Ok(response.errors.into_iter().map(|e| e.message).collect())
 }
 

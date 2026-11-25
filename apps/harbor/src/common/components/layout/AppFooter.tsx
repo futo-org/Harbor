@@ -45,12 +45,14 @@ const linksFor = (signedIn: boolean): FooterLinkProps[] => [
   { text: 'Merch', href: MERCH_URL },
   { text: 'Privacy', href: PRIVACY_POLICY_URL },
   { text: 'Content Policy', href: CONTENT_POLICY_URL },
-  { text: '© 2026 FUTO', href: FUTO_URL },
 ];
+
+const COPYRIGHT: FooterLinkProps = { text: '© 2026 FUTO', href: FUTO_URL };
 
 type AppFooterProps = ComponentProps<typeof View> & {
   /** Off where the screen already has a theme control, such as settings. */
   showThemeSwitcher?: boolean;
+  showCopyright?: boolean;
 };
 
 /**
@@ -59,6 +61,7 @@ type AppFooterProps = ComponentProps<typeof View> & {
  */
 export function AppFooter({
   showThemeSwitcher = true,
+  showCopyright = true,
   style,
   ...props
 }: AppFooterProps) {
@@ -82,6 +85,7 @@ export function AppFooter({
       {linksFor(!!identity).map(({ text, href }) => (
         <FooterLink key={text} href={href} text={text} />
       ))}
+      {showCopyright && <FooterLink {...COPYRIGHT} />}
     </View>
   );
 }

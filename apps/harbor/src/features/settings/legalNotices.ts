@@ -30,9 +30,17 @@ export interface LegalNotice {
   licenseText?: string;
 }
 
-// Bundled third-party assets whose licenses require attribution. OFL fonts
+// Third-party assets and data whose licenses require attribution. OFL fonts
 // carry their notice in the file and are not listed.
 export const LEGAL_NOTICES: readonly LegalNotice[] = [
+  {
+    name: 'OpenStreetMap',
+    url: 'https://www.openstreetmap.org/copyright',
+    attribution:
+      'Place search uses data from OpenStreetMap, copyright OpenStreetMap contributors.',
+    license: 'Open Database License',
+    licenseUrl: 'https://opendatacommons.org/licenses/odbl/',
+  },
   {
     name: 'Twemoji',
     url: 'https://github.com/jdecked/twemoji',

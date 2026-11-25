@@ -1,4 +1,4 @@
-import type { types } from '@polycentric/react-native';
+import type { types } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -71,7 +71,7 @@ jest.mock('@/src/common/link-previews', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   COLLECTION: { FEED: 1 },
   types: {},
   v2: {
@@ -411,6 +411,11 @@ describe('useComposer pending share', () => {
     );
     expect(usePendingShareStore.getState().pendingShare).toBeNull();
     expect(mockConfirm).not.toHaveBeenCalled();
+
+    await flush();
+    expect(result.current.attachments).toEqual([
+      expect.objectContaining({ uri: sharedImage.uri, status: 'ready' }),
+    ]);
   });
 
   it('takes a share that was pending before mounting', async () => {
@@ -459,7 +464,7 @@ describe('useComposer pending share', () => {
     expect(result.current.text).toBe('my draft');
     expect(usePendingShareStore.getState().pendingShare).toBeNull();
 
-    act(() => mockConfirm.mock.calls[0][0].onConfirm());
+    await act(async () => mockConfirm.mock.calls[0][0].onConfirm());
 
     expect(result.current.text).toBe('shared text');
     expect(result.current.attachments).toEqual([
@@ -580,6 +585,8 @@ describe('useComposer handlePost', () => {
 
   it('shows a fixed message, not the raw error, when posting fails', async () => {
     mockClient.createEvent.mockRejectedValueOnce(new Error('create boom'));
+    // Suppress the console error that we expect from cluttering the output
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     const { result } = await renderComposer();
     act(() => result.current.setText('hello'));
 
@@ -590,6 +597,8 @@ describe('useComposer handlePost', () => {
     expect(result.current.error).toBe("Couldn't publish the post. Try again.");
     expect(result.current.submitting).toBe(false);
     expect(onClose).not.toHaveBeenCalled();
+
+    error.mockRestore();
   });
 });
 

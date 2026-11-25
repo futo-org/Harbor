@@ -1,0 +1,20 @@
+FROM rust:1.100-slim-trixie@sha256:86993c97389ebb5487eb09e88168e2a00b0de29aa08dff9ae896049b9be96ed9
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    unzip \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN cargo install just && rm -rf /usr/local/cargo/registry
+
+RUN curl -L -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip" \
+    && unzip -q /tmp/ndk.zip -d /opt \
+    && mv /opt/android-ndk-* /opt/android-ndk \
+    && rm /tmp/ndk.zip
+
+ENV ANDROID_NDK_HOME=/opt/android-ndk
+ENV PATH="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"

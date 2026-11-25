@@ -42,17 +42,9 @@ jest.mock('./hooks/useProfile', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
-jest.mock('@rn-primitives/portal', () => ({
-  Portal: ({ children }: { children: unknown }) => children,
+jest.mock('@polycentric/react-native-sdk', () => ({
+  FetchMode: { Default: 'd' },
 }));
-jest.mock('@/src/common/components/HoverCard', () => {
-  const HoverCard = ({ children }: { children: unknown }) => children;
-  HoverCard.Trigger = ({ children }: { children: unknown }) => children;
-  // Closed by default under test, so the full-alias copy isn't also rendered.
-  HoverCard.Content = () => null;
-  return { __esModule: true, default: HoverCard };
-});
 jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,

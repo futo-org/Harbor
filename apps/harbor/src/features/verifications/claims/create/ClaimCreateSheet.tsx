@@ -5,6 +5,8 @@ import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import { CalendarEventCard } from '@/src/features/calendar-events/card/CalendarEventCard';
+import type { CalendarEventData } from '@/src/features/calendar-events/lib/calendar-event';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -14,10 +16,20 @@ import type { DecodedClaim } from '../../hooks/useClaimById';
 import { useClaimsList } from '../../hooks/useClaimsList';
 import type { ClaimRef } from '../../hooks/useCreateClaim';
 import useRequestVerification from '../../hooks/useRequestVerification';
-import { CLAIM_TYPES, type ClaimType } from '../../utils/forms';
+import {
+  ATTENDANCE_CLAIM_TYPE,
+  CLAIM_TYPES,
+  type ClaimType,
+} from '../../utils/forms';
+import { attendanceValues } from '../../utils/attendance';
 import type { Platform } from '../../utils/platforms';
 import type { TintColors } from '../../utils/tint';
 import { ClaimCreateProvider } from './ClaimCreateContext';
+import {
+  ClaimCreateEventNew,
+  type EventFormState,
+} from './ClaimCreateEventNew';
+import { ClaimCreateEventPicker } from './ClaimCreateEventPicker';
 import { ClaimCreateForm, type ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
 import { ClaimCreatePlatformOAuth } from './ClaimCreatePlatformOAuth';
@@ -31,7 +43,9 @@ type Step =
   | { kind: 'choose' }
   | { kind: 'existing' }
   | { kind: 'type' }
-  | { kind: 'form'; claimType: ClaimType }
+  | { kind: 'form'; claimType: ClaimType; calendarEvent?: CalendarEventData }
+  | { kind: 'event' }
+  | { kind: 'event-new' }
   | { kind: 'platform' }
   | { kind: 'platform-link'; platform: Platform }
   | { kind: 'platform-oauth'; platform: Platform };
@@ -46,6 +60,10 @@ function stepTitle(step: Step): string {
       return 'Create a claim';
     case 'form':
       return step.claimType.name;
+    case 'event':
+      return 'Choose the event';
+    case 'event-new':
+      return 'New event';
     case 'platform':
       return 'Choose a platform';
     case 'platform-link':
@@ -61,7 +79,7 @@ function stepTitle(step: Step): string {
 function stepKey(step: Step): string {
   switch (step.kind) {
     case 'form':
-      return `form-${step.claimType.name}`;
+      return `form-${step.claimType.name}-${step.calendarEvent?.id ?? ''}`;
     case 'platform-link':
       return `platform-link-${step.platform.name}`;
     case 'platform-oauth':
@@ -75,19 +93,26 @@ export function ClaimCreateSheet({
   open,
   onClose,
   requestFrom,
+  calendarEvent,
 }: {
   open: boolean;
   onClose: () => void;
   // Identity to request verification from once the claim is created.
   requestFrom?: string;
+  // Start on an attendance claim for this event.
+  calendarEvent?: CalendarEventData;
 }) {
   const { theme } = useTheme();
   const toast = useToast();
-
-  const initialStep: Step = requestFrom ? { kind: 'choose' } : { kind: 'type' };
+  const initialStep: Step = calendarEvent
+    ? attendanceStep(calendarEvent)
+    : requestFrom
+      ? { kind: 'choose' }
+      : { kind: 'type' };
   const [stack, setStack] = useState<Step[]>([initialStep]);
 
   const [form, setForm] = useState<ClaimFormState | null>(null);
+  const [eventForm, setEventForm] = useState<EventFormState | null>(null);
 
   const { identityKey } = useCurrentIdentity();
   const existingClaims = useClaimsList(
@@ -107,10 +132,15 @@ export function ClaimCreateSheet({
     setStack([initialStep]);
   };
 
-  const onSelectClaimType = (claimType: ClaimType) =>
-    push(
-      claimType.platform ? { kind: 'platform' } : { kind: 'form', claimType },
-    );
+  const onSelectClaimType = (claimType: ClaimType) => {
+    if (claimType.platform) push({ kind: 'platform' });
+    else if (claimType.calendarEvent) push({ kind: 'event' });
+    else push({ kind: 'form', claimType });
+  };
+
+  // Replaces the new event step, so back returns to the picker
+  const onEventCreated = (event: CalendarEventData) =>
+    setStack((s) => [...s.slice(0, -1), attendanceStep(event)]);
 
   // The requests list refreshes via query invalidation — no redirect.
   const onSelectExisting = async (claim: DecodedClaim) => {
@@ -125,21 +155,32 @@ export function ClaimCreateSheet({
     close();
   };
 
+  // Attendance claims ask the event's hosts to verify them
+  const hostsToAsk =
+    step.kind === 'form' && step.calendarEvent
+      ? step.calendarEvent.hosts.filter((host) => host !== identityKey)
+      : [];
+
   const handleSubmitted = (ref: ClaimRef) => {
-    // Without a pre-targeted verifier, the claim view opens the share sheet.
+    const requested = !!requestFrom || hostsToAsk.length > 0;
+
     toast.success(
-      requestFrom ? 'Claim created — verification requested' : 'Claim created',
+      requested ? 'Claim created — verification requested' : 'Claim created',
     );
     close();
-    if (!requestFrom) {
-      router.navigate(
-        `${Routes.tabs.verification(
-          ref.identity,
-          ref.keyFingerprint,
-          ref.sequence,
-        )}?requestVerification=1`,
-      );
-    }
+
+    if (requestFrom) return;
+
+    const claimRoute = Routes.tabs.verification(
+      ref.identity,
+      ref.keyFingerprint,
+      ref.sequence,
+    );
+
+    // With nobody asked yet, the claim view opens the share sheet.
+    router.navigate(
+      requested ? claimRoute : `${claimRoute}?requestVerification=1`,
+    );
   };
 
   // Platform claims are verified by the verifier servers during the flow, so
@@ -160,35 +201,44 @@ export function ClaimCreateSheet({
 
   const options = useMemo(() => ({ requestFrom }), [requestFrom]);
 
+  // The steps that end in a Create button
+  const create: CreateButtonProps | null =
+    step.kind === 'form'
+      ? {
+          pendingLabel: 'Creating claim',
+          isPending: !!form?.isPending,
+          disabled: !form?.isValid,
+          onPress: () => form?.submit(),
+        }
+      : step.kind === 'event-new'
+        ? {
+            pendingLabel: 'Creating event',
+            isPending: !!eventForm?.isPending,
+            disabled: !eventForm?.canSubmit,
+            onPress: () => eventForm?.submit(),
+          }
+        : null;
+
+  // Images, the event list and the event form don't fit at half height
+  const isTall =
+    !!form?.hasAttachments ||
+    step.kind === 'event' ||
+    step.kind === 'event-new';
+
   return (
     <Sheet
       open={open}
       onClose={close}
-      // Images don't fit at half height, so go full screen once there are any.
-      detents={form?.hasAttachments ? [1] : [0.5]}
+      detents={isTall ? [1] : [0.5]}
       header={
         <Sheet.Header
           title={stepTitle(step)}
           closeIcon={canGoBack ? 'chevronBack' : 'close'}
           onClose={canGoBack ? pop : close}
-          disabled={form?.isPending}
+          disabled={form?.isPending || eventForm?.isPending}
           right={
-            step.kind === 'form' ? (
-              form?.isPending ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.accent}
-                  accessibilityLabel="Creating claim"
-                />
-              ) : (
-                <Button
-                  title="Create"
-                  variant="primary"
-                  size="sm"
-                  disabled={!form?.isValid}
-                  onPress={() => form?.submit()}
-                />
-              )
+            create ? (
+              <CreateButton {...create} />
             ) : step.kind === 'existing' && request.isPending ? (
               <ActivityIndicator
                 size="small"
@@ -296,8 +346,39 @@ export function ClaimCreateSheet({
                 <View style={Atoms.px_lg}>
                   <ClaimCreateForm
                     claimType={step.claimType}
+                    initialValues={
+                      step.calendarEvent
+                        ? attendanceValues(step.calendarEvent)
+                        : undefined
+                    }
+                    header={
+                      step.calendarEvent ? (
+                        <CalendarEventCard
+                          event={step.calendarEvent}
+                          embedded
+                          linkToEvent={false}
+                        />
+                      ) : undefined
+                    }
+                    alsoRequestFrom={hostsToAsk}
                     onSubmitted={handleSubmitted}
                     onFormState={setForm}
+                  />
+                </View>
+              )}
+
+              {step.kind === 'event' && (
+                <ClaimCreateEventPicker
+                  onSelect={(event) => push(attendanceStep(event))}
+                  onCreateNew={() => push({ kind: 'event-new' })}
+                />
+              )}
+
+              {step.kind === 'event-new' && (
+                <View style={Atoms.px_lg}>
+                  <ClaimCreateEventNew
+                    onCreated={onEventCreated}
+                    onFormState={setEventForm}
                   />
                 </View>
               )}
@@ -339,6 +420,47 @@ export function ClaimCreateSheet({
       </ClaimCreateProvider>
     </Sheet>
   );
+}
+
+type CreateButtonProps = {
+  pendingLabel: string;
+  isPending: boolean;
+  disabled: boolean;
+  onPress: () => void;
+};
+
+// The header's Create button, or a spinner while it's working.
+function CreateButton({
+  pendingLabel,
+  isPending,
+  disabled,
+  onPress,
+}: CreateButtonProps) {
+  const { theme } = useTheme();
+
+  if (isPending) {
+    return (
+      <ActivityIndicator
+        size="small"
+        color={theme.colors.accent}
+        accessibilityLabel={pendingLabel}
+      />
+    );
+  }
+
+  return (
+    <Button
+      title="Create"
+      variant="primary"
+      size="sm"
+      disabled={disabled}
+      onPress={onPress}
+    />
+  );
+}
+
+function attendanceStep(calendarEvent: CalendarEventData): Step {
+  return { kind: 'form', claimType: ATTENDANCE_CLAIM_TYPE, calendarEvent };
 }
 
 // An option in a picker step.

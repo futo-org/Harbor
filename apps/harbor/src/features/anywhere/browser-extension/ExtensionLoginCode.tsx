@@ -6,7 +6,7 @@ import {
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 

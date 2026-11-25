@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
-import { COLLECTION, Query, type EventKey } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  Query,
+  type EventKey,
+} from '@polycentric/react-native-sdk';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';

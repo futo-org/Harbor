@@ -1,5 +1,6 @@
 import { Toaster } from '@/src/common/components/toast';
 import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
+import { NavDrawer } from '@/src/common/components/layout/nav/drawer/NavDrawer';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporter';
 import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
@@ -145,6 +146,7 @@ function RootStack() {
             options={transparentScreenOptions}
           />
           <Stack.Screen name="verifications/index" />
+          <Stack.Screen name="events/index" />
         </Stack.Protected>
 
         <Stack.Screen
@@ -203,7 +205,13 @@ export default function RootLayout() {
                 <ModerationStatusPrefetch />
                 <TelemetryIdentitySync />
                 <TrueSheetProvider>
-                  <RootStack />
+                  {isWeb ? (
+                    <RootStack />
+                  ) : (
+                    <NavDrawer>
+                      <RootStack />
+                    </NavDrawer>
+                  )}
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />

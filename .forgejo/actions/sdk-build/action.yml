@@ -7,7 +7,7 @@ inputs:
     description: Native libraries to have in place besides wasm (the JS SDKs need it), from android ios
     default: ""
   wasm-artifact:
-    description: Take rs-core-wasm-build from this run
+    description: Take js-wasm-build from this run
     default: "false"
   android-artifact:
     description: Take rn-android-build from this run
@@ -37,18 +37,18 @@ runs:
     - if: inputs.wasm-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
-        name: rs-core-wasm-build
-        path: packages
+        name: js-wasm-build
+        path: packages/js
     - if: inputs.android-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
         name: rn-android-build
-        path: packages/react-native/android/src/main/jniLibs
+        path: packages/js/react-native-sdk/android/src/main/jniLibs
     - if: inputs.ios-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
         name: rn-ios-build
-        path: packages/react-native
+        path: packages/js/react-native-sdk
     - uses: ./.forgejo/actions/registry-login
       with:
         registry: ${{ inputs.registry }}
@@ -72,42 +72,46 @@ runs:
       with:
         name: rs-core-libraries
         path: |
-          packages/rs-core-wasm/src/generated/wasm
-          packages/rs-core-wasm/dist
-          packages/react-native/src/generated
-          packages/react-native/src/NativeReactNative.ts
-          packages/react-native/src/uniffi-init.tsx
-          packages/react-native/cpp
-          packages/react-native/ios/ReactNative.h
-          packages/react-native/ios/ReactNative.mm
-          packages/react-native/ReactNative.podspec
-          packages/react-native/android/CMakeLists.txt
-          packages/react-native/android/build.gradle
-          packages/react-native/android/cpp-adapter.cpp
-          packages/react-native/android/src/main/AndroidManifest.xml
-          packages/react-native/android/src/main/java
-          packages/react-native/android/src/main/jniLibs
-          packages/react-native/ios
-          packages/react-native/PolycentricReactNativeFramework.xcframework
+          packages/js/drivers/js-wasm/src/generated/wasm
+          packages/js/drivers/js-wasm/dist
+          packages/js/react-native-sdk/src/generated
+          packages/js/react-native-sdk/src/NativeReactNativeSdk.ts
+          packages/js/react-native-sdk/src/uniffi-init.tsx
+          packages/js/react-native-sdk/cpp
+          packages/js/react-native-sdk/ios/ReactNativeSdk.h
+          packages/js/react-native-sdk/ios/ReactNativeSdk.mm
+          packages/js/react-native-sdk/ReactNativeSdk.podspec
+          packages/js/react-native-sdk/android/CMakeLists.txt
+          packages/js/react-native-sdk/android/build.gradle
+          packages/js/react-native-sdk/android/cpp-adapter.cpp
+          packages/js/react-native-sdk/android/src/main/AndroidManifest.xml
+          packages/js/react-native-sdk/android/src/main/java
+          packages/js/react-native-sdk/android/src/main/jniLibs
+          packages/js/react-native-sdk/ios
+          packages/js/react-native-sdk/PolycentricReactNativeSdkFramework.xcframework
         retention-days: 7
     - uses: ./.forgejo/actions/setup-pnpm
       with:
-        install-args: --filter ./packages/js-*... --filter @polycentric/react-native...
+        install-args: --filter ./packages/js/js-sdk... --filter ./packages/js/node-sdk... --filter './packages/js/drivers/js-datastore-*...' --filter './packages/js/drivers/js-filestore-*...' --filter @polycentric/react-native-sdk...
     - shell: bash
-      run: pnpm --filter='./packages/js-*' run build
+      run: pnpm --filter './packages/js/js-sdk' --filter './packages/js/node-sdk' --filter './packages/js/drivers/js-datastore-*' --filter './packages/js/drivers/js-filestore-*' run build
     - uses: forgejo/upload-artifact@v4
       with:
         name: js-sdks-dist
-        path: packages/js-*/dist
+        path: |
+          packages/js/js-sdk/dist
+          packages/js/node-sdk/dist
+          packages/js/drivers/js-datastore-*/dist
+          packages/js/drivers/js-filestore-*/dist
         retention-days: 7
     - if: inputs.rn-sdk == 'true'
       shell: bash
-      run: pnpm --filter @polycentric/react-native build
+      run: pnpm --filter @polycentric/react-native-sdk build
     - if: inputs.rn-sdk == 'true'
       uses: forgejo/upload-artifact@v4
       with:
         name: rn-sdk
         path: |
-          packages/react-native
-          !packages/react-native/node_modules
+          packages/js/react-native-sdk
+          !packages/js/react-native-sdk/node_modules
         retention-days: 7

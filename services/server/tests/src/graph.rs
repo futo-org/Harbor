@@ -36,11 +36,13 @@ async fn following() {
     check_followers(&mut search, no_followers, &[]).await;
 }
 
-async fn check_following(
+pub(crate) async fn check_following(
     search: &mut GraphServiceClient<tonic::transport::Channel>,
     for_identity: String,
     expected: &[String],
 ) {
+    eprintln!("Checking following for: '{for_identity}'");
+    eprintln!("expected: {expected:#?}");
     let result = search
         .list_following(ListFollowingRequest {
             identity: for_identity.clone(),
@@ -49,6 +51,7 @@ async fn check_following(
         .await
         .unwrap()
         .into_inner();
+    eprintln!("results: {result:#?}");
     assert_eq!(result.event_bundles.len(), expected.len());
     for event in &result.event_bundles {
         let signed_event =
@@ -72,11 +75,13 @@ async fn check_following(
     }
 }
 
-async fn check_followers(
+pub(crate) async fn check_followers(
     search: &mut GraphServiceClient<tonic::transport::Channel>,
     for_identity: String,
     expected: &[&str],
 ) {
+    eprintln!("Checking followers for: '{for_identity}'");
+    eprintln!("expected: {expected:#?}");
     let result = search
         .list_followers(ListFollowersRequest {
             identity: for_identity.clone(),
@@ -85,6 +90,7 @@ async fn check_followers(
         .await
         .unwrap()
         .into_inner();
+    eprintln!("results: {result:#?}");
     assert_eq!(result.event_bundles.len(), expected.len());
     for event in &result.event_bundles {
         let signed_event =
@@ -517,19 +523,19 @@ async fn suggest_follow_pagination() {
 }
 
 #[derive(Debug)]
-struct ExpectedFollowSuggestion {
-    suggestion: String,
-    followers: Vec<String>,
+pub(crate) struct ExpectedFollowSuggestion {
+    pub(crate) suggestion: String,
+    pub(crate) followers: Vec<String>,
 }
 
 #[derive(Debug)]
-struct ExpectedHint {
-    identity: String,
-    expect_profile: bool,
-    expect_follow: Vec<String>,
+pub(crate) struct ExpectedHint {
+    pub(crate) identity: String,
+    pub(crate) expect_profile: bool,
+    pub(crate) expect_follow: Vec<String>,
 }
 
-async fn suggest_follow(
+pub(crate) async fn suggest_follow(
     identity: &TestClient,
     expected_suggestions: Vec<ExpectedFollowSuggestion>,
     expected_hints: Vec<ExpectedHint>,

@@ -7,7 +7,7 @@ import {
   type CreateEventArgs,
   v2,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 
 type UpdateProfileInput = {
   name: string;
@@ -22,7 +22,7 @@ type UpdateProfileInput = {
 };
 
 /** Assemble the full profile update in-memory but don't persist it. */
-export async function beginProfileUpdate(
+export async function draftProfileUpdate(
   client: PolycentricClient,
   { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
 ): Promise<CreateEventArgs> {
@@ -63,6 +63,6 @@ export async function updateProfile(
   client: PolycentricClient,
   input: UpdateProfileInput,
 ): Promise<void> {
-  const args = await beginProfileUpdate(client, input);
+  const args = await draftProfileUpdate(client, input);
   await client.createEvent(args);
 }

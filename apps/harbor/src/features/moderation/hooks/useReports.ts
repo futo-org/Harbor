@@ -7,7 +7,7 @@ import {
   FetchMode,
   Query,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import useModerationStatus from './useModerationStatus';
 

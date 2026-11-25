@@ -50,12 +50,13 @@ fn logs() -> String {
 
 /// What the stamp puts on every resource.
 fn stamped_identity() -> Vec<(String, String)> {
-    let (identity, _) = identity_for(&device_key());
+    let key = device_key();
+    let (identity, _) = identity_for(&key);
     vec![
         (ATTR_IDENTITY.to_string(), identity),
         (
             ATTR_SIGNING_KEY.to_string(),
-            hex::encode(device_key().verifying_key().to_bytes()),
+            format!("1_{}", hex::encode(key.verifying_key().to_bytes())),
         ),
     ]
 }

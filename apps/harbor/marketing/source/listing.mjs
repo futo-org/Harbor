@@ -1,4 +1,5 @@
 // Store listing source. export.mjs writes app-store/ and play-store/ from it.
+import { readFileSync } from 'node:fs';
 
 const tagline = 'Share to the world, not platforms.';
 
@@ -63,8 +64,8 @@ export const urls = {
 export const releaseNotes = `${tagline} You hold the keys, and your posts go to every server you choose.`;
 
 export const signInInstructions = [
-  'There is no sign-in. Explore and Search work without an identity.',
-  'To post, follow or react, tap "Create identity" on the welcome screen and enter a display name. No email, phone or password is needed.',
+  'An identity is required to use the app. It is created on the device, with no email, phone or password.',
+  'On the welcome screen tap "Create new identity", enter a display name and tap "Continue". No demo account or credentials are needed.',
 ].join(' ');
 
 export const appStore = {
@@ -124,11 +125,10 @@ export const appStore = {
   },
   price: { baseTerritory: 'USA', customerPrice: '0.0' },
   availability: { allTerritories: true, availableInNewTerritories: true },
-  reviewNotes: [
-    signInInstructions,
-    `Users can report any post from its "..." menu and block any user from their profile. Content policy: ${urls.storeContentPolicy}`,
-    'The app does not use non-exempt encryption.',
-  ].join('\n\n'),
+  reviewNotes: readFileSync(
+    new URL('./review-notes.txt', import.meta.url),
+    'utf8',
+  ).trim(),
   screenshots: {
     APP_IPHONE_67: 'screenshots/iphone-6.9',
     APP_IPAD_PRO_3GEN_129: 'screenshots/ipad-13',

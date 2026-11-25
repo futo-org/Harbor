@@ -1,0 +1,171 @@
+use std::fmt;
+use std::str::FromStr;
+
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use prost::Message;
+
+use crate::error::Error;
+use crate::models::Serializable;
+use crate::models::protos_v2::{KeyType, PublicKey};
+use crate::models::validate::{self, SliceConfig, Validate};
+use crate::platform::error::PlatformError;
+use crate::signing;
+
+impl PublicKey {
+    /// Gets the raw key bytes
+    pub fn key(&self) -> &[u8] {
+        &self.key
+    }
+
+    /// Gets a copy of the key bytes
+    pub fn key_cloned(&self) -> Vec<u8> {
+        self.key.to_vec()
+    }
+
+    /// Gets the key as a hex string
+    pub fn key_as_hex(&self) -> String {
+        hex::encode(self.key())
+    }
+
+    /// Validates that the key has the expected length
+    pub fn validate_length(&self, expected: usize) -> Result<(), Error> {
+        if self.key.len() != expected {
+            return Err(Error::Platform(PlatformError::KeyIncorrectLength {
+                expected,
+                actual: self.key.len(),
+            }));
+        }
+        Ok(())
+    }
+
+    /// Validates that the key type is correct
+    pub fn validate_type(&self, _expected: u64) -> Result<(), Error> {
+        // TODO: re-enable once `key_type` width settles between v1 (u64) and v2 (i32).
+        // if self.key_type != expected {
+        //     return Err(Error::Platform(PlatformError::KeyInvalidType {
+        //         expected,
+        //         actual: self.key_type,
+        //     }));
+        // }
+        Ok(())
+    }
+
+    /// Checks if this key is equal to another
+    pub fn equals(&self, other: &Self) -> bool {
+        self.key == other.key && self.key_type == other.key_type
+    }
+
+    /// Returns whether `sig` is a valid signature by this key over `msg`.
+    pub fn sig_matches(&self, sig: &[u8], msg: &[u8]) -> bool {
+        match self.key_type {
+            t if t == KeyType::Ed25519 as i32 => {
+                signing::verify_ed25519_signature(&self.key, sig, msg).is_ok()
+            }
+            _ => false,
+        }
+    }
+
+    /// Checks if the key is empty
+    pub fn is_empty(&self) -> bool {
+        self.key.is_empty()
+    }
+
+    /// Returns the length of the key
+    pub fn len(&self) -> usize {
+        self.key.len()
+    }
+}
+
+impl Serializable for PublicKey {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
+        let mut buf = Vec::new();
+        self.encode(&mut buf)
+            .map_err(|e| Error::Platform(PlatformError::SerializationError(e.to_string())))?;
+        Ok(buf)
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        PublicKey::decode(bytes)
+            .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
+    }
+}
+
+impl fmt::Display for PublicKey {
+    /// Encode this public key into its string representation.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}_{}", self.key_type, hex::encode(self.key.as_slice()))
+    }
+}
+
+impl FromStr for PublicKey {
+    type Err = ParsePublicKeyError;
+
+    /// Decode a public key from its string representation.
+    fn from_str(input: &str) -> Result<PublicKey, ParsePublicKeyError> {
+        let (type_str, hex_str) = input.split_once('_').ok_or(ParsePublicKeyError)?;
+        let key_type = type_str.parse::<i32>().map_err(|_| ParsePublicKeyError)?;
+        let key = hex::decode(hex_str).map_err(|_| ParsePublicKeyError)?;
+        Ok(PublicKey { key_type, key })
+    }
+}
+
+/// Error parsing a [`PublicKey`] from its string representation.
+#[derive(Debug)]
+pub struct ParsePublicKeyError;
+
+impl fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let PublicKey { key_type, key } = self;
+        f.debug_struct("PublicKey")
+            .field("key_type", key_type)
+            .field("key", &URL_SAFE_NO_PAD.encode(key))
+            .finish()
+    }
+}
+
+impl Validate for PublicKey {
+    type Error = ValidationError;
+
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
+        let PublicKey { key_type, key } = self;
+        const ED25519: i32 = KeyType::Ed25519 as i32;
+        let key_len = match *key_type {
+            ED25519 => 32,
+            _ => {
+                errors.push(map_err(ValidationError::KeyTypeInvalid));
+                return; // Can't validate the key without knowing the type.
+            }
+        };
+        validate::slice(
+            key,
+            errors,
+            |err| map_err(ValidationError::Key(err)),
+            SliceConfig {
+                min_len: Some(key_len),
+                max_len: Some(key_len),
+                ..Default::default()
+            },
+        );
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "PublicKeyValidationError"))]
+pub enum ValidationError {
+    KeyTypeInvalid,
+    Key(validate::SliceError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::KeyTypeInvalid => write!(f, "key type is invalid"),
+            ValidationError::Key(err) => write!(f, "key {err}"),
+        }
+    }
+}

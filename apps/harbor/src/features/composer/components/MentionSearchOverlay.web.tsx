@@ -13,6 +13,7 @@ import {
   type ViewInstance,
 } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
+import { RemoveScroll } from 'react-remove-scroll';
 import { Kbd, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { hasPointerHover, isApplePlatform } from '@/src/common/util/platform';
@@ -83,34 +84,36 @@ export function MentionSearchOverlay() {
 
   return (
     <Portal name={portalName}>
-      <View
-        // Keep the textarea focused: a blur would close the overlay before
-        // the row's click lands.
-        onMouseDown={(e) => e.preventDefault()}
-        style={[
-          Atoms.fixed,
-          Atoms.rounded_lg,
-          Atoms.overflow_hidden,
-          placeMentionOverlay(anchor, win),
-          theme.atoms.box.primary.bg,
-          theme.atoms.box.primary.border,
-          Atoms.border,
-          { zIndex: ZIndex.tooltipOverlay },
-        ]}
-      >
-        <ScrollView keyboardShouldPersistTaps="handled">
-          {entries.map(({ identity }, i) => (
-            <MentionRow
-              key={identity}
-              identity={identity}
-              selected={i === selectedIndex}
-              onHover={() => setSelectedIndex(i)}
-              onPress={insertMention}
-            />
-          ))}
-        </ScrollView>
-        <MentionShortcutHint />
-      </View>
+      <RemoveScroll>
+        <View
+          // Keep the textarea focused: a blur would close the overlay before
+          // the row's click lands.
+          onMouseDown={(e) => e.preventDefault()}
+          style={[
+            Atoms.fixed,
+            Atoms.rounded_lg,
+            Atoms.overflow_hidden,
+            placeMentionOverlay(anchor, win),
+            theme.atoms.box.primary.bg,
+            theme.atoms.box.primary.border,
+            Atoms.border,
+            { zIndex: ZIndex.tooltipOverlay },
+          ]}
+        >
+          <ScrollView keyboardShouldPersistTaps="handled">
+            {entries.map(({ identity }, i) => (
+              <MentionRow
+                key={identity}
+                identity={identity}
+                selected={i === selectedIndex}
+                onHover={() => setSelectedIndex(i)}
+                onPress={insertMention}
+              />
+            ))}
+          </ScrollView>
+          <MentionShortcutHint />
+        </View>
+      </RemoveScroll>
     </Portal>
   );
 }

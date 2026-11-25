@@ -154,7 +154,7 @@ impl EventSyncService for PolycentricStandIn {
     }
 }
 
-/// Mint a token matching js-core's `createServerJwt` format.
+/// Mint a token matching js-sdk's `createServerJwt` format.
 pub fn mint(key: &SigningKey, iss: &str, aud: &str, exp: u64) -> String {
     let kid = hex::encode(key.verifying_key().to_bytes());
     let header = format!(r#"{{"alg":"EdDSA","typ":"JWT","kid":"{kid}"}}"#);

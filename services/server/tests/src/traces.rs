@@ -111,7 +111,11 @@ async fn a_request_trace_is_exported_with_its_children() {
         hex::encode(client_trace_id),
         hex::encode(client_span_id)
     );
-    let mut request = tonic::Request::new(PutEventsRequest { event_bundles });
+    let mut request = as_identity(
+        client.identity(),
+        client.signing_key(),
+        PutEventsRequest { event_bundles },
+    );
     request
         .metadata_mut()
         .insert("traceparent", traceparent.parse().unwrap());

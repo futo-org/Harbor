@@ -1,4 +1,5 @@
 ---
+
 title: Live Sync
 sidebar_label: Live Sync
 sidebar_position: 7
@@ -100,12 +101,12 @@ events, receives the newest heads and skips the ones in between.
 
 **Database use.**
 
-| Moment                         | Postgres                                       |
-| ------------------------------ | ---------------------------------------------- |
-| Stream opens                   | one `ListHeads` query on the primary           |
-| Event stored                   | none (the heads travel in the message)         |
-| Valkey reconnect or lag        | one `ListHeads` per identity followed on the process, 16 at a time |
-| Idle                           | none                                           |
+| Moment                  | Postgres                                                           |
+| ----------------------- | ------------------------------------------------------------------ |
+| Stream opens            | one `ListHeads` query on the primary                               |
+| Event stored            | none (the heads travel in the message)                             |
+| Valkey reconnect or lag | one `ListHeads` per identity followed on the process, 16 at a time |
+| Idle                    | none                                                               |
 
 ## A new event
 
@@ -172,7 +173,7 @@ server don't all return at once. The merged value is the highest head per
 `(collection, signer)` across servers, since each server can miss events the
 others have.
 
-`PolycentricClient.startLiveSync()` in js-core subscribes for the active
+`PolycentricClient.startLiveSync()` in js-sdk subscribes for the active
 identity and follows identity switches. On every value it compares the heads
 with the local store and, when a server is ahead, runs
 `sync(SyncStrategy.PARTIAL_PULL)`. Pulls run one at a time, and heads that
@@ -202,8 +203,8 @@ With `N` events per second and `R` server replicas:
 
 ## Configuration
 
-| Variable            | Default   | Description |
-| ------------------- | --------- | ----------- |
+| Variable            | Default   | Description                                                                                                                                                                                       |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `HARBOR_VALKEY_URL` | _(unset)_ | Valkey or Redis URL: `redis://[user:password@]host:6379`, or `rediss://` for TLS. Unset turns live sync off and keeps the [unread notifications](unread-notifications.md) change feed in-process. |
 
 Valkey holds no data for this, so it needs no persistence or backups. The dev
@@ -213,14 +214,14 @@ crate, over RESP3 (pub/sub pushes need it).
 
 ## Where the code is
 
-| Piece                         | Path                                                               |
-| ----------------------------- | ------------------------------------------------------------------ |
-| Proto                         | `protos/polycentric/v2/events.proto`                               |
-| Valkey connections            | `services/common/valkey/src/lib.rs`                                |
-| Heads pub/sub (registry)      | `services/server/src/service/events/heads_pubsub.rs`               |
-| Stream handler                | `services/server/src/service/events/rpc/subscribe_heads.rs`        |
-| Publish                       | `services/server/src/service/events/rpc/put_events.rs`             |
-| Integration tests             | `services/server/tests/src/heads.rs`                               |
-| Client subscription           | `packages/rs-core/src/query/heads.rs`                              |
-| Pull on new heads             | `packages/js-core/src/polycentric-client.ts` (`startLiveSync`)     |
-| Harbor                        | `apps/harbor/src/common/lib/polycentric-hooks/PolycentricProvider.tsx` |
+| Piece                    | Path                                                                   |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Proto                    | `protos/polycentric/v2/events.proto`                                   |
+| Valkey connections       | `services/common/valkey/src/lib.rs`                                    |
+| Heads pub/sub (registry) | `services/server/src/service/events/heads_pubsub.rs`                   |
+| Stream handler           | `services/server/src/service/events/rpc/subscribe_heads.rs`            |
+| Publish                  | `services/server/src/service/events/rpc/put_events.rs`                 |
+| Integration tests        | `services/server/tests/src/heads.rs`                                   |
+| Client subscription      | `packages/rust/rs-core/src/query/heads.rs`                             |
+| Pull on new heads        | `packages/js/js-sdk/src/polycentric-client.ts` (`startLiveSync`)       |
+| Harbor                   | `apps/harbor/src/common/lib/polycentric-hooks/PolycentricProvider.tsx` |

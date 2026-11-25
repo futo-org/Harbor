@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type { PolycentricClient } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native-sdk';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { beginProfileUpdate } from '@/src/features/profile/lib/updateProfile';
+import { draftProfileUpdate } from '@/src/features/profile/lib/updateProfile';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { profileQueryKey } from '@/src/features/profile/hooks/useProfile';
 
@@ -142,7 +142,7 @@ async function initializeIdentity(
   });
 
   // Create and persist initial profile event and its blobs
-  const initialProfile = await beginProfileUpdate(client, {
+  const initialProfile = await draftProfileUpdate(client, {
     name: initialData.displayName,
     description: initialData.about,
     avatarUri: initialData.avatarUri,

@@ -8,7 +8,7 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
-import { Portal } from '@rn-primitives/portal';
+import { Portal, PortalHost } from '@rn-primitives/portal';
 import { router, useNavigation, usePreventRemove } from 'expo-router';
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -27,13 +28,16 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewInstance,
   type ViewProps,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { RemoveScroll } from 'react-remove-scroll';
 import Icon, { type IconProps } from '../Icon';
 import Topbar from '../layout/Topbar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SheetPortalHostContext } from './useSheetPortalHost';
 
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 120;
@@ -341,6 +345,12 @@ function NativeSheet({
 
   const [detentIndex, setDetentIndex] = useState(0);
   const [sheetWidth, setSheetWidth] = useState(0);
+  const portalHostName = `sheet-content-${useId()}`;
+  const portalHostRef = useRef<ViewInstance>(null);
+  const portalHost = useMemo(
+    () => ({ name: portalHostName, ref: portalHostRef }),
+    [portalHostName],
+  );
   const { width: windowWidth } = useWindowDimensions();
 
   const sizesToContent = detents.includes('auto');
@@ -399,8 +409,17 @@ function NativeSheet({
         ]}
       >
         <SheetSizesToContentContext.Provider value={sizesToContent}>
-          {children}
+          <SheetPortalHostContext.Provider value={portalHost}>
+            {children}
+          </SheetPortalHostContext.Provider>
         </SheetSizesToContentContext.Provider>
+        <View
+          ref={portalHostRef}
+          pointerEvents="box-none"
+          style={StyleSheet.absoluteFill}
+        >
+          <PortalHost name={portalHostName} />
+        </View>
       </View>
     </TrueSheet>
   );
@@ -499,45 +518,56 @@ function WebModal({
       ]}
       pointerEvents="box-none"
     >
-      {/* Fixed so the modal stays put while the page behind it scrolls; the
-          fade only animates opacity, which keeps this relative to the viewport. */}
-      <View
-        style={[Atoms.fixed, Atoms.inset_0, { padding: SHEET_OVERLAY_PADDING }]}
-        pointerEvents="box-none"
-      >
-        <Pressable
-          accessibilityLabel="Dismiss"
-          style={[Atoms.fixed, Atoms.inset_0, theme.atoms.backdrop.modal]}
-          onPress={dismissible ? close : undefined}
-        />
+      <RemoveScroll>
         <View
           style={[
-            Atoms.w_full,
-            // Content-sized up to the viewport; taller content scrolls inside
-            // the card body so the modal itself never exceeds the screen.
-            Atoms.max_h_full,
-            height !== undefined && { height },
-            Atoms.overflow_hidden,
-            Atoms.flex_col,
-            { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
-            compact && Atoms.max_w_full,
-            maxWidth !== undefined && { maxWidth },
-            theme.atoms.box.primary.bg,
-            { borderRadius: BorderRadius.xl },
+            // Fixed so it stays relative to the viewport; the fade only animates opacity.
+            Atoms.fixed,
+            Atoms.inset_0,
+            { padding: SHEET_OVERLAY_PADDING },
           ]}
+          pointerEvents="box-none"
         >
-          {header}
-          <View style={Atoms.flex_1}>
-            {/* The scroll container between the pinned header and footer. A
-              scroll container's automatic minimum size is 0, so it shrinks to
-              the space the card has left instead of forcing the card past its
-              max height, and grows to fill a fixed-height card. */}
-            <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
-            {footer}
-            {overlay}
+          <Pressable
+            accessibilityLabel="Dismiss"
+            style={[Atoms.fixed, Atoms.inset_0, theme.atoms.backdrop.modal]}
+            onPress={dismissible ? close : undefined}
+          />
+          <View
+            style={[
+              Atoms.w_full,
+              // Content-sized up to the viewport; taller content scrolls inside
+              // the card body so the modal itself never exceeds the screen.
+              Atoms.max_h_full,
+              height !== undefined && { height },
+              Atoms.overflow_hidden,
+              Atoms.flex_col,
+              {
+                maxWidth: 600,
+                marginVertical: 'auto',
+                marginHorizontal: 'auto',
+              },
+              compact && Atoms.max_w_full,
+              maxWidth !== undefined && { maxWidth },
+              theme.atoms.box.primary.bg,
+              { borderRadius: BorderRadius.xl },
+            ]}
+          >
+            {header}
+            <View style={Atoms.flex_1}>
+              {/* The scroll container between the pinned header and footer. A
+                scroll container's automatic minimum size is 0, so it shrinks to
+                the space the card has left instead of forcing the card past its
+                max height, and grows to fill a fixed-height card. */}
+              <View style={[Atoms.flex_1, Atoms.overflow_auto]}>
+                {children}
+              </View>
+              {footer}
+              {overlay}
+            </View>
           </View>
         </View>
-      </View>
+      </RemoveScroll>
     </Reanimated.View>
   );
 }

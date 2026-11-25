@@ -1,0 +1,23 @@
+{
+  "name": "polycentric-docs-examples",
+  "description": "Code shown on the docs, verified in CI.",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.react-native.json"
+  },
+  "dependencies": {
+    "@polycentric/js-datastore-indexeddb": "workspace:*",
+    "@polycentric/js-filestore-opfs": "workspace:*",
+    "@polycentric/js-sdk": "workspace:*",
+    "@polycentric/js-wasm": "workspace:*",
+    "@polycentric/node-sdk": "workspace:*",
+    "@polycentric/react-native-sdk": "workspace:*",
+    "expo-application": "~58.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

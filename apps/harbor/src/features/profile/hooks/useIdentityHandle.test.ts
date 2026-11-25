@@ -1,7 +1,7 @@
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (identity: string) => identity.slice(0, 10),
 }));
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   FetchMode: { OfflineFirst: 'OfflineFirst' },
 }));
 jest.mock('./useProfile', () => ({ useProfile: jest.fn() }));

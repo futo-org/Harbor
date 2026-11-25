@@ -16,7 +16,7 @@ import {
   SearchPostsSort,
   UpdateMode,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useEffect } from 'react';
 import { useFeedDataStore } from '../../feed/hooks/feedCache';
 import { EMPTY_POSTS, type FeedHookResult } from '../../feed/hooks/types';

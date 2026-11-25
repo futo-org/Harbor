@@ -12,8 +12,8 @@ set -euo pipefail
 # the sources the library is built from
 inputs() {
   case $1 in
-    wasm) echo packages/rs-core packages/rs-common packages/rs-core-wasm packages/react-native/tools packages/react-native/package.json packages/react-native/ubrn.config.yaml protos Cargo.toml Cargo.lock patches .forgejo/images .forgejo/actions/wasm-build ;;
-    android | ios) echo packages/rs-core packages/rs-common packages/react-native protos Cargo.toml Cargo.lock .forgejo/images ;;
+    wasm) echo packages/rust/rs-core packages/rust/rs-common packages/js/drivers/js-wasm packages/js/react-native-sdk/tools packages/js/react-native-sdk/package.json packages/js/react-native-sdk/ubrn.config.yaml protos Cargo.toml Cargo.lock patches .forgejo/images .forgejo/actions/wasm-build ;;
+    android | ios) echo packages/rust/rs-core packages/rust/rs-common packages/js/react-native-sdk protos Cargo.toml Cargo.lock .forgejo/images ;;
     *) echo "unknown library $1" >&2; exit 2 ;;
   esac
 }
@@ -21,9 +21,9 @@ inputs() {
 # a build-only path that shows the library is present
 marker() {
   case $1 in
-    wasm) echo packages/rs-core-wasm/dist ;;
-    android) echo packages/react-native/android/src/main/jniLibs ;;
-    ios) echo packages/react-native/PolycentricReactNativeFramework.xcframework/ios-arm64 ;;
+    wasm) echo packages/js/drivers/js-wasm/dist ;;
+    android) echo packages/js/react-native-sdk/android/src/main/jniLibs ;;
+    ios) echo packages/js/react-native-sdk/PolycentricReactNativeSdkFramework.xcframework/ios-arm64 ;;
   esac
 }
 
@@ -31,10 +31,10 @@ marker() {
 paths() {
   case $1 in
     # The wasm job also generates react-native's uniffi bindings
-    wasm) echo packages/rs-core-wasm/dist packages/rs-core-wasm/src/generated/wasm \
-      packages/react-native/src/generated packages/react-native/src/NativeReactNative.ts packages/react-native/src/uniffi-init.tsx packages/react-native/cpp packages/react-native/ios/ReactNative.h packages/react-native/ios/ReactNative.mm packages/react-native/ReactNative.podspec packages/react-native/android/CMakeLists.txt packages/react-native/android/build.gradle packages/react-native/android/cpp-adapter.cpp packages/react-native/android/src/main/AndroidManifest.xml packages/react-native/android/src/main/java ;;
-    android) echo packages/react-native/android/src/main/jniLibs ;;
-    ios) echo packages/react-native/PolycentricReactNativeFramework.xcframework packages/react-native/ios ;;
+    wasm) echo packages/js/drivers/js-wasm/dist packages/js/drivers/js-wasm/src/generated/wasm \
+      packages/js/react-native-sdk/src/generated packages/js/react-native-sdk/src/NativeReactNativeSdk.ts packages/js/react-native-sdk/src/uniffi-init.tsx packages/js/react-native-sdk/cpp packages/js/react-native-sdk/ios/ReactNativeSdk.h packages/js/react-native-sdk/ios/ReactNativeSdk.mm packages/js/react-native-sdk/ReactNativeSdk.podspec packages/js/react-native-sdk/android/CMakeLists.txt packages/js/react-native-sdk/android/build.gradle packages/js/react-native-sdk/android/cpp-adapter.cpp packages/js/react-native-sdk/android/src/main/AndroidManifest.xml packages/js/react-native-sdk/android/src/main/java ;;
+    android) echo packages/js/react-native-sdk/android/src/main/jniLibs ;;
+    ios) echo packages/js/react-native-sdk/PolycentricReactNativeSdkFramework.xcframework packages/js/react-native-sdk/ios ;;
   esac
 }
 

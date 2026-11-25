@@ -1,11 +1,13 @@
 use ::entity::{
-    application, block, content, content_delete, event, follow,
+    application, block, calendar_event_rsvp, content, content_calendar_event,
+    content_calendar_event_host, content_delete, event, follow,
     interaction_tally, profile, quote, reaction, reply, repost,
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Application, Block, Content, ContentDigest, Delete, EventKey, Follow, Post,
-    ProfileUpdate, Reaction, Repost,
+    Application, Block, CalendarEventRsvp, CalendarEventRsvpStatus, Content,
+    ContentDigest, Delete, EventKey, Follow, Post, ProfileUpdate, Reaction,
+    Repost,
 };
 use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
@@ -18,6 +20,7 @@ use tonic::Status;
 
 use crate::db::Connection;
 use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
+use crate::service::calendar::repository::ends_at;
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
@@ -26,6 +29,7 @@ const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
 const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
 const COLLECTION_INTERACTIONS: i16 = collections::INTERACTIONS as i16;
+const COLLECTION_CALENDAR: i16 = collections::CALENDAR as i16;
 
 pub struct Query;
 
@@ -383,6 +387,10 @@ impl Mutation {
             }
             ContentBody::Repost(repost) => {
                 Mutation::repost_query(with, repost, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::CalendarEventRsvp(rsvp) => {
+                Mutation::calendar_event_rsvp_query(rsvp, event_id_identity)
                     .map(|q| Some(q.into()))
             }
             ContentBody::Delete(delete) => Mutation::delete_query(with, delete),
@@ -861,6 +869,107 @@ impl Mutation {
                     ))),
             );
 
+        Ok(query)
+    }
+
+    fn calendar_event_rsvp_query(
+        rsvp: &CalendarEventRsvp,
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<InsertStatement, DbErr> {
+        let key =
+            split_event_key(rsvp.event_key.clone(), "calendar event rsvp")
+                .map_err(|err| DbErr::Custom(err.message().into()))?;
+        let status = i16::try_from(rsvp.status).map_err(|_| {
+            DbErr::Custom("calendar event rsvp status out of range".into())
+        })?;
+
+        // The calendar event's content, if it lets this RSVP count.
+        let mut allowed = SelectStatement::new();
+        allowed
+            .expr(Expr::Constant(true.into()))
+            .from(content::Entity)
+            .and_where(
+                Expr::col(content::Column::DigestType.as_column_ref()).eq(
+                    Expr::col(event::Column::ContentDigestType.as_column_ref()),
+                ),
+            )
+            .and_where(
+                Expr::col(content::Column::DigestBytes.as_column_ref()).eq(
+                    Expr::col(
+                        event::Column::ContentDigestBytes.as_column_ref(),
+                    ),
+                ),
+            );
+        if rsvp.status == CalendarEventRsvpStatus::Hosting as i32 {
+            // Only identities the calendar event names can host it.
+            allowed
+                .inner_join(
+                    content_calendar_event_host::Entity,
+                    Expr::col(
+                        content_calendar_event_host::Column::ContentId
+                            .as_column_ref(),
+                    )
+                    .eq(Expr::col(content::Column::Id.as_column_ref())),
+                )
+                .and_where(
+                    Expr::col(
+                        content_calendar_event_host::Column::Identity
+                            .as_column_ref(),
+                    )
+                    .eq(Expr::col((event_table.clone(), identity.clone()))),
+                );
+        } else {
+            // No RSVPs once the calendar event has finished.
+            allowed
+                .inner_join(
+                    content_calendar_event::Entity,
+                    Expr::col(
+                        content_calendar_event::Column::ContentId
+                            .as_column_ref(),
+                    )
+                    .eq(Expr::col(content::Column::Id.as_column_ref())),
+                )
+                .and_where(ends_at().gte(Expr::col((
+                    event_table.clone(),
+                    event::Column::CreatedAt,
+                ))));
+        }
+
+        let mut calendar_event_id = select_not_deleted_event_id(key);
+        calendar_event_id
+            .clear_selects()
+            .expr(Expr::col((event_table.clone(), event_id)))
+            .expr(Expr::col((event_table.clone(), identity)))
+            .expr(Expr::col(event::Column::Id.as_column_ref()))
+            .expr(Expr::from(status))
+            .from(event_table)
+            .and_where(Expr::exists(allowed));
+
+        let mut query = InsertStatement::new();
+        query
+            .into_table(calendar_event_rsvp::Entity)
+            .columns([
+                calendar_event_rsvp::Column::EventId,
+                calendar_event_rsvp::Column::Identity,
+                calendar_event_rsvp::Column::OnEvent,
+                calendar_event_rsvp::Column::Status,
+            ])
+            .select_from(calendar_event_id)
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            // A new RSVP overwrites the identity's old one.
+            .on_conflict({
+                let mut c = OnConflict::columns([
+                    calendar_event_rsvp::Column::OnEvent,
+                    calendar_event_rsvp::Column::Identity,
+                ]);
+                c.update_columns([
+                    calendar_event_rsvp::Column::EventId,
+                    calendar_event_rsvp::Column::Status,
+                ]);
+                c
+            });
         Ok(query)
     }
 
@@ -1470,6 +1579,24 @@ impl Mutation {
                     );
 
                 Ok(Some(query.into()))
+            }
+            // Deletion of an RSVP, or of a calendar event and the RSVPs to it.
+            COLLECTION_CALENDAR => {
+                let mut delete_rsvps = DeleteStatement::new();
+                delete_rsvps
+                    .from_table(calendar_event_rsvp::Entity)
+                    .cond_where(
+                        Condition::any()
+                            .add(
+                                Expr::col(calendar_event_rsvp::Column::EventId)
+                                    .in_subquery(event_id.clone()),
+                            )
+                            .add(
+                                Expr::col(calendar_event_rsvp::Column::OnEvent)
+                                    .in_subquery(event_id),
+                            ),
+                    );
+                Ok(Some(delete_rsvps.into()))
             }
             // Nothing to delete.
             _ => Ok(None),

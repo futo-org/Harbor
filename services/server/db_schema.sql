@@ -38,11 +38,10 @@ COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
 CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     BEGIN ATOMIC
- WITH token_numword AS (
+ WITH tokens_word AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
-           WHERE (ts_token_type.alias = 'numword'::text)
-          LIMIT 1
+           WHERE (ts_token_type.alias = ANY (ARRAY['asciiword'::text, 'word'::text, 'numword'::text, 'hword_numpart'::text, 'hword_part'::text, 'hword_asciipart'::text, 'numhword'::text, 'asciihword'::text, 'hword'::text]))
          ), token_sfloat AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
@@ -57,10 +56,10 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
           SELECT
                  CASE
                      WHEN ((parsed.tokid = ( SELECT token_sfloat.id
-                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
-                        FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
-                     WHEN ((parsed.tokid = ( SELECT token_numword.id
-                        FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
+                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () IN ( SELECT tokens_word.id
+                        FROM tokens_word))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((parsed.tokid IN ( SELECT tokens_word.id
+                        FROM tokens_word)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
                         FROM token_sfloat))) THEN NULL::text
                      WHEN ((parsed.tokid = ( SELECT token_blank.id
                         FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
@@ -213,6 +212,18 @@ CREATE TABLE public.block (
 
 
 --
+-- Name: calendar_event_rsvp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendar_event_rsvp (
+    event_id bigint NOT NULL,
+    identity text NOT NULL,
+    on_event bigint NOT NULL,
+    status smallint NOT NULL
+);
+
+
+--
 -- Name: content; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -257,6 +268,53 @@ CREATE TABLE public.content_blob (
 CREATE TABLE public.content_block (
     content_id bigint NOT NULL,
     identity_id character varying NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event (
+    content_id bigint NOT NULL,
+    title text NOT NULL,
+    description text,
+    start_at timestamp with time zone NOT NULL,
+    end_at timestamp with time zone,
+    all_day boolean NOT NULL,
+    location_name text,
+    location_address text,
+    latitude double precision,
+    longitude double precision,
+    location_url text,
+    timezone text,
+    labels text[] DEFAULT '{}'::text[] NOT NULL,
+    search_data tsvector GENERATED ALWAYS AS ((((public.create_tsvector(title) || public.create_tsvector(description)) || public.create_tsvector(location_name)) || public.create_tsvector(location_address))) STORED NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event_host; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event_host (
+    content_id bigint NOT NULL,
+    identity character varying NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event_rsvp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event_rsvp (
+    content_id bigint NOT NULL,
+    status smallint NOT NULL,
+    event_key_collection smallint NOT NULL,
+    event_key_identity character varying NOT NULL,
+    event_key_public_key_type smallint NOT NULL,
+    event_key_public_key bytea NOT NULL,
+    event_key_sequence bigint NOT NULL
 );
 
 
@@ -491,6 +549,30 @@ CREATE TABLE public.default_follow_suggestion (
 
 
 --
+-- Name: deleted_event; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deleted_event (
+    id bigint NOT NULL,
+    collection smallint NOT NULL,
+    identity character varying NOT NULL,
+    public_key_type smallint NOT NULL,
+    public_key bytea NOT NULL,
+    sequence bigint NOT NULL,
+    content_digest_type integer,
+    content_digest_bytes bytea,
+    signature bytea NOT NULL,
+    previous_signature bytea NOT NULL,
+    previous_root bytea NOT NULL,
+    event_bytes bytea NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    synced_at timestamp with time zone NOT NULL,
+    application_id integer,
+    content_type smallint
+);
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -555,6 +637,40 @@ CREATE TABLE public.gravity (
 --
 
 COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
+
+
+--
+-- Name: identity_audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.identity_audit_log (
+    id bigint NOT NULL,
+    identity text NOT NULL,
+    action smallint NOT NULL,
+    by_identity text,
+    by_public_key text,
+    "timestamp" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT action_performed_by CHECK (((by_identity IS NOT NULL) OR (by_public_key IS NOT NULL)))
+);
+
+
+--
+-- Name: identity_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.identity_audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: identity_audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.identity_audit_log_id_seq OWNED BY public.identity_audit_log.id;
 
 
 --
@@ -769,6 +885,13 @@ CREATE TABLE public.verification_schema (
 
 
 --
+-- Name: identity_audit_log id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.identity_audit_log ALTER COLUMN id SET DEFAULT nextval('public.identity_audit_log_id_seq'::regclass);
+
+
+--
 -- Name: application application_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -809,6 +932,14 @@ ALTER TABLE ONLY public.block
 
 
 --
+-- Name: calendar_event_rsvp calendar_event_rsvp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_event_rsvp
+    ADD CONSTRAINT calendar_event_rsvp_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: content_attributed_to_reaction content_attributed_to_reaction_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -830,6 +961,30 @@ ALTER TABLE ONLY public.content_blob
 
 ALTER TABLE ONLY public.content_block
     ADD CONSTRAINT content_block_pkey PRIMARY KEY (content_id);
+
+
+--
+-- Name: content_calendar_event_host content_calendar_event_host_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event_host
+    ADD CONSTRAINT content_calendar_event_host_pkey PRIMARY KEY (content_id, identity);
+
+
+--
+-- Name: content_calendar_event content_calendar_event_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event
+    ADD CONSTRAINT content_calendar_event_pkey PRIMARY KEY (content_id);
+
+
+--
+-- Name: content_calendar_event_rsvp content_calendar_event_rsvp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event_rsvp
+    ADD CONSTRAINT content_calendar_event_rsvp_pkey PRIMARY KEY (content_id);
 
 
 --
@@ -937,6 +1092,14 @@ ALTER TABLE ONLY public.default_follow_suggestion
 
 
 --
+-- Name: deleted_event deleted_event_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deleted_event
+    ADD CONSTRAINT deleted_event_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -950,6 +1113,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.follow
     ADD CONSTRAINT follow_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: identity_audit_log identity_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.identity_audit_log
+    ADD CONSTRAINT identity_audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -1107,6 +1278,41 @@ CREATE INDEX ban_created_at_identity_idx ON public.ban USING btree (created_at, 
 --
 
 CREATE INDEX block_blocker_blocked_idx ON public.block USING btree (blocker, blocked);
+
+
+--
+-- Name: calendar_event_rsvp_event_identity_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX calendar_event_rsvp_event_identity_unique ON public.calendar_event_rsvp USING btree (on_event, identity);
+
+
+--
+-- Name: content_calendar_event_host_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_host_identity ON public.content_calendar_event_host USING btree (identity);
+
+
+--
+-- Name: content_calendar_event_rsvp_event_key_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_rsvp_event_key_idx ON public.content_calendar_event_rsvp USING btree (event_key_collection, event_key_identity, event_key_public_key_type, event_key_public_key, event_key_sequence);
+
+
+--
+-- Name: content_calendar_event_search_data; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_search_data ON public.content_calendar_event USING gin (search_data);
+
+
+--
+-- Name: content_calendar_event_start_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_start_at ON public.content_calendar_event USING btree (start_at);
 
 
 --

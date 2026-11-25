@@ -348,7 +348,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !progress {
             mp.set_draw_target(ProgressDrawTarget::hidden());
         }
-        run_push(&db, &cfg.servers, cfg.concurrency, &mp, progress).await?;
+        // `put_events` is authenticated with the master key.
+        let signing_key = cfg
+            .signing_key
+            .as_deref()
+            .ok_or("HARBOR_GRAYJAY_MIGRATOR_SIGNING_KEY is required")?;
+        let authoring = Arc::new(polycentric::Authoring::new(
+            signing_key,
+            cfg.identity_servers.clone(),
+        )?);
+        run_push(&db, authoring, &cfg.servers, cfg.concurrency, &mp, progress).await?;
         return Ok(());
     }
 
@@ -1368,6 +1377,7 @@ fn resolve_link(url: &str, cache: &LinkCache) -> Option<Link> {
 /// Push each `signed` system's unpushed bundles concurrently, then mark complete.
 async fn run_push(
     db: &sea_orm::DatabaseConnection,
+    authoring: Arc<polycentric::Authoring>,
     servers: &[String],
     concurrency: usize,
     mp: &MultiProgress,
@@ -1401,8 +1411,9 @@ async fn run_push(
     let servers = Arc::new(servers.to_vec());
 
     stream::iter(targets.into_iter().map(|(key_hex, identity)| {
-        let (db, servers, bar, ok, fail, events) = (
+        let (db, authoring, servers, bar, ok, fail, events) = (
             db.clone(),
+            authoring.clone(),
             servers.clone(),
             bar.clone(),
             ok.clone(),
@@ -1410,7 +1421,7 @@ async fn run_push(
             events.clone(),
         );
         tokio::spawn(async move {
-            match push_system(&db, &key_hex, &servers).await {
+            match push_system(&db, &authoring, &key_hex, &identity, &servers).await {
                 Ok(n) => {
                     // Mark the sent bundles pushed, then finalize the status.
                     let finalize = async {
@@ -1463,7 +1474,9 @@ async fn run_push(
 /// least one server accepts every bundle. Returns the number of events sent.
 async fn push_system(
     db: &sea_orm::DatabaseConnection,
+    authoring: &polycentric::Authoring,
     key_hex: &str,
+    identity: &str,
     servers: &[String],
 ) -> Result<usize, String> {
     let encoded = mapping::load_unpushed_bundles(db, key_hex)
@@ -1484,7 +1497,8 @@ async fn push_system(
     for server in servers {
         let mut server_ok = true;
         for chunk in bundles.chunks(PUSH_CHUNK) {
-            match polycentric::push(server, chunk.to_vec()).await {
+            let token = authoring.auth_token(identity, server);
+            match polycentric::push(server, chunk.to_vec(), &token).await {
                 Ok(errors) if errors.is_empty() => {}
                 Ok(errors) => {
                     warn!(

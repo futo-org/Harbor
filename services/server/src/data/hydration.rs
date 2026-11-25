@@ -320,7 +320,10 @@ where
             | Some(ContentBody::ProfileUpdate(_))
             | Some(ContentBody::Identity(_))
             | Some(ContentBody::VerificationClaim(_))
+            | Some(ContentBody::CalendarEvent(_))
             | None => {}
+            // Not hydrated yet
+            Some(ContentBody::CalendarEventRsvp(_)) => {}
         }
     }
     (keys, quote_set, repost_set)
@@ -418,6 +421,14 @@ pub fn event_identities(
                 identities.extend(
                     target
                         .target_identities
+                        .into_iter()
+                        .filter(|identity| !identity.is_empty()),
+                );
+            }
+            Some(ContentBody::CalendarEvent(event)) => {
+                identities.extend(
+                    event
+                        .hosts
                         .into_iter()
                         .filter(|identity| !identity.is_empty()),
                 );

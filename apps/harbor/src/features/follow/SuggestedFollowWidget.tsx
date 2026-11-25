@@ -7,7 +7,7 @@ import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 
 const SUGGESTIONS_LIMIT = 5;
 
@@ -90,7 +90,7 @@ function SuggestedFollowWidgetRow({ identity }: { identity: string }) {
     <ProfileRow
       size="sm"
       identity={identity}
-      onPress={() => router.navigate(Routes.tabs.profile(identity))}
+      linkToProfile
       style={Atoms.px_0}
       activeStyle="none"
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}

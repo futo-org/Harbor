@@ -3,7 +3,7 @@ import { hexToBytes } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useAnywhereLink } from '@/src/features/anywhere/hooks/useAnywhereLink';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
-import { type types, v2 } from '@polycentric/react-native';
+import { type types, v2 } from '@polycentric/react-native-sdk';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ComposeSheet } from './ComposeSheet';
@@ -34,12 +34,6 @@ export default function ComposeScreen() {
     ? v2.EventKey.fromBinary(hexToBytes(params.quote))
     : undefined;
 
-  const { post: quote } = usePostById(
-    quoteEventKey?.identity,
-    getKeyFingerprint(quoteEventKey?.signedBy),
-    quoteEventKey?.sequence,
-  );
-
   const { link: attributedTo } = useAnywhereLink(params.about);
 
   const attachOnMount = params.attach === '1';
@@ -56,7 +50,7 @@ export default function ComposeScreen() {
     <ComposeSheet
       onPostCreated={handlePostCreated}
       replyTo={replyTo}
-      quote={quote}
+      quote={quoteEventKey}
       attributedTo={attributedTo}
       attachOnMount={attachOnMount}
     />
