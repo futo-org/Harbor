@@ -98,16 +98,28 @@ export const Overflow: Story = {
   },
   render: (args) => (
     <View style={Atoms.gap_xl}>
-      <NarrowContainer label="No icon">
+      <NarrowContainer label="Short, no icon">
+        <Button {...args} title="Short" icon={undefined} />
+      </NarrowContainer>
+      <NarrowContainer label="Short, with icon">
+        <Button {...args} title="Short" icon={args.icon ?? 'add'} />
+      </NarrowContainer>
+      <NarrowContainer label="Short, no icon, full width">
+        <Button {...args} title="Short" icon={undefined} fullWidth />
+      </NarrowContainer>
+      <NarrowContainer label="Short, with icon, full width">
+        <Button {...args} title="Short" icon={args.icon ?? 'add'} fullWidth />
+      </NarrowContainer>
+      <NarrowContainer label="Long, no icon">
         <Button {...args} icon={undefined} />
       </NarrowContainer>
-      <NarrowContainer label="With icon">
+      <NarrowContainer label="Long, with icon">
         <Button {...args} icon={args.icon ?? 'add'} />
       </NarrowContainer>
-      <NarrowContainer label="No icon, full width">
+      <NarrowContainer label="Long, no icon, full width">
         <Button {...args} icon={undefined} fullWidth />
       </NarrowContainer>
-      <NarrowContainer label="With icon, full width">
+      <NarrowContainer label="Long, with icon, full width">
         <Button {...args} icon={args.icon ?? 'add'} fullWidth />
       </NarrowContainer>
     </View>
