@@ -8,7 +8,7 @@ import {
 } from '@/src/common/theme';
 import type { Preview } from '@storybook/react-native';
 import { type PropsWithChildren, useMemo } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { create } from 'zustand';
 
 // Stories' own scheme, apart from the app's theme. Outside the decorator so it
@@ -51,7 +51,9 @@ function ThemeDecorator({ children }: PropsWithChildren) {
   return (
     <Context.Provider value={themeContext}>
       <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
-        {children}
+        <ScrollView contentContainerStyle={Atoms.flex_grow_1}>
+          {children}
+        </ScrollView>
         <IconButton
           size="sm"
           icon={scheme === 'dark' ? 'themeLight' : 'themeDark'}
