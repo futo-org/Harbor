@@ -15,7 +15,3 @@ Backport of upstream [#776](https://github.com/AppAndFlow/react-native-safe-area
 ## `react-remove-scroll@2.7.2`
 
 Limits the "allow drag selection (iOS)" check in `shouldCancelEvent` to touch events with a non-collapsed selection. Unpatched, it lets through any wheel or touch event whose target sits inside the selection's `anchorNode`, even a collapsed caret. Picking a dropdown item leaves that caret on `body` once the dropdown's portal unmounts, so a web `Sheet` opened from a menu didn't block page scroll. Not fixed upstream as of 2.7.2.
-
-## `uniffi-bindgen-react-native@0.31.0-7`
-
-Frees `RustBuffer` arguments of callbacks (Rust calling JS) after the JS call, in the JSI C++ template `CallbackFunction.cpp`. Since 0.31.0-3 (upstream #394) `Bridging<RustBuffer>::toJs` gives JS a non-owning view instead of a copy, and only return values got a matching free, so every callback argument leaked: each `QueryObserver.next` emission (whole feed result) stayed in native memory forever. The wasm and NAPI runtimes copy and free, so only JSI is affected. After editing the patch, regenerate the bindings (`ubrn:android` or `ubrn:ios` in `packages/js/react-native-sdk`). Not fixed upstream as of 0.31.0-7.

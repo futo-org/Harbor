@@ -207,8 +207,8 @@ catalogs:
       specifier: ^5.9.3
       version: 5.9.3
     uniffi-bindgen-react-native:
-      specifier: 0.31.0-7
-      version: 0.31.0-7
+      specifier: 0.31.0-8
+      version: 0.31.0-8
 
 overrides:
   dompurify@<3.4.17: '>=3.4.17'
@@ -224,7 +224,6 @@ patchedDependencies:
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
   react-remove-scroll@2.7.2: e76968a09dcd0466b9527adb861f3386e4896bdbe7be22205007ea875abc8ba4
-  uniffi-bindgen-react-native@0.31.0-7: 598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c
 
 importers:
 
@@ -801,7 +800,7 @@ importers:
         version: 5.9.3
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
 
   packages/js/drivers/video-transcoding:
     devDependencies:
@@ -972,7 +971,7 @@ importers:
         version: 1.11.0(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
     devDependencies:
       '@react-native/babel-preset':
         specifier: 0.83.0
@@ -13063,8 +13062,8 @@ packages:
     resolution: {integrity: sha512-lzlXPoVB0Uy/FvTaUgX39RbixYiSKoc3JSoSf01+0c2B6FR3qdYIPN7Qjo/AV7n6sqLCk0509cT3LRj1oSZ1+A==}
     engines: {node: '>=20'}
 
-  uniffi-bindgen-react-native@0.31.0-7:
-    resolution: {integrity: sha512-nby2kXC+heUwtbOwKbJeZoGV5K8nNxp0kxoPhx2bK98k0MT9P6DA73jnbS7AER1eh0du8bR7Eeco7LcxxEs4bA==}
+  uniffi-bindgen-react-native@0.31.0-8:
+    resolution: {integrity: sha512-cW9ixYjkJw08vCcNlbK1/3icNnLuw1XRIvvHMzKt52iOs4mZXVVXzRnZYqaTB/ytFG8uwIZdg/6hLCGJxGgW7g==}
     hasBin: true
 
   unified@11.0.5:
@@ -29154,7 +29153,7 @@ snapshots:
 
   unicorn-magic@0.4.1: {}
 
-  uniffi-bindgen-react-native@0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c): {}
+  uniffi-bindgen-react-native@0.31.0-8: {}
 
   unified@11.0.5:
     dependencies:
