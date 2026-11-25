@@ -22,7 +22,6 @@ import type { Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useFeatureFlag } from '@/src/common/feature-flags';
 import { CalendarEventEmbed } from '@/src/features/calendar-events/card/CalendarEventEmbed';
 import { usePostById } from '../hooks/usePostById';
 import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
@@ -48,7 +47,6 @@ export function PostContentQuote({
   quotePost?: PostData;
 }) {
   const { theme } = useTheme();
-  const calendarEventsEnabled = useFeatureFlag('calendar-events');
 
   const eventKey = useMemo(() => {
     try {
@@ -57,8 +55,8 @@ export function PostContentQuote({
       return null;
     }
   }, [quoteId]);
-  const isCalendarEvent =
-    calendarEventsEnabled && eventKey?.collection === COLLECTION.CALENDAR;
+  // Shown whatever the flag is, or it would look like a broken post
+  const isCalendarEvent = eventKey?.collection === COLLECTION.CALENDAR;
 
   const fetched = usePostById(
     quotePost || isCalendarEvent ? undefined : eventKey?.identity,
