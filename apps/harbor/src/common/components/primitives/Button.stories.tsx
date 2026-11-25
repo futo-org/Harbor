@@ -134,6 +134,9 @@ export const IconHeights: Story = {
           />
         ),
       )}
+      {/* Icon only: an empty title */}
+      <Button {...args} title="" icon="personAdd" />
+      <Button {...args} title="" icon="add" />
     </OutlinedRow>
   ),
 };
