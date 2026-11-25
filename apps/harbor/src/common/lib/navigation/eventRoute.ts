@@ -25,6 +25,17 @@ export function eventRoute(key: EventLocation): Href | null {
         ? Routes.tabs.post(key.identity, fingerprint, String(key.sequence))
         : null;
     }
+    // RSVPs share this collection, so their keys end up here too
+    case COLLECTION.CALENDAR: {
+      const fingerprint = getKeyFingerprint(key.signedBy);
+      return fingerprint
+        ? Routes.tabs.calendarEvent(
+            key.identity,
+            fingerprint,
+            String(key.sequence),
+          )
+        : null;
+    }
     case COLLECTION.PROFILE:
     case COLLECTION.IDENTITY:
       return Routes.tabs.profile(key.identity);
