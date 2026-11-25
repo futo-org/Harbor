@@ -1,0 +1,40 @@
+diff --git a/build/web/actions/ResizeAction.web.js b/build/web/actions/ResizeAction.web.js
+index 710ad75b362e9b2ef404b57cc010ab6488c55ba9..a5360f1f50d83408899352e967a08b7986c8e1db 100644
+--- a/build/web/actions/ResizeAction.web.js
++++ b/build/web/actions/ResizeAction.web.js
+@@ -36,13 +36,13 @@ import { getContext } from '../utils.web';
+             let gx_a = 0;
+             const yCenter = (j + 0.5) * hRatio;
+             const yy_start = Math.floor(j * hRatio);
+-            const yy_stop = Math.ceil((j + 1) * hRatio);
++            const yy_stop = Math.min(heightSource, Math.ceil((j + 1) * hRatio));
+             for(let yy = yy_start; yy < yy_stop; yy++){
+                 const dy = Math.abs(yCenter - (yy + 0.5)) / hRatioHalf;
+                 const center_x = (i + 0.5) * wRatio;
+                 const w0 = dy * dy; //pre-calc part of w
+                 const xx_start = Math.floor(i * wRatio);
+-                const xx_stop = Math.ceil((i + 1) * wRatio);
++                const xx_stop = Math.min(widthSource, Math.ceil((i + 1) * wRatio));
+                 for(let xx = xx_start; xx < xx_stop; xx++){
+                     const dx = Math.abs(center_x - (xx + 0.5)) / wRatioHalf;
+                     const w = Math.sqrt(w0 + dx * dx);
+diff --git a/src/web/actions/ResizeAction.web.ts b/src/web/actions/ResizeAction.web.ts
+index b0e0eba08b64e6a35c92c492b32453cb4dce2440..d693bee094f38a2715da65511dddd4fb4eb6ef51 100644
+--- a/src/web/actions/ResizeAction.web.ts
++++ b/src/web/actions/ResizeAction.web.ts
+@@ -49,13 +49,13 @@ function resampleSingle(
+       let gx_a = 0;
+       const yCenter = (j + 0.5) * hRatio;
+       const yy_start = Math.floor(j * hRatio);
+-      const yy_stop = Math.ceil((j + 1) * hRatio);
++      const yy_stop = Math.min(heightSource, Math.ceil((j + 1) * hRatio));
+       for (let yy = yy_start; yy < yy_stop; yy++) {
+         const dy = Math.abs(yCenter - (yy + 0.5)) / hRatioHalf;
+         const center_x = (i + 0.5) * wRatio;
+         const w0 = dy * dy; //pre-calc part of w
+         const xx_start = Math.floor(i * wRatio);
+-        const xx_stop = Math.ceil((i + 1) * wRatio);
++        const xx_stop = Math.min(widthSource, Math.ceil((i + 1) * wRatio));
+         for (let xx = xx_start; xx < xx_stop; xx++) {
+           const dx = Math.abs(center_x - (xx + 0.5)) / wRatioHalf;
+           const w = Math.sqrt(w0 + dx * dx);
