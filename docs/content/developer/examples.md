@@ -20,7 +20,7 @@ publish if they wish to advertise the app they were created with; see
 
 ### Node.js
 
-`@polycentric/js-node` stores events in SQLite (or Postgres, with `databaseUrl`) and blobs in a
+`@polycentric/node-sdk` stores events in SQLite (or Postgres, with `databaseUrl`) and blobs in a
 directory.
 
 ```ts file=docs/examples/src/client.ts#node-client
@@ -28,7 +28,7 @@ directory.
 
 ### React Native and web
 
-`@polycentric/react-native` provides a native-compiled core, with SQLite for storage, iOS and
+`@polycentric/react-native-sdk` provides a native-compiled core, with SQLite for storage, iOS and
 Android; or a wasm core, with IndexedDB and OPFS for storage, on the web.
 
 ```ts file=docs/examples/src/react-native/client.ts#rn-client
@@ -36,7 +36,7 @@ Android; or a wasm core, with IndexedDB and OPFS for storage, on the web.
 
 ### Browser, without React Native
 
-Load the wasm core yourself and pass in the `@polycentric/js-browser` storage implementations.
+Load the wasm core yourself and pass in the `@polycentric/js-datastore-indexeddb` and `@polycentric/js-filestore-opfs` drivers.
 
 ```ts file=docs/examples/src/browser-client.ts#browser-client
 ```
@@ -46,7 +46,7 @@ Load the wasm core yourself and pass in the `@polycentric/js-browser` storage im
 Kotlin/Android uses the Maven package, which provides a file store and SQLite storage
 implementation.
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#client
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#client
 ```
 
 ## Creating an identity
@@ -56,7 +56,7 @@ when `activeIdentityKey` is empty.
 
 ### JavaScript
 
-`@polycentric/react-native` provides an easy helper:
+`@polycentric/react-native-sdk` provides an easy helper:
 
 ```ts file=docs/examples/src/react-native/client.ts#rn-identity
 ```
@@ -71,7 +71,7 @@ If not using React Native, run through the following steps with the login manage
 The Kotlin client will have a ready key pair after creating the client. Publish an identity
 whose only rotation key is that key pair:
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#identity
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#identity
 ```
 
 ## Publishing content
@@ -129,7 +129,7 @@ the image from.
 The Kotlin client will need to build an event, then sign it, and then commit it to local storage
 before finally syncing.
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#publish
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#publish
 ```
 
 ## Reading
@@ -140,8 +140,8 @@ that errors or takes longer than 5 seconds is left out. The same queries are ava
 
 - **TypeScript:** pass a `Query` to `client.core.awaitQuery`. It resolves to the merged response as
   bytes once every server has answered or timed out, which you decode with a protobuf type (use the
-  `v2` object, as shown in the examples below). Import `Query` from `@polycentric/react-native`, or
-  from `@polycentric/rs-core-wasm` in Node.js and the browser.
+  `v2` object, as shown in the examples below). Import `Query` from `@polycentric/react-native-sdk`, or
+  from `@polycentric/js-wasm` in Node.js and the browser.
 - **Kotlin:** call the extension functions on `PolycentricClient`, such as `getProfile` and
   `getIdentityFeed`. They return the decoded response, or `null` when no server answered.
 
@@ -150,7 +150,7 @@ that errors or takes longer than 5 seconds is left out. The same queries are ava
 ```ts file=docs/examples/src/reading.ts#profile
 ```
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-profile
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#read-profile
 ```
 
 ### Listing an identity's posts
@@ -158,7 +158,7 @@ that errors or takes longer than 5 seconds is left out. The same queries are ava
 ```ts file=docs/examples/src/reading.ts#identity-feed
 ```
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-feed
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#read-feed
 ```
 
 The response's `page_info` carries the cursors for loading further pages; see
@@ -172,7 +172,7 @@ you have an `EventKey` for.
 ```ts file=docs/examples/src/reading.ts#single-event
 ```
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#read-event
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#read-event
 ```
 
 ### Other queries
@@ -200,5 +200,5 @@ Push failures do not throw. Listen for them to surface errors:
 ```
 
 For a complete program, see the Node.js example server in
-`packages/js-node/examples/server`, which creates an identity, posts, and renders
+`packages/js/node-sdk/examples/server`, which creates an identity, posts, and renders
 the feed.

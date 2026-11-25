@@ -75,6 +75,8 @@ impl Mutation {
             ContentBody::VerificationClaim(claim) => verification_claim::add_query(with, claim, content_id)?.into(),
             ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),
+            // Not indexed yet
+            ContentBody::CalendarEvent(_) | ContentBody::CalendarEventRsvp(_) => return Ok(None),
         }))
     }
 

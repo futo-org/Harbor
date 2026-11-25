@@ -4,7 +4,7 @@ import {
   Query,
   labelsFromVerificationClaimsResponse,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useClaimBundleList } from './useClaimBundleList';
 
 const parse = (data: ArrayBuffer) => ({

@@ -1,4 +1,4 @@
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 
 export type ReportOptions = Record<
   string,

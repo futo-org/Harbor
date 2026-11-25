@@ -23,7 +23,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 }));
 
 // A one-byte stand-in for the proto codec: the count is the byte.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   Query: {
     SubscribeUnreadNotificationCount: class SubscribeUnreadNotificationCount {},
   },

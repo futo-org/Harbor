@@ -1,4 +1,5 @@
 ---
+
 title: Feed Paging
 sidebar_label: Feed Paging
 sidebar_position: 3
@@ -112,13 +113,13 @@ receives its own.
 
 ## Constants
 
-| Constant              | Value | Meaning                                       |
-| --------------------- | ----- | --------------------------------------------- |
-| `FEED_PAGE_SIZE`      | 50    | Posts requested from each server per page.    |
-| `FEED_WINDOW_STEP`    | 15    | Posts added to the window by each `loadMore`. |
-| `FEED_INITIAL_WINDOW` | 2 steps | Posts in the first emission.                |
-| `MIN_REVEAL`          | 8     | New posts a `loadMore` aims to surface.       |
-| `MAX_ROUNDS`          | 3     | Fan-outs one `loadMore` may chain.            |
+| Constant              | Value   | Meaning                                       |
+| --------------------- | ------- | --------------------------------------------- |
+| `FEED_PAGE_SIZE`      | 50      | Posts requested from each server per page.    |
+| `FEED_WINDOW_STEP`    | 15      | Posts added to the window by each `loadMore`. |
+| `FEED_INITIAL_WINDOW` | 2 steps | Posts in the first emission.                  |
+| `MIN_REVEAL`          | 8       | New posts a `loadMore` aims to surface.       |
+| `MAX_ROUNDS`          | 3       | Fan-outs one `loadMore` may chain.            |
 
 The first three are defined in `feedCache.ts`, the last two in
 `useChainedExtend.ts`.
@@ -176,8 +177,8 @@ hints into the local store, and passes `validated_feed_merge(order, window_size)
 to `query_client.fetch`. Add a `Query` variant in `api.rs` and a match arm in
 `fetch_query`.
 
-**3. Bindings.** Regenerate with `pnpm -C packages/react-native ubrn:android`
-for native and `pnpm -C packages/rs-core-wasm build` for web. A new `Query` variant
+**3. Bindings.** Regenerate with `pnpm -C packages/js/react-native-sdk ubrn:android`
+for native and `pnpm -C packages/js/drivers/js-wasm build` for web. A new `Query` variant
 shifts the enum ordinals, so the JS bindings and the native library must ship
 together.
 

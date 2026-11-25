@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useQueryStore } from '@/src/common/query/hooks/useQuery';
-import { FetchMode, Query } from '@polycentric/react-native';
+import { FetchMode, Query } from '@polycentric/react-native-sdk';
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { decodeProfile, type DecodedProfile } from '../lib/decodeProfile';

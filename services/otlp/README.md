@@ -6,7 +6,7 @@ encoding they accept, to [VictoriaLogs](https://docs.victoriametrics.com/victori
 and [VictoriaTraces](https://docs.victoriametrics.com/victoriatraces/data-ingestion/opentelemetry/).
 
 Every request must carry the same bearer JWT clients mint for the server
-(`createServerJwt` in js-core, with this service's public URL as the
+(`createServerJwt` in js-sdk, with this service's public URL as the
 audience). The service verifies the signature, audience and expiry, then checks
 the signing key against the issuer's identity document fetched from a
 polycentric server. The verified identity is written onto each payload's

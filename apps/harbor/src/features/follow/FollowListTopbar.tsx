@@ -3,7 +3,7 @@ import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { View } from 'react-native';
 
 /** Names whose follow lists these are. Shared by both pages, so it sits above

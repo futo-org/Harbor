@@ -7,7 +7,7 @@ import {
   type CreateEventArgs,
   v2,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 
 type UpdateProfileInput = {
   name: string;

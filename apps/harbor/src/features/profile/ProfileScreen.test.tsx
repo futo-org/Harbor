@@ -6,7 +6,7 @@ const ALIAS = 'test@domain.com';
 
 // --- collaborators, all mocked so we exercise only the routing/verification ---
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   FetchMode: { Default: 'Default' },
 }));
 

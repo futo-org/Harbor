@@ -1,4 +1,5 @@
 ---
+
 title: Unread Notifications
 sidebar_label: Unread Notifications
 sidebar_position: 6
@@ -91,11 +92,11 @@ protocol errors.
 
 A subscription touches the pool only briefly:
 
-| Moment                         | Connection                                  |
-| ------------------------------ | ------------------------------------------- |
-| Stream opens                   | one pooled connection, released after the first count |
-| Change arrives for its identity| one pooled connection, released after the re-count    |
-| Idle                           | none                                        |
+| Moment                          | Connection                                            |
+| ------------------------------- | ----------------------------------------------------- |
+| Stream opens                    | one pooled connection, released after the first count |
+| Change arrives for its identity | one pooled connection, released after the re-count    |
+| Idle                            | none                                                  |
 
 The worker and the acknowledge handler publish through the process's shared
 Valkey publisher connection, so they need nothing extra either.
@@ -234,14 +235,14 @@ on its streams, which Envoy and other compliant proxies respect.
 
 ## Where the code is
 
-| Piece                                   | Path                                                                          |
-| --------------------------------------- | ----------------------------------------------------------------------------- |
-| Proto                                   | `protos/polycentric/v2/notifications.proto`                                   |
-| Change feed (subscribe, broadcast, notify) | `services/server/src/service/notifications/changes.rs`                     |
-| Valkey connections                      | `services/common/valkey/src/lib.rs`                                           |
-| Stream handler                          | `services/server/src/service/notifications/rpc/subscribe_unread_notification_count.rs` |
-| Acknowledge handler                     | `services/server/src/service/notifications/rpc/acknowledge_notifications.rs`  |
-| Worker notify                           | `services/server/src/service/notifications/worker.rs`                         |
-| Count and marker queries                | `services/server/src/service/notifications/repository.rs`                     |
-| Client subscription                     | `packages/rs-core/src/query/client.rs` (`subscribe`), `packages/rs-core/src/query/notification.rs` |
-| Harbor hook                             | `apps/harbor/src/features/notifications/hooks/useUnreadNotificationCount.ts` |
+| Piece                                      | Path                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Proto                                      | `protos/polycentric/v2/notifications.proto`                                                                  |
+| Change feed (subscribe, broadcast, notify) | `services/server/src/service/notifications/changes.rs`                                                       |
+| Valkey connections                         | `services/common/valkey/src/lib.rs`                                                                          |
+| Stream handler                             | `services/server/src/service/notifications/rpc/subscribe_unread_notification_count.rs`                       |
+| Acknowledge handler                        | `services/server/src/service/notifications/rpc/acknowledge_notifications.rs`                                 |
+| Worker notify                              | `services/server/src/service/notifications/worker.rs`                                                        |
+| Count and marker queries                   | `services/server/src/service/notifications/repository.rs`                                                    |
+| Client subscription                        | `packages/rust/rs-core/src/query/client.rs` (`subscribe`), `packages/rust/rs-core/src/query/notification.rs` |
+| Harbor hook                                | `apps/harbor/src/features/notifications/hooks/useUnreadNotificationCount.ts`                                 |

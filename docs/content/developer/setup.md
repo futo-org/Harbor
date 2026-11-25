@@ -18,15 +18,15 @@ edges and occasional breaking changes on `develop`.
 
 ## Prerequisites
 
-| Tool                                                    | Notes                                                                                          |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [Node.js](https://nodejs.org)                           | Version pinned in `.nvmrc`; `nvm install` picks it up.                                         |
-| [pnpm](https://pnpm.io)                                 | The workspace's package manager, version set in `package.json`.                                |
-| [Rust toolchain](https://rustup.rs)                     | Builds `rs-core`, the server, and the WASM bindings.                                           |
-| [`protoc`](https://github.com/protocolbuffers/protobuf) | Compiles the protobuf definitions in `protos/`.                                                |
-| [JDK](https://adoptium.net) 17+                         | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
-| [Android SDK](https://developer.android.com/studio)     | Only for working on `packages/kt-core`; AGP needs it to configure the build.                   |
-| [`docker compose`](https://github.com/docker/compose)   | Runs PostgreSQL, the object store, and the server.                                             |
+| Tool                                                    | Notes                                                                                                    |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org)                           | Version pinned in `.nvmrc`; `nvm install` picks it up.                                                   |
+| [pnpm](https://pnpm.io)                                 | The workspace's package manager, version set in `package.json`.                                          |
+| [Rust toolchain](https://rustup.rs)                     | Builds `rs-core`, the server, and the WASM bindings.                                                     |
+| [`protoc`](https://github.com/protocolbuffers/protobuf) | Compiles the protobuf definitions in `protos/`.                                                          |
+| [JDK](https://adoptium.net) 17+                         | Only for working on `packages/kotlin/kotlin-sdk`; the pre-commit hook formats its Kotlin through Gradle. |
+| [Android SDK](https://developer.android.com/studio)     | Only for working on `packages/kotlin/kotlin-sdk`; AGP needs it to configure the build.                   |
+| [`docker compose`](https://github.com/docker/compose)   | Runs PostgreSQL, the object store, and the server.                                                       |
 
 System packages on Debian/Ubuntu:
 
@@ -42,7 +42,7 @@ apt-get install \
 
 The web build compiles `rs-core` to WebAssembly, so add the WASM target and
 the `wasm-bindgen` CLI. The CLI only accepts modules built against its own
-version, so install the one `packages/rs-core/Cargo.toml` pins (the
+version, so install the one `packages/rust/rs-core/Cargo.toml` pins (the
 `wasm-bindgen = "=<version>"` line):
 
 ```sh
@@ -74,7 +74,7 @@ pnpm prepare
 The React Native package's uniffi bindings are generated from `rs-core`.
 `pnpm generate` builds `rs-core` for your machine and runs
 `uniffi-bindgen-react-native` on it
-(`packages/react-native/tools/generate-bindings.mjs`), so it needs only the
+(`packages/js/react-native-sdk/tools/generate-bindings.mjs`), so it needs only the
 Rust toolchain, not the Android NDK or Xcode. Remember to re-generate after
 changes to `rs-core`, or typechecking will fail.
 
@@ -146,8 +146,8 @@ output, including Expo's QR code. The verifier bot and scraper are left out,
 since the stack already runs them.
 
 The wasm build of the Rust core is built once when `mise js` starts and is
-not watched. After changing `packages/rs-core` or `packages/rs-common`, rebuild
-it with `pnpm --filter @polycentric/rs-core-wasm build` (or restart its task in
+not watched. After changing `packages/rust/rs-core` or `packages/rust/rs-common`, rebuild
+it with `pnpm --filter @polycentric/js-wasm build` (or restart its task in
 turbo). The Android and iOS dev clients compile the Rust core into the app, so
 a Rust change reaches them through `pnpm run:android` / `pnpm run:ios`.
 
@@ -200,14 +200,14 @@ pnpm format:fix   # Biome format, writing changes
 Rust crates use the usual `cargo test` / `cargo fmt`. The app's TypeScript is
 checked with `pnpm -C apps/harbor typecheck`.
 
-`packages/kt-core` (Kotlin) is checked with
+`packages/kotlin/kotlin-sdk` (Kotlin) is checked with
 [ktlint](https://github.com/JLLeitschuh/ktlint-gradle) via its Gradle
 wrapper. The pre-commit hook formats any staged `*.kt` file automatically
 (this is what requires the JDK and Android SDK above when committing
-kt-core changes); to run it manually:
+kotlin-sdk changes); to run it manually:
 
 ```sh
-cd packages/kt-core
+cd packages/kotlin/kotlin-sdk
 ./gradlew :core:ktlintFormat  # fix
 ./gradlew :core:ktlintCheck   # verify, same as CI
 ```

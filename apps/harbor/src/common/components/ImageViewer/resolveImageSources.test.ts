@@ -6,7 +6,7 @@ import {
 
 // `v2` is only used as types here and in the helpers; a stub keeps the
 // real (native-backed) package out of the test.
-jest.mock('@polycentric/react-native', () => ({ v2: {} }));
+jest.mock('@polycentric/react-native-sdk', () => ({ v2: {} }));
 
 type BlobUrls = Parameters<typeof resolveImageSources>[1];
 

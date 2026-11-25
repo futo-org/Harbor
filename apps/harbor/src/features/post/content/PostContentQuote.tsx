@@ -14,7 +14,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native';
+import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native-sdk';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { isWeb } from '@/src/common/util/platform';

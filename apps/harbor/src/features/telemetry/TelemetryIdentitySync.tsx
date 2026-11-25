@@ -6,7 +6,7 @@ import {
   IdentityManager,
   bytesToHex,
   createServerJwt,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useEffect } from 'react';
 import {
   setTelemetryAuthTokenProvider,

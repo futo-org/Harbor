@@ -13,7 +13,7 @@ node_modules/
 target/
 
 # Note: workspace package `dist/` and `build/` directories are NOT
-# ignored — packages like `@polycentric/js-core` are consumed via their
+# ignored — packages like `@polycentric/js-sdk` are consumed via their
 # built output (their `main` field points into `dist/`), so EAS needs
 # them uploaded. Native build dirs are excluded individually below.
 .expo/
@@ -73,5 +73,3 @@ docker-compose.live*
 services/
 legacy/
 
-# Browser SDK demo (~150MB of node_modules + bundle, irrelevant to the native build)
-packages/js-browser/examples/

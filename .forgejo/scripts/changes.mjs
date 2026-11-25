@@ -71,14 +71,23 @@ const SERVER_STACK = [
   '.forgejo/scripts/integration-server.sh',
 ];
 
-const rsCore = touches(CARGO, /^packages\/rs-[^/]+\//);
-const jsSdk = touches(LOCK, /^packages\/js-[^/]+\//);
-const rnSdk = touches(LOCK, 'packages/react-native/');
-const ktCore = touches(
+// The pure-TS SDK packages; react-native-sdk has its own flag (rnSdk), and
+// js-wasm is built from rs-core so it counts as rsCore.
+const JS_SDK =
+  /^packages\/js\/(js-sdk|node-sdk|drivers\/js-(datastore|filestore)-[^/]+)\//;
+
+const rsCore = touches(
+  CARGO,
+  /^packages\/rust\//,
+  'packages/js/drivers/js-wasm/',
+);
+const jsSdk = touches(LOCK, JS_SDK);
+const rnSdk = touches(LOCK, 'packages/js/react-native-sdk/');
+const kotlinSdk = touches(
   /^Cargo\.lock$/,
-  'packages/kt-core/',
-  'packages/rs-core/',
-  'packages/rs-common/',
+  'packages/kotlin/kotlin-sdk/',
+  'packages/rust/rs-core/',
+  'packages/rust/rs-common/',
   'protos/',
 );
 const server = touches(CARGO, SERVER_STACK, CHARTS);
@@ -112,8 +121,8 @@ const grayjayMigrator = touches(
 const scraper = touches(NODE_ROOT, 'services/scraper/', CHARTS);
 const verifierBot = touches(
   NODE_ROOT,
-  /^packages\/js-[^/]+\//,
-  'packages/rs-core-wasm/',
+  JS_SDK,
+  'packages/js/drivers/js-wasm/',
   'services/verifier-bot/',
   CHARTS,
 );
@@ -125,7 +134,7 @@ const web = app || jsSdk || rnSdk || rsCore;
 const docs = touches(
   'docs/',
   'protos/polycentric/v2/',
-  'packages/kt-core/core/src/test/kotlin/examples/',
+  'packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/',
   /^buf\.yaml$/,
 );
 const charts = touches(
@@ -208,8 +217,8 @@ const flags = {
     app_typecheck: app || jsSdk || rnSdk || rsCore,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
     build_rn_sdk: rnSdk || rsCore || app,
-    kt_core_lint: ktCore,
-    kt_core_build: ktCore,
+    kotlin_sdk_lint: kotlinSdk,
+    kotlin_sdk_build: kotlinSdk,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
     web_image: web,

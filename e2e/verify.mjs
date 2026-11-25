@@ -2,8 +2,8 @@
 // only an http client, so run.mjs serves this in its own process (and it dies
 // with it): POST /verify-newest-claim {"name"} does what it says for that user.
 import { createServer } from 'node:http';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
-import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-sdk';
+import { Query, QueryStatus } from '@polycentric/js-wasm/generated';
 import { SEEDED_USERS, signupInfoFor } from './seed.mjs';
 
 // loginManager.claim without its identity republish, which would add an

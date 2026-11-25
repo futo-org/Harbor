@@ -13,7 +13,7 @@ import {
   MAX_BIO_LENGTH,
   MAX_NAME_LENGTH,
 } from '@/src/features/profile/lib/decodeProfile';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';

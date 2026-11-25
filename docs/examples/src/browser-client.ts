@@ -1,15 +1,10 @@
 // Shown on docs/content/developer/examples.md under "Creating a client".
 
 // #region browser-client
-import { PolycentricClient } from '@polycentric/js-core';
-import {
-  IndexedDBStorageDriver,
-  OpfsFileStoreDriver,
-} from '@polycentric/js-browser';
-import {
-  PolycentricCore,
-  uniffiInitAsync,
-} from '@polycentric/rs-core-wasm/web';
+import { PolycentricClient } from '@polycentric/js-sdk';
+import { IndexedDBStorageDriver } from '@polycentric/js-datastore-indexeddb';
+import { OpfsFileStoreDriver } from '@polycentric/js-filestore-opfs';
+import { PolycentricCore, uniffiInitAsync } from '@polycentric/js-wasm/web';
 
 // #endregion browser-client
 

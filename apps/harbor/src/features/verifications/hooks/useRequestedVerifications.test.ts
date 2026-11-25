@@ -1,7 +1,7 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
+// `@polycentric/react-native-sdk`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
   Query: {
     ListTargetedVerificationClaims:
       function ListTargetedVerificationClaims() {},
@@ -50,7 +50,7 @@ import {
   eventKeyId,
   type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';

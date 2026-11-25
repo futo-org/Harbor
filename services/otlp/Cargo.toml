@@ -10,7 +10,7 @@ version      = "0.1.0"
 common-dotenv = { path = "../common/dotenv" }
 common-telemetry = { path = "../common/telemetry" }
 polycentric-common.workspace = true
-polycentric-core = { path = "../../packages/rs-core" }
+polycentric-core = { path = "../../packages/rust/rs-core" }
 
 # 3rd Party
 axum = { version = "0.8.8", default-features = false, features = ["http1", "http2", "tokio"] }

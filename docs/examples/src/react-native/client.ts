@@ -2,11 +2,11 @@
 // "Creating an identity".
 
 // #region rn-client
-import { createPolycentricClient } from '@polycentric/react-native';
+import { createPolycentricClient } from '@polycentric/react-native-sdk';
 
 // #endregion rn-client
 // #region rn-identity
-import { createIdentity } from '@polycentric/react-native';
+import { createIdentity } from '@polycentric/react-native-sdk';
 
 // #endregion rn-identity
 

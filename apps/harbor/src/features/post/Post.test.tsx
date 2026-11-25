@@ -44,7 +44,7 @@ jest.mock('./toolbar/PostToolbar', () => ({ PostToolbar: () => null }));
 jest.mock('@/src/features/moderation/LabelWarnOverlay', () => ({
   LabelWarnOverlay: () => null,
 }));
-jest.mock('@polycentric/react-native', () => ({ COLLECTION: { FEED: 1 } }));
+jest.mock('@polycentric/react-native-sdk', () => ({ COLLECTION: { FEED: 1 } }));
 
 import { render } from '@testing-library/react-native';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';

@@ -1,7 +1,7 @@
 // `@polycentric/react-native`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest. The pick only needs the `v2` protos.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
 }));
 
 // Evaluates query state from the native barrel at import time, which the pick
@@ -11,7 +11,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({}));
 // ESM-only package jest can't parse; the pick never hashes schemas.
 jest.mock('@noble/hashes/sha2.js', () => ({}));
 
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { pickClaim } from './useClaimById';
 
 const IDENTITY = 'claimowner';
