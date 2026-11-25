@@ -47,6 +47,7 @@ function ThemeDecorator({ children }: PropsWithChildren) {
       <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
         {children}
         <IconButton
+          size="sm"
           icon={scheme === 'dark' ? 'themeLight' : 'themeDark'}
           accessibilityLabel={
             scheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
@@ -56,7 +57,7 @@ function ThemeDecorator({ children }: PropsWithChildren) {
               scheme: scheme === 'dark' ? 'light' : 'dark',
             })
           }
-          style={[Atoms.absolute, { top: Spacing.sm, right: Spacing.sm }]}
+          style={[Atoms.absolute, { top: Spacing.xs, right: Spacing.xs }]}
         />
       </View>
     </Context.Provider>
