@@ -18,8 +18,108 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  android:
+    name: Build Android libraries
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler cmake ninja-build clang-format
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            i686-linux-android \
+            x86_64-linux-android
+          cargo install --locked cargo-ndk@4.1.2
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @polycentric/react-native-sdk
+
+      - name: Build Android libraries
+        run: pnpm --filter @polycentric/react-native-sdk ubrn:android --release
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rn-android-build
+          path: packages/js/react-native-sdk/android/src/main/jniLibs
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: Build iOS libraries
+    runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        run: brew install protobuf cmake ninja clang-format
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add \
+            aarch64-apple-ios \
+            aarch64-apple-ios-sim \
+            x86_64-apple-ios
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @polycentric/react-native-sdk
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app
+
+      - name: Build iOS libraries
+        run: pnpm --filter @polycentric/react-native-sdk ubrn:ios
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rn-ios-build
+          path: |
+            packages/js/react-native-sdk/ios
+            packages/js/react-native-sdk/PolycentricReactNativeSdkFramework.xcframework
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
     name: Build and publish
+    needs: [ android, ios ]
     runs-on: ubuntu-24.04
     environment: npm
     permissions:
@@ -59,9 +159,12 @@ jobs:
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org
 
-      - name: Install pnpm and check npm
-        run: | # zizmor: ignore[adhoc-packages] exact version from packageManager
-          npm install -g "$(node -p "require('./package.json').packageManager")"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+
+      - name: Check npm
+        run: |
           pnpm --version
           node -e '
             const [a, b, c] = process.argv[1].split(".").map(Number);
@@ -71,18 +174,50 @@ jobs:
             }' "$(npm --version)"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter './packages/js-*...' --filter @polycentric/rs-core-wasm
-
-      - name: Build rs-core-wasm
         run: |
-          pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
-          wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+          pnpm install --frozen-lockfile \
+            --filter @polycentric/js-wasm... \
+            --filter @polycentric/js-sdk... \
+            --filter @polycentric/js-datastore-sqlite... \
+            --filter @polycentric/js-datastore-postgres... \
+            --filter @polycentric/js-datastore-indexeddb... \
+            --filter @polycentric/js-filestore-opfs... \
+            --filter @polycentric/node-sdk... \
+            --filter @polycentric/react-native-sdk...
+
+      - name: Build js-wasm
+        run: |
+          pnpm --filter @polycentric/js-wasm build --profile wasm-release
+          wasm=packages/js/drivers/js-wasm/src/generated/wasm/polycentric_core.wasm
           before=$(stat -c%s "$wasm")
           wasm-opt -Oz -g "$wasm" -o "$wasm"
           echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
 
       - name: Build JS packages
-        run: pnpm --filter './packages/js-*' run build
+        run: |
+          pnpm --filter @polycentric/js-sdk \
+            --filter @polycentric/js-datastore-sqlite \
+            --filter @polycentric/js-datastore-postgres \
+            --filter @polycentric/js-datastore-indexeddb \
+            --filter @polycentric/js-filestore-opfs \
+            --filter @polycentric/node-sdk \
+            run build
+
+      - name: Generate react-native-sdk bindings
+        run: pnpm --filter @polycentric/react-native-sdk generate
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rn-android-build
+          path: packages/js/react-native-sdk/android/src/main/jniLibs
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rn-ios-build
+          path: packages/js/react-native-sdk
+
+      - name: Build react-native-sdk
+        run: pnpm --filter @polycentric/react-native-sdk build
 
       - name: Set the release version
         env:
@@ -96,15 +231,24 @@ jobs:
         run: |
           set -euo pipefail
           # Packages in topological order by dependency relations.
-          # Note react-native is left out: it needs the Android and iOS native builds.
+          # Note video-transcoding is WIP and not part of the release set.
           out_dir="$(mktemp -d)"
-          for pkg in rs-core-wasm js-core js-storage-sqlite js-storage-postgres js-browser js-node; do
-            name="@polycentric/${pkg}"
+          for dir in \
+            js/drivers/js-wasm \
+            js/js-sdk \
+            js/drivers/js-datastore-sqlite \
+            js/drivers/js-datastore-postgres \
+            js/drivers/js-datastore-indexeddb \
+            js/drivers/js-filestore-opfs \
+            js/node-sdk \
+            js/react-native-sdk; do
+            package_dir="packages/${dir}"
+            name=$(node -p "require('./${package_dir}/package.json').name")
             if npm view "${name}@${VERSION}" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
               echo "Found ${name}@${VERSION} already on npmjs.org, skipping."
               continue
             fi
-            packed=$(cd "packages/${pkg}" && pnpm pack --pack-destination "$out_dir" | tail -n1)
+            packed=$(cd "${package_dir}" && pnpm pack --pack-destination "$out_dir" | tail -n1)
             echo "Publishing ${name}@${VERSION} from ${packed}"
             npm publish "$packed" --access public --tag latest --registry https://registry.npmjs.org
           done

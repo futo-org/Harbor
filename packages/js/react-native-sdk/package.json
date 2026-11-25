@@ -24,6 +24,7 @@
     "android",
     "ios",
     "cpp",
+    "PolycentricReactNativeSdkFramework.xcframework",
     "*.podspec",
     "react-native.config.js",
     "!ios/build",
