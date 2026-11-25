@@ -15,6 +15,11 @@ const VARIANTS: NonNullable<ButtonProps['variant']>[] = [
   'destructive',
 ];
 const SIZES: NonNullable<ButtonProps['size']>[] = ['sm', 'md', 'lg'];
+const SIZE_TITLES: Record<(typeof SIZES)[number], string> = {
+  sm: 'Small',
+  md: 'Medium',
+  lg: 'Large',
+};
 
 // Width of the containers the Overflow story squeezes buttons into
 const NARROW_CONTAINER_WIDTH = 200;
@@ -51,11 +56,8 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 export const AllVariants: Story = {
-  // The grid sets these on every button
-  argTypes: {
-    title: { control: false },
-    variant: { control: false },
-    size: { control: false },
+  parameters: {
+    controls: { include: ['icon', 'disabled', 'onPress'] },
   },
   render: (args) => (
     <View style={Atoms.gap_xl}>
@@ -76,7 +78,7 @@ export const AllVariants: Story = {
               <Button
                 key={size}
                 {...args}
-                title={size}
+                title={SIZE_TITLES[size]}
                 variant={variant}
                 size={size}
               />
@@ -92,9 +94,10 @@ export const Overflow: Story = {
   args: {
     title: 'A title too long for the box',
   },
-  argTypes: {
-    // Each case sets it
-    fullWidth: { control: false },
+  parameters: {
+    controls: {
+      include: ['title', 'variant', 'size', 'icon', 'disabled', 'onPress'],
+    },
   },
   render: (args) => (
     <View style={Atoms.gap_xl}>
@@ -131,10 +134,8 @@ export const Overflow: Story = {
 };
 
 export const IconHeights: Story = {
-  argTypes: {
-    // Each button sets its own
-    title: { control: false },
-    icon: { control: false },
+  parameters: {
+    controls: { include: ['variant', 'size', 'disabled', 'onPress'] },
   },
   render: (args) => (
     <OutlinedRow>
@@ -149,7 +150,6 @@ export const IconHeights: Story = {
           />
         ),
       )}
-      {/* Icon only: an empty title */}
       <Button {...args} title="" icon="personAdd" />
       <Button {...args} title="" icon="add" />
     </OutlinedRow>
@@ -189,7 +189,6 @@ function OutlinedRow({ children }: PropsWithChildren) {
       style={[
         Atoms.flex_row,
         Atoms.flex_wrap,
-        // So a button taller than its neighbours stands out
         Atoms.items_start,
         Atoms.gap_md,
         Atoms.px_md,
