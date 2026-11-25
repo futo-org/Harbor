@@ -22,10 +22,10 @@ pub(super) fn add_query(
         start_at,
         end_at,
         location,
-        labels: _,
+        labels,
         all_day,
         image,
-        timezone: _,
+        timezone,
         mut hosts,
     } = event;
     // Validation limits these, so this only fails for unvalidated content
@@ -39,7 +39,7 @@ pub(super) fn add_query(
         name,
         address,
         point,
-        url: _,
+        url,
     } = location.unwrap_or_default();
     let (latitude, longitude) = match point {
         Some(GeoPoint {
@@ -59,8 +59,11 @@ pub(super) fn add_query(
             content_calendar_event::Column::StartAt,
             content_calendar_event::Column::EndAt,
             content_calendar_event::Column::AllDay,
+            content_calendar_event::Column::Timezone,
+            content_calendar_event::Column::Labels,
             content_calendar_event::Column::LocationName,
             content_calendar_event::Column::LocationAddress,
+            content_calendar_event::Column::LocationUrl,
             content_calendar_event::Column::Latitude,
             content_calendar_event::Column::Longitude,
         ])
@@ -73,9 +76,12 @@ pub(super) fn add_query(
                 .expr(Expr::from(start_at))
                 .expr(Expr::from(end_at))
                 .expr(Expr::from(all_day))
+                .expr(Expr::from(timezone))
+                .expr(Expr::from(labels))
                 // Empty name means the location only has an address or link
                 .expr(Expr::from(Some(name).filter(|name| !name.is_empty())))
                 .expr(Expr::from(address))
+                .expr(Expr::from(url))
                 .expr(Expr::from(latitude))
                 .expr(Expr::from(longitude));
             q

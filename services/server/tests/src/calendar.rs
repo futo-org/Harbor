@@ -21,7 +21,7 @@ fn bundle_key(bundle: &EventBundle) -> EventKey {
 }
 
 /// (going, maybe, not going)
-fn counts(bundle: &CalendarEventBundle) -> (i64, i64, i64) {
+pub(crate) fn counts(bundle: &CalendarEventBundle) -> (i64, i64, i64) {
     let stats = bundle.stats.as_ref().unwrap();
     (stats.going_count, stats.maybe_count, stats.not_going_count)
 }
@@ -41,6 +41,19 @@ async fn list_events(
         .await
         .unwrap()
         .into_inner()
+}
+
+/// The event with its stats, or the error if it can't be read
+pub(crate) async fn get_event(
+    event_key: &EventKey,
+) -> Result<CalendarEventBundle, tonic::Status> {
+    let response = calendar_service()
+        .await
+        .get_calendar_event(GetCalendarEventRequest {
+            event_key: Some(event_key.clone()),
+        })
+        .await?;
+    Ok(response.into_inner().event.unwrap())
 }
 
 /// Events the identity created or hosts that haven't finished, soonest first
@@ -65,7 +78,7 @@ async fn awaiting_host(identity: &str) -> Vec<EventKey> {
     event_keys(&list_events(filters, false, None).await.events)
 }
 
-async fn list_attendees(
+pub(crate) async fn list_attendees(
     event_key: &EventKey,
     status: Option<CalendarEventRsvpStatus>,
 ) -> Vec<String> {
