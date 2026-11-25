@@ -1,4 +1,11 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const {
+  withStorybook,
+} = require('@storybook/react-native/metro/withStorybook');
+
+// withStorybook sends a telemetry event on every start unless this is set; it
+// ignores `core.disableTelemetry`
+process.env.STORYBOOK_DISABLE_TELEMETRY = 'true';
 
 const config = getDefaultConfig(__dirname);
 
@@ -13,4 +20,8 @@ config.resolver.blockList = [
   /[\\/]e2e[\\/]reports[\\/]/,
 ];
 
-module.exports = config;
+// Disabled, it resolves every Storybook import to an empty module, which keeps
+// it out of non-dev bundles
+module.exports = withStorybook(config, {
+  enabled: process.env.APP_VARIANT === 'dev',
+});

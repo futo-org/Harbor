@@ -22,6 +22,7 @@ import { Routes } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
+import { APP_VARIANT } from '@/src/common/util/application';
 import { isBrowserExtension, isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
@@ -181,6 +182,10 @@ function RootStack() {
           name="[identityId]/photo"
           options={imageViewerScreenOptions}
         />
+
+        <Stack.Protected guard={APP_VARIANT === 'dev'}>
+          <Stack.Screen name="storybook" />
+        </Stack.Protected>
       </Stack>
     </>
   );

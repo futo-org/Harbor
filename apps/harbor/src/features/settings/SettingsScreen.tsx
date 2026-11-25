@@ -16,6 +16,7 @@ import { Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
+import { APP_VARIANT } from '@/src/common/util/application';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
@@ -243,6 +244,13 @@ export default function SettingsTabScreen() {
                 >
                   <Text variant="body">Feature flags</Text>
                 </ListItemWrapper>
+                {APP_VARIANT === 'dev' ? (
+                  <ListItemWrapper
+                    onPress={() => router.navigate(Routes.storybook)}
+                  >
+                    <Text variant="body">Storybook</Text>
+                  </ListItemWrapper>
+                ) : null}
               </ListItemGroup>
 
               <ListItemGroup label="About">

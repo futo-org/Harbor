@@ -33,6 +33,7 @@
       "!packages/js/react-native-sdk/src/uniffi-init.tsx",
       "!apps/harbor/.expo",
       "!apps/harbor/expo-env.d.ts",
+      "!apps/harbor/.rnstorybook/storybook.requires.ts",
       "!packages/rust/rs-core",
       "!packages/js/drivers/js-wasm-browser",
       "!packages/js/drivers/js-wasm-node",

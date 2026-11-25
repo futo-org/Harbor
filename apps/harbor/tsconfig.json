@@ -10,6 +10,8 @@
     "**/*.ts",
     "**/*.mts",
     "**/*.tsx",
+    // Wildcards skip dot folders
+    ".rnstorybook/**/*",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],

@@ -145,4 +145,5 @@ export const Routes = {
       moderation: '/signup/moderation',
     },
   },
+  storybook: '/storybook',
 } as const;
