@@ -2,26 +2,16 @@ import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants';
-import {
-  useCurrentIdentity,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   type TextInputInstance,
 } from 'react-native';
 import { CalendarEventFormFields } from './CalendarEventFormFields';
-import { createCalendarEvent } from '../lib/calendar-actions';
-import { useCoverPhoto } from '../hooks/useCoverPhoto';
-import {
-  type CalendarEventForm,
-  EMPTY_CALENDAR_EVENT_FORM,
-  calendarEventFromForm,
-} from '../lib/calendar-event';
+import { useCalendarEventCreateForm } from '../hooks/useCalendarEventCreateForm';
 
 type CalendarEventCreateSheetProps = {
   open: boolean;
@@ -35,70 +25,41 @@ export function CalendarEventCreateSheet({
 }: CalendarEventCreateSheetProps) {
   const { theme } = useTheme();
   const toast = useToast();
-  const client = usePolycentric();
-  const { identityKey } = useCurrentIdentity();
-  const [form, setForm] = useState(EMPTY_CALENDAR_EVENT_FORM);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, setPending] = useState(false);
-  const coverPhoto = useCoverPhoto(isPending, setError);
-  const titleRef = useRef<TextInputInstance>(null);
 
-  const patch = (changes: Partial<CalendarEventForm>) => {
-    setError(null);
-    setForm((prev) => ({ ...prev, ...changes }));
-  };
+  const {
+    form,
+    patch,
+    coverPhoto,
+    error,
+    isPending,
+    canSubmit,
+    submit,
+    reset,
+  } = useCalendarEventCreateForm();
+
+  const titleRef = useRef<TextInputInstance>(null);
 
   // Sheet stays mounted when closed, so reset
   const close = () => {
     onClose();
-    setForm(EMPTY_CALENDAR_EVENT_FORM);
-    coverPhoto.reset();
-    setError(null);
+    reset();
   };
 
-  const submit = async () => {
-    if (isPending) return;
+  const create = async () => {
+    const created = await submit();
+    if (!created) return;
 
-    const result = calendarEventFromForm(form, identityKey ?? '');
+    toast.success('Event created');
+    close();
 
-    if ('error' in result) {
-      setError(result.error);
-      return;
-    }
-
-    setPending(true);
-
-    try {
-      const [image] = await coverPhoto.resolveImageSets();
-
-      const created = await createCalendarEvent(client, {
-        ...result.event,
-        image,
-      });
-
-      toast.success('Event created');
-      close();
-
-      router.navigate(
-        Routes.tabs.calendarEvent(
-          created.identity,
-          created.keyFingerprint,
-          created.sequence,
-        ),
-      );
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't create the event. Try again.");
-    } finally {
-      setPending(false);
-    }
+    router.navigate(
+      Routes.tabs.calendarEvent(
+        created.identity,
+        created.keyFingerprint,
+        created.sequence,
+      ),
+    );
   };
-
-  const canSubmit =
-    !!form.title.trim() &&
-    !!form.date &&
-    (form.allDay || !!form.startTime) &&
-    !coverPhoto.isUploading;
 
   return (
     <Sheet
@@ -125,7 +86,7 @@ export function CalendarEventCreateSheet({
                 size="sm"
                 testID="calendar-event-create-submit"
                 disabled={!canSubmit}
-                onPress={() => void submit()}
+                onPress={() => void create()}
               />
             )
           }

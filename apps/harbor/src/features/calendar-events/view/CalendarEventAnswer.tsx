@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { useCalendarEventHosts } from '../hooks/useCalendarEventHosts';
 import { useRsvp } from '../hooks/useRsvp';
 import { type CalendarEventData, isUpcoming } from '../lib/calendar-event';
+import { CalendarEventClaimAttendance } from './CalendarEventClaimAttendance';
 import { RsvpActions } from './RsvpActions';
 
 type CalendarEventAnswerProps = { event: CalendarEventData };
@@ -62,12 +63,41 @@ export function CalendarEventAnswer({ event }: CalendarEventAnswerProps) {
     );
   }
 
-  // No RSVPs once the event is over
-  if (!isUpcoming(event, Date.now())) {
+  const now = Date.now();
+
+  // No RSVPs once the event is over, but they can claim they were there
+  if (!isUpcoming(event, now)) {
     return (
-      <Text variant="secondary" color="muted" testID="calendar-event-ended">
-        This event has ended.
-      </Text>
+      <View
+        style={[Atoms.flex_row, Atoms.align_center, Atoms.justify_between]}
+        testID="calendar-event-ended"
+      >
+        <Text variant="secondary" color="muted">
+          This event has ended.
+        </Text>
+
+        <CalendarEventClaimAttendance event={event} />
+      </View>
+    );
+  }
+
+  // Under way, so they can RSVP or say they're there
+  if (event.startAt <= now) {
+    return (
+      <View style={Atoms.gap_sm}>
+        <RsvpActions status={status} answer={answer} />
+
+        <View
+          style={[Atoms.flex_row, Atoms.align_center, Atoms.justify_between]}
+          testID="calendar-event-started"
+        >
+          <Text variant="secondary" color="muted">
+            This event has started.
+          </Text>
+
+          <CalendarEventClaimAttendance event={event} />
+        </View>
+      </View>
     );
   }
 
