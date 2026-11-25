@@ -207,8 +207,8 @@ catalogs:
       specifier: ^5.9.3
       version: 5.9.3
     uniffi-bindgen-react-native:
-      specifier: 0.31.0-7
-      version: 0.31.0-7
+      specifier: 0.31.0-8
+      version: 0.31.0-8
 
 overrides:
   dompurify@<3.4.17: '>=3.4.17'
@@ -224,7 +224,6 @@ patchedDependencies:
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
   react-remove-scroll@2.7.2: e76968a09dcd0466b9527adb861f3386e4896bdbe7be22205007ea875abc8ba4
-  uniffi-bindgen-react-native@0.31.0-7: 598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c
 
 importers:
 
@@ -904,7 +903,7 @@ importers:
         version: 1.11.0(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
     devDependencies:
       '@react-native/babel-preset':
         specifier: 0.83.0
@@ -957,7 +956,7 @@ importers:
         version: 5.9.3
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
 
   packages/video-transcoding:
     devDependencies:
@@ -3775,10 +3774,6 @@ packages:
 
   '@metascraper/helpers@5.55.2':
     resolution: {integrity: sha512-3hVAj5mtgDvH6QekXc52Pod1VxzAzDelzY1HCgxIe4J+lInhQKWmcFVRpXrpwWvJTnpN5OueFyekQnqeyhDL+Q==}
-    engines: {node: '>= 22.13'}
-
-  '@metascraper/helpers@5.58.4':
-    resolution: {integrity: sha512-3pyzjvl+2IjDoZpBhwmFJVyiTKq0wPk6d8tiL+MjeI07++VNutSyGIQZdcQK3cYhs3u+HL2Z+BH4rBQlGJ2yfg==}
     engines: {node: '>= 22.13'}
 
   '@metascraper/helpers@5.58.7':
@@ -12991,8 +12986,8 @@ packages:
     resolution: {integrity: sha512-lzlXPoVB0Uy/FvTaUgX39RbixYiSKoc3JSoSf01+0c2B6FR3qdYIPN7Qjo/AV7n6sqLCk0509cT3LRj1oSZ1+A==}
     engines: {node: '>=20'}
 
-  uniffi-bindgen-react-native@0.31.0-7:
-    resolution: {integrity: sha512-nby2kXC+heUwtbOwKbJeZoGV5K8nNxp0kxoPhx2bK98k0MT9P6DA73jnbS7AER1eh0du8bR7Eeco7LcxxEs4bA==}
+  uniffi-bindgen-react-native@0.31.0-8:
+    resolution: {integrity: sha512-cW9ixYjkJw08vCcNlbK1/3icNnLuw1XRIvvHMzKt52iOs4mZXVVXzRnZYqaTB/ytFG8uwIZdg/6hLCGJxGgW7g==}
     hasBin: true
 
   unified@11.0.5:
@@ -18053,38 +18048,6 @@ snapshots:
       smartquotes: 2.3.2
       tldts: 7.4.18
       url-regex-safe: 4.0.0(re2@1.26.1)
-      video-extensions: 2.0.0
-    transitivePeerDependencies:
-      - '@noble/hashes'
-      - canvas
-      - debug
-
-  '@metascraper/helpers@5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))':
-    dependencies:
-      audio-extensions: 0.0.0
-      chrono-node: 2.10.3
-      condense-whitespace: 3.0.0
-      data-uri-utils: 1.0.15
-      debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
-      entities: 8.1.0
-      file-extension: 4.0.5
-      has-values: 2.0.1
-      image-extensions: 1.1.0
-      is-relative-url: 4.1.1
-      is-uri: 1.2.14
-      iso-639-3: 3.0.1
-      isostring: 0.0.1
-      jsdom: 30.1.3(@noble/hashes@2.4.0)
-      jsonrepair: 3.15.0
-      lodash: 4.18.1
-      memoize-one: 6.0.0
-      microsoft-capitalize: 1.0.8
-      mime: 4.1.2
-      normalize-url: 9.0.1
-      re2: 1.27.0
-      smartquotes: 2.3.2
-      tldts: 7.4.18
-      url-regex-safe: 4.0.0(re2@1.27.0)
       video-extensions: 2.0.0
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -29011,7 +28974,7 @@ snapshots:
 
   unicorn-magic@0.4.1: {}
 
-  uniffi-bindgen-react-native@0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c): {}
+  uniffi-bindgen-react-native@0.31.0-8: {}
 
   unified@11.0.5:
     dependencies:
