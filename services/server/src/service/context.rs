@@ -173,6 +173,19 @@ pub(crate) type AuthContext = RequestContext<Identity>;
 #[derive(Debug)]
 pub(crate) struct Identity(String);
 
+impl Identity {
+    #[cfg(test)]
+    pub(crate) fn with_public_key(
+        self,
+        public_key: polycentric_common::models::protos_v2::PublicKey,
+    ) -> AuthenticatedIdentity {
+        AuthenticatedIdentity {
+            identity: self.0,
+            public_key,
+        }
+    }
+}
+
 impl std::ops::Deref for Identity {
     type Target = str;
 

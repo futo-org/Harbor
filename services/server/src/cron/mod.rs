@@ -130,7 +130,7 @@ impl AdvisoryLock {
         let mut indices = (0..4).into_iter().cycle();
         for b in identity.as_bytes() {
             let idx = indices.next().unwrap_or(0);
-            key_bytes[idx] = key_bytes[idx] ^ b;
+            key_bytes[idx] ^= b;
         }
         AdvisoryLock(i64::from_be_bytes(key_bytes))
     }
@@ -181,6 +181,7 @@ impl AdvisoryLock {
     ///  * `Ok(GuardConn)` -> acquired the lock.
     ///  * `Ok(DbConn)` -> failed to acquire lock (not an error).
     ///  * `Err((DbConn, DbErr))` -> locking failed.
+    #[allow(clippy::result_large_err)]
     pub(crate) async fn try_session_lock(
         self,
         db: DbConn,
@@ -272,8 +273,8 @@ async fn session_unlock(db: &mut DbConn, key: i64) -> Result<(), DbErr> {
     if unlocked {
         Ok(())
     } else {
-        return Err(DbErr::Custom(format!(
+        Err(DbErr::Custom(format!(
             "failed to unlock advisory lock '{key}', lock not held",
-        )));
+        )))
     }
 }

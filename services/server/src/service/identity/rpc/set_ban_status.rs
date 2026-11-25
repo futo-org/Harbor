@@ -23,7 +23,7 @@ pub async fn handle(
         &mut ctx.db,
         &req.target_identity,
         req.banned,
-        &*moderator.identity,
+        &moderator.identity,
     )
     .await
     .map_err(|e| {
@@ -55,7 +55,7 @@ pub async fn handle(
         moderation_repo::Mutation::resolve_reports_by_author(
             &mut ctx.db,
             &req.target_identity,
-            &*moderator.identity,
+            &moderator.identity,
         )
         .await
         .map_err(|e| {
