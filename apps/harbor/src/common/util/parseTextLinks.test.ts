@@ -4,7 +4,7 @@ import {
   truncateSegments,
   type TextSegment,
 } from './parseTextLinks';
-import mentionFixtures from '../../../../../packages/rs-common/src/mentions.fixtures.json';
+import mentionFixtures from '../../../../../packages/rust/rs-common/src/mentions.fixtures.json';
 
 /**
  * parseTextLinks minus the raw offsets, so the segment assertions below stay

@@ -1,6 +1,6 @@
 // The provider's other imports reach native uniffi init and rs-core queries,
 // which can't run under jest.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   FetchMode: { OfflineFirst: 'OfflineFirst' },
 }));
 jest.mock('@/src/features/block/hooks/useBlocks', () => jest.fn());

@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { setQueryCache, useQuery } from '@/src/common/query/hooks/useQuery';
-import { Query, v2 } from '@polycentric/react-native';
+import { Query, v2 } from '@polycentric/react-native-sdk';
 import { useCallback, useMemo } from 'react';
 
 /** Servers stop counting here. */

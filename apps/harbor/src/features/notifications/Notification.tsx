@@ -14,7 +14,7 @@ import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/react-native-sdk';
 import type { Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type {

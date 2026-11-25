@@ -1,7 +1,7 @@
 import { Button } from '@/src/common/components';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { COLLECTION, v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import type { ServerReport } from '../hooks/useReports';

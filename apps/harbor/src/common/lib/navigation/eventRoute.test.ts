@@ -1,12 +1,12 @@
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   COLLECTION: jest.requireActual(
-    '../../../../../../packages/js-core/src/constants',
+    '../../../../../../packages/js/js-sdk/src/constants',
   ).COLLECTION,
 }));
 
 jest.mock('expo-router', () => ({ router: {} }));
 
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/react-native-sdk';
 import { eventRoute } from './eventRoute';
 
 const IDENTITY = 'identity';

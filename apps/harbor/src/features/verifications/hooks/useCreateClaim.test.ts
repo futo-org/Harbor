@@ -1,7 +1,7 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
+// `@polycentric/react-native-sdk`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest — expose just what the hooks need.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
   COLLECTION: { VERIFICATIONS: 8 },
   SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
 }));
@@ -15,7 +15,7 @@ let mockSequence = 0;
 const mockClient = {
   createEvent: jest.fn(
     async (_args: { collection: number; content: v2.Content }) => {
-      const { v2 } = jest.requireMock('@polycentric/react-native');
+      const { v2 } = jest.requireMock('@polycentric/react-native-sdk');
       const signer = v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) });
       const eventKey = v2.EventKey.create({
         identity: 'me',
@@ -38,7 +38,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
   getKeyFingerprint: (key?: unknown) => (key ? 'fingerprint' : undefined),
   eventKeyId: (key: unknown) => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
+    const { v2 } = jest.requireMock('@polycentric/react-native-sdk');
     return Buffer.from(v2.EventKey.toBinary(key)).toString('hex');
   },
 }));
@@ -53,7 +53,7 @@ jest.mock('../claims/create/ClaimCreateContext', () => ({
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -142,7 +142,7 @@ describe('useCreateClaim', () => {
   });
 
   it('puts the images on the claim', async () => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
+    const { v2 } = jest.requireMock('@polycentric/react-native-sdk');
     const images = [
       v2.ImageSet.create({
         images: [v2.Image.create({ width: 512, height: 384 })],

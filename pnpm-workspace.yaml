@@ -1,8 +1,8 @@
 packages:
   - apps/*
-  - packages/*
-  - packages/js-browser/examples/*
-  - packages/js-node/examples/*
+  - packages/js/*
+  - packages/js/drivers/*
+  - packages/js/node-sdk/examples/*
   - services/scraper
   - services/verifier-bot
   - tools/*

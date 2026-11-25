@@ -1,4 +1,4 @@
-import type { types } from '@polycentric/react-native';
+import type { types } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -71,7 +71,7 @@ jest.mock('@/src/common/link-previews', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   COLLECTION: { FEED: 1 },
   types: {},
   v2: {

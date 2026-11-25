@@ -5,7 +5,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import type { DecodedClaim } from './useClaimById';
 

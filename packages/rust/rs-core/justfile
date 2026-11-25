@@ -1,0 +1,52 @@
+_default:
+    @just --list
+
+_ensure-protos:
+    @if [ ! -f ../../../protos/polycentric.proto ]; then \
+        echo "Error: Proto files not found at ../../../protos/"; \
+        exit 1; \
+    fi
+
+# Run all tests
+test: _ensure-protos
+    @echo "Running tests..."
+    @cargo test
+
+# Check for compile errors
+check: _ensure-protos
+    @echo "Checking for compile errors..."
+    @cargo check
+
+# Format the code using cargo fmt
+format:
+    @echo "Formatting code..."
+    @cargo fmt
+    @echo "Formatting complete."
+
+# Check that code is formatted correctly
+format-check:
+    @echo "Checking code formatting..."
+    @cargo fmt --check
+    @echo "Formatting check passed."
+
+# Lint code using cargo clippy
+clippy:
+    @echo "Linting code with clippy..."
+    @cargo clippy -- -D warnings # Treat warnings as errors
+    @echo "All clippy checks passed."
+
+# Build and open the documentation
+doc:
+    @echo "Building documentation..."
+    @cargo doc --open
+
+# Open the documentation without rebuilding
+open-docs:
+    @echo "Opening documentation..."
+    @open target/doc/polycentric_core/index.html
+
+# Clean build artifacts
+clean:
+    @echo "Cleaning build artifacts..."
+    @cargo clean
+    @echo "Build artifacts have been removed."

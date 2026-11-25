@@ -1,5 +1,5 @@
 import { Base64 } from 'js-base64';
-import { bytesToHex, hexToBytes, v2 } from '@polycentric/react-native';
+import { bytesToHex, hexToBytes, v2 } from '@polycentric/react-native-sdk';
 import {
   HARBOR_APP_URL,
   PAIRING_CODE_PARAM,

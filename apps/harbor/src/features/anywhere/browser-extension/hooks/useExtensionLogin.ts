@@ -1,7 +1,7 @@
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { useCallback, useEffect, useState } from 'react';
 import {
   LOGIN_CANCEL_MESSAGE,

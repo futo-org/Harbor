@@ -64,7 +64,7 @@ web id from an `EXPO_PUBLIC_APP_VARIANT` runtime variable.
 
 ### Kotlin
 
-```kotlin file=packages/kt-core/core/src/test/kotlin/examples/Examples.kt#application
+```kotlin file=packages/kotlin/kotlin-sdk/core/src/test/kotlin/examples/Examples.kt#application
 ```
 
 ### Building events yourself

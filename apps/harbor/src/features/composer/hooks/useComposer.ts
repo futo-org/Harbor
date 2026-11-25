@@ -31,7 +31,7 @@ import {
   type PolycentricClient,
   FetchMode,
   Query,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useComposerStore } from './useComposerStore';

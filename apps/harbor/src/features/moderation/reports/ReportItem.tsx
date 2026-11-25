@@ -1,6 +1,6 @@
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { COLLECTION, FetchMode, type v2 } from '@polycentric/react-native';
+import { COLLECTION, FetchMode, type v2 } from '@polycentric/react-native-sdk';
 import { View } from 'react-native';
 import type { ServerReport } from '../hooks/useReports';
 import { ModeratedPost, useModeratedPost } from '../ModeratedPost';

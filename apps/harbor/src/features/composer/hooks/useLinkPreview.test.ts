@@ -62,7 +62,7 @@ jest.mock('@/src/common/link-previews', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   v2: {
     // Metadata + the url we requested; return it verbatim so tests can assert
     // on the resolved `url`.

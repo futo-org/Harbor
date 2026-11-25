@@ -276,7 +276,7 @@ jobs:
         with:
           install-args: --filter polycentric
       - name: Biome
-        run: pnpm exec biome check packages/js-core --diagnostic-level=error
+        run: pnpm exec biome check packages/js/js-sdk --diagnostic-level=error
 
   js-services-lint:
     name: Lint JS services
@@ -365,12 +365,12 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric
-      - name: js-core protos
+      - name: js-sdk protos
         run: |
-          pnpm -C packages/js-core generate
+          pnpm -C packages/js/js-sdk generate
           stale=$(git status --porcelain)
           [ -z "$stale" ] ||
-            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js-core generate' and commit the result"; exit 1; }
+            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js/js-sdk generate' and commit the result"; exit 1; }
 
   # Unit tests ---------------------------------------------------------------
 
@@ -440,13 +440,13 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # js-core's tests call into the real rs-core wasm.
+      # js-sdk's tests call into the real rs-core wasm.
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
-          install-args: --filter @polycentric/js-core...
-      - name: js-core
-        run: pnpm --filter @polycentric/js-core test:ci
+          install-args: --filter @polycentric/js-sdk...
+      - name: js-sdk
+        run: pnpm --filter @polycentric/js-sdk test:ci
 
   scraper:
     name: Test scraper
@@ -563,10 +563,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
-  kt-core-lint:
+  kotlin-sdk-lint:
     name: Lint Kotlin
     needs: [ changes, setup-images ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_lint && needs.setup-images.result != 'failure' }}
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kotlin_sdk_lint && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
@@ -579,7 +579,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kotlin-sdk-build
         with:
           task: ":core:ktlintCheck"
           upload-artifact: "false"
@@ -592,10 +592,10 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
-  kt-core:
+  kotlin-sdk:
     name: Build Kotlin
-    needs: [ changes, setup-images, kt-core-lint ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_build && needs.kt-core-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
+    needs: [ changes, setup-images, kotlin-sdk-lint ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kotlin_sdk_build && needs.kotlin-sdk-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
     container:
@@ -608,7 +608,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kotlin-sdk-build
         with:
           task: ":core:assembleRelease :core:compileDebugUnitTestKotlin"
       - uses: ./.forgejo/actions/r2-cache
@@ -1133,8 +1133,8 @@ jobs:
       - wasm
       - android
       - ios
-      - kt-core
-      - kt-core-lint
+      - kotlin-sdk
+      - kotlin-sdk-lint
       - sdks
       - service-binaries
       - service-images

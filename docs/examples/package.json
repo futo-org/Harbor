@@ -8,11 +8,12 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.react-native.json"
   },
   "dependencies": {
-    "@polycentric/js-browser": "workspace:*",
-    "@polycentric/js-core": "workspace:*",
-    "@polycentric/js-node": "workspace:*",
-    "@polycentric/react-native": "workspace:*",
-    "@polycentric/rs-core-wasm": "workspace:*",
+    "@polycentric/js-datastore-indexeddb": "workspace:*",
+    "@polycentric/js-filestore-opfs": "workspace:*",
+    "@polycentric/js-sdk": "workspace:*",
+    "@polycentric/js-wasm": "workspace:*",
+    "@polycentric/node-sdk": "workspace:*",
+    "@polycentric/react-native-sdk": "workspace:*",
     "expo-application": "~58.1.2"
   },
   "devDependencies": {

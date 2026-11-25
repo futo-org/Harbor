@@ -9,7 +9,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { useCardLinkPress } from '@/src/common/lib/navigation/useCardLinkPress';
 import { isWeb } from '@/src/common/util/platform';
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/react-native-sdk';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';

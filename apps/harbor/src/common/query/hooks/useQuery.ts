@@ -5,7 +5,7 @@ import {
   type QueryOpts,
   QueryStatus,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { create } from 'zustand';
 import { toast } from '../../components/toast/useToast';
 import { usePolycentric } from '../../lib/polycentric-hooks/context';

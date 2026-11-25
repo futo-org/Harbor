@@ -1,6 +1,6 @@
 import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import type { DecodedClaim } from './useClaimById';
 

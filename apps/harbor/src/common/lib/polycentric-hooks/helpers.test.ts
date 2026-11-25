@@ -1,12 +1,12 @@
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
 }));
 jest.mock('@/src/common/query/hooks/useQuery', () => ({}));
 jest.mock('@noble/hashes/sha2.js', () => ({
   sha256: (bytes: Uint8Array) => bytes,
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { postLinks } from './helpers';
 
 const GRAYJAY = v2.Application.create({

@@ -1,4 +1,4 @@
-import type { ServerPushResult } from '@polycentric/react-native';
+import type { ServerPushResult } from '@polycentric/react-native-sdk';
 import { create } from 'zustand';
 
 interface LastSyncStore {
