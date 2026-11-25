@@ -15,13 +15,14 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::query::blocks::retain_unblocked_bundles;
+use crate::query::client::fetch_local_first;
 use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{
     EventBundleResponse, decode_event, merge_bundle_response, merge_bundle_responses,
 };
 use crate::query::validation::retain_validated_hints;
 use crate::query::{
-    QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
+    MaybeSend, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
 use crate::store::keys::EventKey as StoreEventKey;
@@ -311,17 +312,68 @@ pub fn get_post(
         sequence,
         signer_key_prefix,
     } = args;
+    let request = GetPostRequest {
+        identity: identity.clone(),
+        sequence,
+        omit_labels: vec![],
+    };
+    let fetch_response = move |server_url: String| {
+        let request = request.clone();
+        async move {
+            Ok(FeedsServiceClient::new(channel(&server_url).await?)
+                .get_post(request)
+                .await
+                .map_err(|e| format!("get_post [{server_url}]: {e}"))?
+                .into_inner())
+        }
+    };
+    get_candidates::<GetPostResponse, _, _>(
+        query_client,
+        query_key,
+        GetEventArgs {
+            identity,
+            collection: collections::FEED,
+            sequence,
+            signer_key_prefix,
+        },
+        fetch_response,
+        opts,
+    )
+}
+
+/// The candidates matching a partial event key, with label hints. Calls
+/// `fetch_response` on the servers, copies the responses into the local stores
+/// and answers from those. The local stores answer first, following
+/// `fetch_mode` (`fetch_local_first`).
+pub(crate) fn get_candidates<R, F, Fut>(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetEventArgs,
+    fetch_response: F,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable>
+where
+    R: EventBundleResponse,
+    F: Fn(String) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Result<R, String>> + MaybeSend + 'static,
+{
+    let GetEventArgs {
+        identity,
+        collection,
+        sequence,
+        signer_key_prefix,
+    } = args;
     let signer_key_prefix = Arc::new(signer_key_prefix);
 
     let candidates = get_events_from_stores(
         query_client.client(),
         &identity,
-        collections::FEED,
+        collection,
         sequence,
         signer_key_prefix.as_deref(),
     );
 
-    if !candidates.is_empty() {
+    let local_bytes = (!candidates.is_empty()).then(|| {
         let event_hints = {
             let client = query_client.client().lock_recover();
 
@@ -339,72 +391,44 @@ pub fn get_post(
             hints
         };
 
-        let bytes = GetPostResponse {
-            candidates,
-            event_hints,
-        }
-        .encode_to_vec();
-
-        let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
-            subscriber.next(QueryResult {
-                data: Some(bytes.clone()),
-                status: QueryStatus::Success,
-                successful_servers: 0,
-                pending_servers: 0,
-            });
-            subscriber.complete();
-        });
-        return Arc::new(observable);
-    }
-
-    let request = GetPostRequest {
-        identity: identity.clone(),
-        sequence,
-        omit_labels: vec![],
-    };
+        let mut response = R::default();
+        *response.bundles_mut() = candidates;
+        *response.hints_mut() = event_hints;
+        response.encode_to_vec()
+    });
 
     let client = query_client.client().clone();
 
-    let merge_fn = {
-        let identity = identity.clone();
-        let signer_key_prefix = signer_key_prefix.clone();
+    let merge_fn = move |values: &[Vec<u8>],
+                         _previous: Option<&Vec<u8>>,
+                         client: &Arc<Mutex<PolycentricClient>>| {
+        let mut merged = merge_bundle_response::<R>(values, client);
 
-        move |values: &[Vec<u8>],
-              _previous: Option<&Vec<u8>>,
-              client: &Arc<Mutex<PolycentricClient>>| {
-            let mut merged = merge_bundle_response::<GetPostResponse>(values, client);
+        // Derive the final candidates from local stores so that tombstoned
+        // candidates are filtered out properly.
+        *merged.bundles_mut() = get_events_from_stores(
+            client,
+            &identity,
+            collection,
+            sequence,
+            signer_key_prefix.as_deref(),
+        );
 
-            // Derive the final candidates from local stores so that tombstoned
-            // candidates are filtered out properly.
-            merged.candidates = get_events_from_stores(
-                client,
-                &identity,
-                collections::FEED,
-                sequence,
-                signer_key_prefix.as_deref(),
-            );
-
-            merged.encode_to_vec()
-        }
+        merged.encode_to_vec()
     };
 
     let query_fn = move |server_url: String| {
-        let request = request.clone();
+        let response = fetch_response(server_url);
         let client = client.clone();
 
         async move {
-            let response = FeedsServiceClient::new(channel(&server_url).await?)
-                .get_post(request)
-                .await
-                .map_err(|e| format!("get_post [{server_url}]: {e}"))?
-                .into_inner();
+            let mut response = response.await?;
 
             let bytes = response.encode_to_vec();
 
             // Copy events and content to local stores so that the merge can
             // rely on the client for tombstone checking logic.
-            let hint_bundles: Vec<_> = response
-                .event_hints
+            let hint_bundles: Vec<_> = std::mem::take(response.hints_mut())
                 .into_iter()
                 .filter_map(|h| h.event_bundle)
                 .collect();
@@ -412,12 +436,14 @@ pub fn get_post(
             {
                 let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
-                c.copy_bundles(response.candidates);
+                c.copy_bundles(std::mem::take(response.bundles_mut()));
             }
 
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_fn, opts))
+    fetch_local_first(local_bytes, opts, |opts| {
+        query_client.fetch(query_key, query_fn, merge_fn, opts)
+    })
 }

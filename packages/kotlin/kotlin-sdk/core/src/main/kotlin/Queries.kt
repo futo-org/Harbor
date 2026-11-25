@@ -100,10 +100,13 @@ suspend fun PolycentricClient.getAttributionFeed(
         )
     }?.let { GetFeedResponse.ADAPTER.decode(it) }
 
-suspend fun PolycentricClient.listVerificationClaims(claimedByIdentity: String): ListVerificationClaimsResponse? =
+suspend fun PolycentricClient.listVerificationClaims(
+    claimedByIdentity: String,
+    omitLabels: List<String> = emptyList(),
+): ListVerificationClaimsResponse? =
     coreCall {
         core.awaitQuery(
-            Query.ListVerificationClaims(ListVerificationClaimsArgs(claimedByIdentity)),
+            Query.ListVerificationClaims(ListVerificationClaimsArgs(claimedByIdentity, omitLabels)),
             null,
             null,
         )

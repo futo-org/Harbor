@@ -33,15 +33,17 @@ jest.mock('@/src/common/lib/navigation/eventRoute', () => ({
 jest.mock('@/src/common/lib/navigation/useCardLinkPress', () => ({
   useCardLinkPress: () => ({}),
 }));
-jest.mock('./hooks/usePostModeration', () => ({
-  usePostModeration: () => ({ hasWarnContent: false, warnLabels: [] }),
+jest.mock('@/src/features/moderation/hooks/useLabelModeration', () => ({
+  useLabelModeration: () => ({ hasWarnContent: false, warnLabels: [] }),
 }));
 jest.mock('./content/PostContent', () => ({ PostContent: () => null }));
 jest.mock('./PostAuthor', () => ({ PostAuthor: () => null }));
 jest.mock('./PostHeader', () => ({ PostHeader: () => null }));
 jest.mock('./PostMenu', () => ({ __esModule: true, default: () => null }));
 jest.mock('./toolbar/PostToolbar', () => ({ PostToolbar: () => null }));
-jest.mock('./PostWarnOverlay', () => ({ PostWarnOverlay: () => null }));
+jest.mock('@/src/features/moderation/LabelWarnOverlay', () => ({
+  LabelWarnOverlay: () => null,
+}));
 jest.mock('@polycentric/react-native-sdk', () => ({ COLLECTION: { FEED: 1 } }));
 
 import { render } from '@testing-library/react-native';

@@ -13,7 +13,7 @@ use futures_timer::Delay;
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::logging::{log_error, log_warn, panic_payload_message};
-use crate::query::query_observable::{QueryResult, QueryStatus};
+use crate::query::query_observable::{QueryObservable, QueryResult, QueryStatus};
 use crate::rx::observable::{Observable, Subscriber};
 
 /// Per-server timeout applied when `QueryOpts.server_timeout_ms` is unset.
@@ -569,6 +569,64 @@ where
             state.next_fanout(UpdateMode::Replace);
         }
     }
+}
+
+/// Run a query whose answer can also be built from rs-core's local stores,
+/// applying `fetch_mode` to them as `fetch` applies it to the query cache:
+/// - `OfflineOnly`, or `OfflineFirst` with `local`: answers with `local` (an
+///   empty message when there's none) and makes no server call.
+/// - Otherwise: runs `fetch`, and until a server answers emits `local` in
+///   place of the missing data, keeping the status.
+pub(crate) fn fetch_local_first(
+    local: Option<Vec<u8>>,
+    opts: Option<QueryOpts>,
+    fetch: impl FnOnce(Option<QueryOpts>) -> Observable<QueryResult<Vec<u8>>>,
+) -> Arc<dyn QueryObservable> {
+    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
+    let offline_only = matches!(fetch_mode, Some(FetchMode::OfflineOnly));
+    let offline_first = matches!(fetch_mode, Some(FetchMode::OfflineFirst));
+    if offline_only || (offline_first && local.is_some()) {
+        let bytes = local.unwrap_or_default();
+        let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
+            subscriber.next(QueryResult {
+                data: Some(bytes.clone()),
+                status: QueryStatus::Success,
+                successful_servers: 0,
+                pending_servers: 0,
+            });
+            subscriber.complete();
+        });
+        return Arc::new(observable);
+    }
+
+    let underlying = fetch(opts);
+
+    let Some(local) = local else {
+        return Arc::new(underlying);
+    };
+
+    let wrapped: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
+        let subscriber = Arc::new(subscriber);
+        let local = local.clone();
+        let next_subscriber = subscriber.clone();
+        let error_subscriber = subscriber.clone();
+        let complete_subscriber = subscriber;
+        // The fan-out completes on its own once every server has responded.
+        let _ = underlying.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                next_subscriber.next(QueryResult {
+                    data: r.data.or_else(|| Some(local.clone())),
+                    status: r.status,
+                    successful_servers: r.successful_servers,
+                    pending_servers: r.pending_servers,
+                });
+            },
+            move |msg: String| error_subscriber.error(msg),
+            move || complete_subscriber.complete(),
+        );
+    });
+
+    Arc::new(wrapped)
 }
 
 /// Resolve the target server list for a fan-out: the caller's

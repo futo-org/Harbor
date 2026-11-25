@@ -17,8 +17,8 @@ import { PostAuthor } from './PostAuthor';
 import { PostHeader } from './PostHeader';
 import PostMenu from './PostMenu';
 import { PostToolbar } from './toolbar/PostToolbar';
-import { PostWarnOverlay } from './PostWarnOverlay';
-import { usePostModeration } from './hooks/usePostModeration';
+import { LabelWarnOverlay } from '@/src/features/moderation/LabelWarnOverlay';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
 
 interface PostProps {
   post: PostData;
@@ -72,7 +72,7 @@ export const Post = memo(function Post({
     return `${timePart} · ${datePart}`;
   }, [shownAt]);
 
-  const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
+  const { hasWarnContent, warnLabels } = useLabelModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
   const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
@@ -119,7 +119,7 @@ export const Post = memo(function Post({
 
   const body =
     hasWarnContent && !warnDismissed ? (
-      <PostWarnOverlay
+      <LabelWarnOverlay
         labels={warnLabels}
         authorIdentity={authorIdentity}
         onDismiss={handleWarnDismiss}

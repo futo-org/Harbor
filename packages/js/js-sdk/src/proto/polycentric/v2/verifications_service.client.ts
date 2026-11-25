@@ -12,6 +12,8 @@ import type { ListVerificationVerifiesResponse } from "./verifications_service";
 import type { ListVerificationVerifiesRequest } from "./verifications_service";
 import type { ListVerificationTargetsResponse } from "./verifications_service";
 import type { ListVerificationTargetsRequest } from "./verifications_service";
+import type { GetVerificationClaimResponse } from "./verifications_service";
+import type { GetVerificationClaimRequest } from "./verifications_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { ListVerificationClaimsResponse } from "./verifications_service";
 import type { ListVerificationClaimsRequest } from "./verifications_service";
@@ -28,6 +30,12 @@ export interface IVerificationsServiceClient {
      * @generated from protobuf rpc: ListVerificationClaims
      */
     listVerificationClaims(input: ListVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListVerificationClaimsRequest, ListVerificationClaimsResponse>;
+    /**
+     * The claim of an identity at a sequence, for opening a single claim.
+     *
+     * @generated from protobuf rpc: GetVerificationClaim
+     */
+    getVerificationClaim(input: GetVerificationClaimRequest, options?: RpcOptions): UnaryCall<GetVerificationClaimRequest, GetVerificationClaimResponse>;
     /**
      * VerificationTarget events for a claim: who has been asked to verify.
      *
@@ -75,12 +83,21 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
         return stackIntercept<ListVerificationClaimsRequest, ListVerificationClaimsResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * The claim of an identity at a sequence, for opening a single claim.
+     *
+     * @generated from protobuf rpc: GetVerificationClaim
+     */
+    getVerificationClaim(input: GetVerificationClaimRequest, options?: RpcOptions): UnaryCall<GetVerificationClaimRequest, GetVerificationClaimResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetVerificationClaimRequest, GetVerificationClaimResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * VerificationTarget events for a claim: who has been asked to verify.
      *
      * @generated from protobuf rpc: ListVerificationTargets
      */
     listVerificationTargets(input: ListVerificationTargetsRequest, options?: RpcOptions): UnaryCall<ListVerificationTargetsRequest, ListVerificationTargetsResponse> {
-        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListVerificationTargetsRequest, ListVerificationTargetsResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -89,7 +106,7 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
      * @generated from protobuf rpc: ListVerificationVerifies
      */
     listVerificationVerifies(input: ListVerificationVerifiesRequest, options?: RpcOptions): UnaryCall<ListVerificationVerifiesRequest, ListVerificationVerifiesResponse> {
-        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListVerificationVerifiesRequest, ListVerificationVerifiesResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -99,7 +116,7 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
      * @generated from protobuf rpc: ListTargetedVerificationClaims
      */
     listTargetedVerificationClaims(input: ListTargetedVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse> {
-        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -109,7 +126,7 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
      * @generated from protobuf rpc: ResolveVerifiedClaims
      */
     resolveVerifiedClaims(input: ResolveVerifiedClaimsRequest, options?: RpcOptions): UnaryCall<ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse> {
-        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        const method = this.methods[5], opt = this._transport.mergeOptions(options);
         return stackIntercept<ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse>("unary", this._transport, method, opt, input);
     }
 }

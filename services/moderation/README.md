@@ -27,6 +27,16 @@ All service variables are read and validated once at startup by
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).
 
+## Scored content
+
+The service scores the user-supplied text and images of these events; every
+other event carries nothing to score:
+
+- Posts: the text, link previews (title, description, URL) and images.
+- Profile updates: the name, description, alias, avatar and banner.
+- Verification claims: the inline schema's name, description and field
+  descriptions, the values of string fields, and the images.
+
 ## Moderator reports
 
 Besides scoring content, the service publishes labels corresponding to moderator
