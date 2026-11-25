@@ -1,4 +1,4 @@
-import { Atoms, type TextColor } from '@/src/common/theme';
+import { Atoms, createThemedStyles, type TextColor } from '@/src/common/theme';
 import type { Meta, StoryObj } from '@storybook/react-native';
 import { View } from 'react-native';
 import Icon, { type IconName, IconsMap } from './Icon';
@@ -26,33 +26,33 @@ const meta = {
     color: { control: 'select', options: TEXT_COLORS },
     showBounds: { control: 'boolean' },
   },
-  render: ({ size, color, showBounds }) => (
-    <View style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_md, Atoms.p_lg]}>
-      {(Object.keys(IconsMap) as IconName[]).map((name) => (
-        <View
-          key={name}
-          style={[Atoms.items_center, Atoms.gap_xs, { width: ICON_CELL_WIDTH }]}
-        >
-          <View
-            style={
-              showBounds && {
-                outlineWidth: 1,
-                outlineStyle: 'solid',
-                outlineColor: 'red',
-              }
-            }
-          >
-            <Icon name={name} size={size} color={color} />
+  render: ({ size, color, showBounds }) => {
+    const styles = useStyles();
+    return (
+      <View style={styles.grid}>
+        {(Object.keys(IconsMap) as IconName[]).map((name) => (
+          <View key={name} style={styles.cell}>
+            <View style={showBounds && styles.bounds}>
+              <Icon name={name} size={size} color={color} />
+            </View>
+            <Text variant="small" color="muted" numberOfLines={1}>
+              {name}
+            </Text>
           </View>
-          <Text variant="small" color="muted" numberOfLines={1}>
-            {name}
-          </Text>
-        </View>
-      ))}
-    </View>
-  ),
+        ))}
+      </View>
+    );
+  },
 } satisfies Meta<{ size: number; color: TextColor; showBounds: boolean }>;
 
 export default meta;
 
 export const AllIcons: StoryObj<typeof meta> = {};
+
+const useStyles = createThemedStyles((_theme, define) =>
+  define({
+    grid: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_md, Atoms.p_lg],
+    cell: [Atoms.items_center, Atoms.gap_xs, { width: ICON_CELL_WIDTH }],
+    bounds: { outlineWidth: 1, outlineStyle: 'solid', outlineColor: 'red' },
+  }),
+);
