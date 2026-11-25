@@ -624,12 +624,11 @@ async fn no_events(client: &mut TestClient) {
 }
 
 async fn prune_identities() {
-    let mut output;
     let mut i = 0;
     loop {
         i += 1;
 
-        output =
+        let output =
             run_admin_cli(&["prune-identities", "--grace-period-secs", "0"])
                 .await;
 
@@ -655,12 +654,5 @@ async fn prune_identities() {
         }
     }
 
-    use std::io::Write;
-    let stdout = std::io::stdout();
-    let mut stdout = stdout.lock();
-    let stderr = std::io::stderr();
-    let mut stderr = stderr.lock();
-    _ = stdout.write_all(&output.stdout);
-    _ = stderr.write_all(&output.stderr);
     panic!("running admin CLI to prune identities failed");
 }

@@ -350,7 +350,6 @@ async fn set_ban_status(identity: &str, banned: bool) {
 }
 
 async fn prune_blob(blobs: &[Blob]) {
-    let mut output;
     let mut i = 0;
     loop {
         i += 1;
@@ -367,7 +366,7 @@ async fn prune_blob(blobs: &[Blob]) {
             return;
         }
 
-        output =
+        let output =
             run_admin_cli(&["prune-blobs", "--grace-period-secs", "0"]).await;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -398,12 +397,5 @@ async fn prune_blob(blobs: &[Blob]) {
         }
     }
 
-    use std::io::Write;
-    let stdout = std::io::stdout();
-    let mut stdout = stdout.lock();
-    let stderr = std::io::stderr();
-    let mut stderr = stderr.lock();
-    _ = stdout.write_all(&output.stdout);
-    _ = stderr.write_all(&output.stderr);
     panic!("running admin CLI to prune blobs failed");
 }

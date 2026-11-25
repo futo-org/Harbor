@@ -1501,11 +1501,20 @@ async fn run_admin_cli(args: &[&str]) -> std::process::Output {
             .expect("failed to build server");
     });
 
-    tokio::process::Command::new("../../target/debug/server")
+    let output = tokio::process::Command::new("../../target/debug/server")
         .args(args)
         .current_dir("..")
         .stdin(std::process::Stdio::null())
         .output()
         .await
-        .expect("failed to prune blobs via admin CLI")
+        .expect("failed to prune blobs via admin CLI");
+
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        println!("admin CLI: {line}");
+    }
+    for line in String::from_utf8_lossy(&output.stderr).lines() {
+        eprintln!("admin CLI: {line}");
+    }
+
+    output
 }
