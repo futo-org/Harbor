@@ -1,5 +1,6 @@
 pub mod access_log;
 pub mod auth;
+pub mod calendar;
 pub mod content;
 pub mod context;
 pub mod events;

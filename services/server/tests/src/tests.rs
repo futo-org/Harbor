@@ -6,6 +6,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::mint_jwt;
 use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::attributed_to::To;
+use polycentric_common::models::protos_v2::calendar_service_client::CalendarServiceClient;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -27,6 +28,7 @@ use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
 mod blobs;
+mod calendar;
 mod deleting;
 mod event_sync;
 mod feeds;
@@ -71,7 +73,7 @@ pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
 pub const COLLECTION_CALENDAR: i32 = 9;
-pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
+pub const COLLECTION_MAX: i32 = COLLECTION_CALENDAR;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
@@ -173,6 +175,13 @@ pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
 pub async fn identity_service()
 -> IdentityServiceClient<tonic::transport::Channel> {
     IdentityServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn calendar_service()
+-> CalendarServiceClient<tonic::transport::Channel> {
+    CalendarServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -592,6 +601,54 @@ impl TestClient {
     ) -> Vec<u8> {
         let claim = github_verification_claim(login);
         self.verification_claim(claim, created_at)
+    }
+
+    pub fn calendar_event(
+        &mut self,
+        event: CalendarEvent,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::CalendarEvent(event), created_at)
+    }
+
+    /// One hour event. Negative `starts_in_hours` is in the past
+    pub fn calendar_event_titled(
+        &mut self,
+        title: &str,
+        starts_in_hours: i64,
+        created_at: u64,
+    ) -> Vec<u8> {
+        const HOUR_MS: i64 = 60 * 60 * 1000;
+        let start_at = current_timestamp()
+            .checked_add_signed(starts_in_hours * HOUR_MS)
+            .unwrap();
+        let event = CalendarEvent {
+            id: random_string(),
+            title: title.to_owned(),
+            description: None,
+            start_at,
+            end_at: Some(start_at + HOUR_MS as u64),
+            location: None,
+            labels: Vec::new(),
+            all_day: false,
+            image: None,
+            timezone: None,
+            hosts: Vec::new(),
+        };
+        self.calendar_event(event, created_at)
+    }
+
+    pub fn rsvp(
+        &mut self,
+        to: EventKey,
+        status: CalendarEventRsvpStatus,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let rsvp = CalendarEventRsvp {
+            event_key: Some(to),
+            status: status as i32,
+        };
+        self.push_event_bundle(ContentBody::CalendarEventRsvp(rsvp), created_at)
     }
 
     pub async fn delete_self(&self) {

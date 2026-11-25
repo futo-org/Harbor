@@ -25,6 +25,8 @@ use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
 
 mod attributed_to_reaction;
 mod block;
+mod calendar_event;
+mod calendar_event_rsvp;
 mod delete;
 mod follow;
 mod identity;
@@ -75,8 +77,8 @@ impl Mutation {
             ContentBody::VerificationClaim(claim) => verification_claim::add_query(with, claim, content_id)?.into(),
             ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),
-            // Not indexed yet
-            ContentBody::CalendarEvent(_) | ContentBody::CalendarEventRsvp(_) => return Ok(None),
+            ContentBody::CalendarEvent(event) => calendar_event::add_query(with, event, content_id)?.into(),
+            ContentBody::CalendarEventRsvp(rsvp) => calendar_event_rsvp::add_query(rsvp, content_id)?.into(),
         }))
     }
 
