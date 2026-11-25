@@ -3,7 +3,7 @@ import {
   RefreshStrategy,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import {
   type ClaimWithStatus,

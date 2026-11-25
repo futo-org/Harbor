@@ -4,7 +4,7 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { COLLECTION } from '@polycentric/react-native';
+import { COLLECTION } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { View } from 'react-native';
 import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';

@@ -12,7 +12,7 @@ runs:
         brew install just protobuf cmake ninja clang-format pnpm
     - name: Build iOS libraries
       shell: bash
-      working-directory: packages/react-native
+      working-directory: packages/js/react-native-sdk
       run: |
         source "$CARGO_HOME/env"
         pnpm i
@@ -21,6 +21,6 @@ runs:
       with:
         name: rn-ios-build
         path: |
-          packages/react-native/ios
-          packages/react-native/PolycentricReactNativeFramework.xcframework
+          packages/js/react-native-sdk/ios
+          packages/js/react-native-sdk/PolycentricReactNativeSdkFramework.xcframework
         retention-days: 7

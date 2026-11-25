@@ -4,7 +4,7 @@ import {
   type PostLabel,
   type QueryStatus,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
 export function toBase64(bytes: Uint8Array): string {
@@ -102,7 +102,7 @@ export type PostData = {
   labels?: PostLabel[];
 };
 
-export type { LabelSet, PostLabel } from '@polycentric/react-native';
+export type { LabelSet, PostLabel } from '@polycentric/react-native-sdk';
 
 const OWN_APP_ID_PREFIX = 'org.futo.polycentric';
 const GRAYJAY_APP_ID_PREFIX = 'com.futo.platformplayer';

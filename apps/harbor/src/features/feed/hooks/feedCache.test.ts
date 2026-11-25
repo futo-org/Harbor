@@ -1,9 +1,9 @@
 import type { PostData, PostLabel } from '@/src/common/lib/polycentric-hooks';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 // Stand in with the same semantics as `labels_changed`: order-insensitive,
 // comparing on (value, labeledBy).
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   v2: {},
   FeedSort: { Top: 'top', Latest: 'latest' },
   labelsFromFeedResponse: () => [],

@@ -1,7 +1,7 @@
 import { isIdentityKey } from './isIdentityKey';
 
 // The server mirrors the mention rules below in
-// `packages/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
+// `packages/rust/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
 // two in sync. Alias mentions are only links for older posts: new ones are
 // posted in the curly form and the server never notifies for them.
 type SegmentBody =

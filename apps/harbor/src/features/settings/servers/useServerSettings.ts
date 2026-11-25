@@ -6,7 +6,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateAllQueries } from '@/src/common/query/hooks/useQuery';
-import { ServerAlreadyAddedError } from '@polycentric/react-native';
+import { ServerAlreadyAddedError } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 
 export function useServerSettings() {

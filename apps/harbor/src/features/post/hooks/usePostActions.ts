@@ -5,7 +5,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
+import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native-sdk';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import {
   alterPostReplyCount,

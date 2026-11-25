@@ -1,8 +1,8 @@
 // Shown on docs/content/developer/declaring-your-application.md.
 
-import type { PolycentricClientConfig } from '@polycentric/js-core';
+import type { PolycentricClientConfig } from '@polycentric/js-sdk';
 // #region js-application
-import { PolycentricClient } from '@polycentric/js-core';
+import { PolycentricClient } from '@polycentric/js-sdk';
 
 // #endregion js-application
 

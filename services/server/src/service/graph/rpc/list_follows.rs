@@ -11,7 +11,6 @@ use crate::data::{
 };
 use crate::db::Connection;
 use crate::service::context::PublicContext;
-use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
@@ -113,23 +112,11 @@ async fn hydrate(
     _params: &Params,
     fetched: &Fetched<EventWithContentRow, EventCreatedAt>,
 ) -> Result<HydrationState, Status> {
-    let keys: Vec<TargetEventKey> = fetched
-        .rows
-        .iter()
-        .map(|(e, _)| TargetEventKey::of(e))
-        .collect();
-
-    let raw = tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
-        .await
-        .map_err(map_db_err)?;
-    let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
-
     let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =
         list_identity_and_profile_events(ctx, identities).await?;
 
     Ok(HydrationState {
-        deletes_by_target,
         identity_events,
         profile_events,
         ..Default::default()

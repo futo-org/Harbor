@@ -1,7 +1,7 @@
 import {
   moderationLabels,
   isModerationLabel as isModerationLabelFfi,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 
 /**
  * The moderation label vocabulary, mirroring `ModerationLabel` in rs-common.

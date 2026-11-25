@@ -16,7 +16,7 @@ RUN rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-a
 ENV ANDROID_NDK_HOME=/opt/android-ndk
 ENV PATH="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"
 
-# JDK 17 + Android SDK (for the kt-core AAR build).
+# JDK 17 + Android SDK (for the kotlin-sdk AAR build).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-25-jdk-headless \
     && rm -rf /var/lib/apt/lists/*

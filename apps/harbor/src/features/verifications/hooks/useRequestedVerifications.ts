@@ -1,4 +1,4 @@
-import { Query, v2 } from '@polycentric/react-native';
+import { Query, v2 } from '@polycentric/react-native-sdk';
 import { useClaimBundleList } from './useClaimBundleList';
 
 const parse = (bytes: Uint8Array) =>

@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Linking, StyleSheet } from 'react-native';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { COMPACT_IMAGE_WIDTH, LinkPreviewCard } from './LinkPreviewCard';
 
 let mockIsWeb = false;

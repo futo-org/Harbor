@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type { PolycentricClient } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native-sdk';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { draftProfileUpdate } from '@/src/features/profile/lib/updateProfile';

@@ -42,7 +42,7 @@
     "@opentelemetry/sdk-logs": "3.1.1",
     "@opentelemetry/sdk-trace": "3.1.1",
     "@opentelemetry/semantic-conventions": "^1.43.0",
-    "@polycentric/react-native": "workspace:*",
+    "@polycentric/react-native-sdk": "workspace:*",
     "@polycentric/video-transcoding": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-presence": "^1.1.10",

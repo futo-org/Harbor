@@ -1,4 +1,4 @@
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { type Href, Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';

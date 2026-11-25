@@ -1,7 +1,7 @@
 import { toast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
-import type { PolycentricClient } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native-sdk';
 import { type Href, router } from 'expo-router';
 
 /**

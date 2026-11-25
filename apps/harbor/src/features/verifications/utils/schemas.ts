@@ -1,5 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2.js';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 
 /**
  * Derive the verification schema from a claim's form fields.
