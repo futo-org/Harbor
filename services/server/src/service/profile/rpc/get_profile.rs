@@ -48,10 +48,10 @@ pub async fn handle(
     let event_hints = rows_into_hints(hint_rows);
 
     let following_count =
-        GraphRepository::count_following(&mut ctx, &req.identity).await?;
+        GraphRepository::count_following(&mut ctx.db, &req.identity).await?;
 
     let followers_count =
-        GraphRepository::count_followers(&mut ctx, &req.identity).await?;
+        GraphRepository::count_followers(&mut ctx.db, &req.identity).await?;
 
     Ok(GetProfileResponse {
         event_bundles,

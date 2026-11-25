@@ -1,14 +1,12 @@
-use ::entity::{
-    block, content, content_follow, default_follow_suggestion, event, follow,
-};
+use std::collections::HashSet;
+
+use ::entity::{block, content, default_follow_suggestion, event, follow};
 use polycentric_common::models::collections;
-use prost::Message;
 use sea_orm::*;
 use sea_query::{
     Asterisk, ColumnRef, CommonTableExpression, Expr, Func, IntoColumnRef,
     PgFunc, SelectStatement, UnionType, WithClause,
 };
-use std::collections::HashSet;
 use tonic::Status;
 
 use crate::data::EventWithContentRow;
@@ -16,10 +14,7 @@ use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
 use crate::db::Connection;
 use crate::service::context::{Auth, RequestContext};
-use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
-use crate::service::proto::Content;
-use crate::service::proto::content::ContentBody;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 
 #[derive(Debug)]
@@ -78,24 +73,6 @@ pub type FollowSuggestionsSortedBy = i32;
 pub struct Query;
 
 impl Query {
-    /// Return the list of identities that `caller` has followed,
-    /// excluding any Follow event tombstoned by a *valid* Delete
-    /// event.
-    ///
-    /// Follow → Unfollow → Follow-again resolves to "following"
-    /// because the re-follow event has a fresh sequence and no
-    /// valid Delete points at it.
-    ///
-    /// TODO: We can either cache these OR keep a follower table that we update on ingest.
-    /// This current query is inefficient.
-    #[tracing::instrument(skip_all)]
-    pub async fn list_followed_identities<A>(
-        ctx: &mut RequestContext<A>,
-        caller: &str,
-    ) -> Result<Vec<String>, Status> {
-        list_graph_targets(ctx, caller, decode_followed_identity).await
-    }
-
     /// Identities `caller` has blocked, read from the `block` cache table.
     /// No tombstone filtering is required here: the cache only holds rows
     /// for blocks that have not been deleted.
@@ -198,49 +175,29 @@ impl Query {
     }
 
     /// Count of distinct identities `identity` follows (tombstone-aware).
-    ///
-    /// TODO: same inefficiency as `list_followed_identities` — a
-    /// maintained counter would avoid scanning the graph rows.
     #[tracing::instrument(skip_all)]
-    pub async fn count_following<A>(
-        ctx: &mut RequestContext<A>,
+    pub async fn count_following<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<u64, Status> {
-        Ok(Self::list_followed_identities(ctx, identity).await?.len() as u64)
+        follow::Entity::find()
+            .filter(follow::Column::Follower.eq(identity))
+            .count(db)
+            .await
+            .map_err(map_db_err)
     }
 
-    /// Count of distinct identities following `identity`
-    /// (tombstone-aware).
+    /// Count of distinct identities following `identity` (tombstone-aware).
     #[tracing::instrument(skip_all)]
-    pub async fn count_followers<A>(
-        ctx: &mut RequestContext<A>,
+    pub async fn count_followers<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<u64, Status> {
-        let rows: Vec<EventWithContentRow> = follow_events_query()
-            .filter(content_follow::Column::IdentityId.eq(identity))
-            .all(&ctx.db)
+        follow::Entity::find()
+            .filter(follow::Column::Followee.eq(identity))
+            .count(db)
             .await
-            .map_err(map_db_err)?;
-
-        let keys: Vec<TargetEventKey> = rows
-            .iter()
-            .map(|(event, _)| TargetEventKey::of(event))
-            .collect();
-        let raw_tombstones =
-            tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
-                .await
-                .map_err(map_db_err)?;
-        let valid_tombstones =
-            tombstone::validate_tombstones(ctx, raw_tombstones).await?;
-
-        let followers: HashSet<&str> = rows
-            .iter()
-            .filter(|(event, _)| {
-                !valid_tombstones.contains_key(&TargetEventKey::of(event))
-            })
-            .map(|(event, _)| event.identity.as_str())
-            .collect();
-        Ok(followers.len() as u64)
+            .map_err(map_db_err)
     }
 
     /// Follow events authored by `identity` — who they follow. Newest
@@ -252,9 +209,13 @@ impl Query {
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let query =
-            follow_events_query().filter(event::Column::Identity.eq(identity));
-        page_follow_events(db, query, limit, cursor_filter).await
+        Query::list_follow_events(
+            db,
+            follow::Column::Follower.eq(identity),
+            limit,
+            cursor_filter,
+        )
+        .await
     }
 
     /// Follow events targeting `identity` — who follows them. Newest
@@ -266,9 +227,60 @@ impl Query {
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let query = follow_events_query()
-            .filter(content_follow::Column::IdentityId.eq(identity));
-        page_follow_events(db, query, limit, cursor_filter).await
+        Query::list_follow_events(
+            db,
+            follow::Column::Followee.eq(identity),
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn list_follow_events<C: Connection>(
+        db: &mut C,
+        filter: Expr,
+        limit: u32,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let mut query = event::Entity::find()
+            .select_also(content::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(
+                JoinType::InnerJoin,
+                event::Entity::belongs_to(follow::Entity)
+                    .from(event::Column::Id)
+                    .to(follow::Column::EventId)
+                    .into(),
+            )
+            .filter(filter)
+            .cursor_by((event::Column::CreatedAt, event::Column::Id));
+        query.desc();
+
+        match cursor_filter {
+            CursorFilter::Forward(cur) => {
+                match cur {
+                    Cursor::Start => {}
+                    Cursor::Mid(marker) => {
+                        query.after(marker.values());
+                    }
+                    Cursor::End => return Ok(vec![]),
+                }
+                query.first(limit.into());
+            }
+            CursorFilter::Backward(cur) => {
+                match cur {
+                    Cursor::Start => return Ok(vec![]),
+                    Cursor::Mid(marker) => {
+                        query.before(marker.values());
+                    }
+                    Cursor::End => {}
+                }
+                query.last(limit.into());
+            }
+        }
+
+        query.all(db).await
     }
 
     /// `identity` is `None` for an anonymous caller, who follows nobody and
@@ -549,122 +561,6 @@ impl Query {
     }
 }
 
-/// Obtains the targets of graph events authored by `caller`. The `extract`
-/// function filters for specific types of graph events.
-#[tracing::instrument(skip_all)]
-async fn list_graph_targets<A>(
-    ctx: &mut RequestContext<A>,
-    caller: &str,
-    extract: fn(&content::Model) -> Option<String>,
-) -> Result<Vec<String>, Status> {
-    let rows: Vec<EventWithContentRow> = event::Entity::find()
-        .select_also(content::Entity)
-        .join(JoinType::InnerJoin, content_join())
-        .filter(event::Column::Collection.eq(collections::SOCIAL_GRAPH))
-        .filter(event::Column::Identity.eq(caller))
-        .all(&ctx.db)
-        .await
-        .map_err(map_db_err)?;
-
-    let keys: Vec<TargetEventKey> = rows
-        .iter()
-        .map(|(event, _)| TargetEventKey::of(event))
-        .collect();
-    let raw_tombstones =
-        tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
-            .await
-            .map_err(map_db_err)?;
-    let valid_tombstones =
-        tombstone::validate_tombstones(ctx, raw_tombstones).await?;
-
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut result: Vec<String> = Vec::new();
-    for (event, content) in rows {
-        let key = TargetEventKey::of(&event);
-        if valid_tombstones.contains_key(&key) {
-            continue;
-        }
-        let Some(content) = content else { continue };
-        if let Some(identity) = extract(&content)
-            && seen.insert(identity.clone())
-        {
-            result.push(identity);
-        }
-    }
-    Ok(result)
-}
-
-/// Graph events joined to their Follow content. The inner joins keep
-/// Delete (unfollow) events out of the page.
-fn follow_events_query() -> SelectTwo<event::Entity, content::Entity> {
-    event::Entity::find()
-        .select_also(content::Entity)
-        .join(JoinType::InnerJoin, content_join())
-        .join(JoinType::InnerJoin, follow_join())
-        .filter(event::Column::Collection.eq(collections::SOCIAL_GRAPH))
-}
-
-/// Relation joining a content row to its Follow row.
-fn follow_join() -> RelationDef {
-    content::Entity::belongs_to(content_follow::Entity)
-        .from(content::Column::Id)
-        .to(content_follow::Column::ContentId)
-        .into()
-}
-
-/// Apply the (created_at, id) keyset cursor and fetch, newest first.
-/// Mirrors the feeds repository's pagination.
-#[tracing::instrument(skip_all)]
-async fn page_follow_events<C: Connection>(
-    db: &mut C,
-    query: SelectTwo<event::Entity, content::Entity>,
-    limit: u32,
-    cursor_filter: &CursorFilter<EventCreatedAt>,
-) -> Result<Vec<EventWithContentRow>, DbErr> {
-    let mut sea_cursor =
-        query.cursor_by((event::Column::CreatedAt, event::Column::Id));
-    sea_cursor.desc();
-
-    match cursor_filter {
-        CursorFilter::Forward(cur) => {
-            match cur {
-                Cursor::Start => {}
-                Cursor::Mid(marker) => {
-                    sea_cursor.after(marker.values());
-                }
-                Cursor::End => return Ok(vec![]),
-            }
-            sea_cursor.first(limit.into());
-        }
-        CursorFilter::Backward(cur) => {
-            match cur {
-                Cursor::Start => return Ok(vec![]),
-                Cursor::Mid(marker) => {
-                    sea_cursor.before(marker.values());
-                }
-                Cursor::End => {}
-            }
-            sea_cursor.last(limit.into());
-        }
-    }
-
-    sea_cursor.all(db).await
-}
-
-/// Identity of the target of a Follow event, decoded from the
-/// parent content row.
-fn decode_followed_identity(
-    content: &::entity::content::Model,
-) -> Option<String> {
-    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
-    match decoded.content_body? {
-        ContentBody::Follow(follow) => {
-            Some(follow.identity).filter(|s| !s.is_empty())
-        }
-        _ => None,
-    }
-}
-
 fn map_db_err(e: sea_orm::DbErr) -> Status {
     tracing::error!(error = %e, "graph repository db error");
     Status::internal("internal server error")
@@ -676,13 +572,13 @@ mod tests {
     use std::sync::Arc;
 
     use chrono::Utc;
+    use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
-    use sea_orm::{
-        DatabaseConnection, DbBackend, MockDatabase, MockRow, Value,
-    };
+    use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, Value};
 
     use crate::service::context::ServiceContext;
-    use crate::service::proto::{Block, Follow};
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{Content, Follow};
 
     use super::*;
 
@@ -733,21 +629,6 @@ mod tests {
         }
     }
 
-    fn block_content_row(id: i64, target: &str) -> content::Model {
-        let content = Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: target.to_string(),
-            })),
-        };
-        content::Model {
-            id,
-            digest_type: 1,
-            digest_bytes: vec![id as u8],
-            serialized_bytes: content.encode_to_vec(),
-            synced_at: now(),
-        }
-    }
-
     fn block_row(event_id: i64, blocker: &str, blocked: &str) -> block::Model {
         block::Model {
             event_id,
@@ -759,50 +640,6 @@ mod tests {
     /// The single `blocked` column [`Query::list_blocked_identities`] selects.
     fn blocked_column_row(blocked: &str) -> BTreeMap<String, Value> {
         BTreeMap::from([("blocked".to_string(), Value::from(blocked))])
-    }
-
-    fn no_tombstones() -> Vec<MockRow> {
-        Vec::new()
-    }
-
-    #[tokio::test]
-    async fn count_followers_dedupes_follower_identities() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![
-                (event_row(1, "alice", 1), follow_row(1, "target")),
-                (event_row(2, "alice", 2), follow_row(2, "target")),
-                (event_row(3, "bob", 1), follow_row(3, "target")),
-            ]])
-            .append_query_results([no_tombstones()])
-            .into_connection();
-        let mut ctx = ctx(db)
-            .await
-            .public_rw(&tonic::Request::new(()))
-            .await
-            .unwrap();
-
-        let count = Query::count_followers(&mut ctx, "target").await.unwrap();
-        assert_eq!(count, 2);
-    }
-
-    #[tokio::test]
-    async fn count_following_dedupes_followed_identities() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![
-                (event_row(1, "alice", 1), follow_row(1, "bob")),
-                (event_row(2, "alice", 2), follow_row(2, "bob")),
-                (event_row(3, "alice", 3), follow_row(3, "carol")),
-            ]])
-            .append_query_results([no_tombstones()])
-            .into_connection();
-        let mut ctx = ctx(db)
-            .await
-            .public_rw(&tonic::Request::new(()))
-            .await
-            .unwrap();
-
-        let count = Query::count_following(&mut ctx, "alice").await.unwrap();
-        assert_eq!(count, 2);
     }
 
     #[tokio::test]
@@ -832,29 +669,6 @@ mod tests {
 
         let blocked = Query::blocked_set_for_caller(&mut ctx).await.unwrap();
         assert!(blocked.is_empty());
-    }
-
-    #[tokio::test]
-    async fn list_followed_identities_ignores_block_events() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![
-                (event_row(1, "alice", 1), follow_row(1, "bob")),
-                (event_row(2, "alice", 2), block_content_row(2, "carol")),
-            ]])
-            .append_query_results([no_tombstones()])
-            .into_connection();
-        let mut ctx = ctx(db)
-            .await
-            .public_rw(&tonic::Request::new(()))
-            .await
-            .unwrap();
-
-        assert_eq!(
-            Query::list_followed_identities(&mut ctx, "alice")
-                .await
-                .unwrap(),
-            ["bob"]
-        );
     }
 
     #[tokio::test]
