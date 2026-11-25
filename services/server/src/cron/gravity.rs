@@ -11,7 +11,8 @@ use sea_orm::sea_query::{
 use sea_orm::{ColumnTrait, DatabaseConnection, ExprTrait};
 
 use crate::config;
-use crate::cron::{AdvisoryLock, Cron};
+use crate::cron::Cron;
+use crate::db::AdvisoryLock;
 use crate::db::fns::decay_interaction_count;
 use crate::db::{Connection, DbConn};
 

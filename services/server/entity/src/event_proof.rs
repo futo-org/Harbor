@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 
 /// The `EventProof` of each stored event that a revoked key signed.
-/// Rebuilt when the identity's IDENTITY events change.
+/// Rebuilt when the events in the identity's identity collection (1) change.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "event_proof")]

@@ -27,14 +27,6 @@ pub async fn handle(
             Status::internal("internal server error")
         })?;
 
-    // The events are gone: clear the document and proofs.
-    repository::Mutation::rebuild_identity_document(&mut tx, &identity)
-        .await
-        .map_err(|error| {
-            tracing::error!(%error, %identity, "failed to rebuild identity document");
-            Status::internal("internal server error")
-        })?;
-
     repository::Mutation::audit_action(
         &mut tx,
         ctx.auth.identity.clone(),

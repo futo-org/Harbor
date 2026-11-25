@@ -2,16 +2,15 @@ use ::entity::{
     ban, content, content_identity, event, event_proof, identity_audit_log,
     identity_document, moderator,
 };
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 use polycentric_common::merkle;
 use polycentric_common::models::collections;
 use prost::Message;
-use sea_orm::sea_query::Func;
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;
-use crate::db::{Connection, DbTx};
+use crate::db::{AdvisoryLock, Connection, DbTx};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
@@ -105,11 +104,10 @@ impl Query {
         db: &mut C,
         signature: &[u8],
     ) -> Result<bool, DbErr> {
-        let proofs = event_proof::Entity::find()
+        event_proof::Entity::find()
             .filter(event_proof::Column::Signature.eq(signature))
-            .count(db)
-            .await?;
-        Ok(proofs > 0)
+            .exists(db)
+            .await
     }
 
     /// Stored proofs for the events with `signatures`.
@@ -413,18 +411,11 @@ impl Mutation {
 
     /// Rebuilds the identity's document and its revoked keys' event proofs.
     #[tracing::instrument(skip_all)]
-    pub async fn rebuild_identity_document<C: Connection>(
-        db: &mut C,
+    pub async fn rebuild_identity_document(
+        db: &mut DbTx<'_>,
         identity: &str,
     ) -> Result<(), DbErr> {
-        lock_identity(db, identity).await?;
-        event_proof::Entity::delete_many()
-            .filter(event_proof::Column::Identity.eq(identity))
-            .exec(db)
-            .await?;
-        identity_document::Entity::delete_by_id(identity)
-            .exec(db)
-            .await?;
+        Self::delete_identity_document(db, identity).await?;
 
         let rows = Query::list_identity_events_for_identities(
             db,
@@ -443,7 +434,7 @@ impl Mutation {
         .exec_without_returning(db)
         .await?;
 
-        let collections: BTreeSet<i32> = document
+        let collections: HashSet<i32> = document
             .revocation_bounds
             .iter()
             .flat_map(|bound| &bound.targets)
@@ -506,12 +497,33 @@ impl Mutation {
         Ok(())
     }
 
-    /// Moves all events of `identity` to the [`deleted_event`] table.
+    /// Deletes the identity's document and event proofs. Holds the
+    /// identity's document lock until the transaction ends.
     #[tracing::instrument(skip_all)]
-    pub async fn delete_identity<C: Connection>(
-        db: &mut C,
+    pub async fn delete_identity_document(
+        db: &mut DbTx<'_>,
         identity: &str,
     ) -> Result<(), DbErr> {
+        AdvisoryLock::identity_document(identity).lock(db).await?;
+        event_proof::Entity::delete_many()
+            .filter(event_proof::Column::Identity.eq(identity))
+            .exec(db)
+            .await?;
+        identity_document::Entity::delete_by_id(identity)
+            .exec(db)
+            .await?;
+        Ok(())
+    }
+
+    /// Moves all events of `identity` to the [`deleted_event`] table and
+    /// deletes its document and event proofs.
+    #[tracing::instrument(skip_all)]
+    pub async fn delete_identity(
+        db: &mut DbTx<'_>,
+        identity: &str,
+    ) -> Result<(), DbErr> {
+        Self::delete_identity_document(db, identity).await?;
+
         // NOTE: SeaORM's `InsertStatement` type at the time of writing doesn't
         // support getting the columns from a delete statement, only from a
         // select one, so this has to be written manually.
@@ -742,21 +754,6 @@ impl Mutation {
         .await?;
         delete_content_rows(db).await
     }
-}
-
-/// Serialises rebuilds of `identity` until the transaction ends.
-async fn lock_identity<C: Connection>(
-    db: &mut C,
-    identity: &str,
-) -> Result<(), DbErr> {
-    let lock = sea_query::Query::select()
-        .expr(
-            Func::cust("pg_advisory_xact_lock")
-                .arg(Func::cust("hashtextextended").arg(identity).arg(0_i64)),
-        )
-        .to_owned();
-    db.execute(&lock).await?;
-    Ok(())
 }
 
 const ORPHAN_CONTENT: &str = "NOT EXISTS (\

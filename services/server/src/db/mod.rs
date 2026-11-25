@@ -7,8 +7,11 @@ use sqlx::Executor;
 use tokio::sync::Mutex;
 use tonic::Status;
 
+mod advisory_lock;
 pub mod client;
 pub(crate) mod fns;
+
+pub(crate) use advisory_lock::AdvisoryLock;
 
 // TODO(1947): replace with out own trait.
 pub(crate) use sea_orm::ConnectionTrait as Connection;

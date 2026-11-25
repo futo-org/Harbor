@@ -4,13 +4,11 @@ use std::future::Future;
 use std::ops::ControlFlow;
 use std::time::Duration;
 
-use sea_orm::sea_query::{Expr, PgFunc, SelectStatement};
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::DatabaseConnection;
 use tokio::time::{MissedTickBehavior, interval, sleep};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::db::{Connection, DbTx};
 use crate::service::content::content_filestore::ContentFilestore;
 
 pub(crate) mod blob_index;
@@ -84,59 +82,5 @@ impl Cron {
                     sleep(duration).await;
                 }
             }));
-    }
-}
-
-/// Postgres lock.
-struct AdvisoryLock(i64);
-
-const GRAVITY: i64 = 1 << 32;
-const BLOB_PRUNE: i64 = 2 << 32;
-
-impl AdvisoryLock {
-    pub(crate) const fn gravity() -> AdvisoryLock {
-        AdvisoryLock(GRAVITY)
-    }
-
-    pub(crate) fn blob_prune() -> AdvisoryLock {
-        AdvisoryLock(BLOB_PRUNE)
-    }
-
-    /// Lock the key and run `f`.
-    ///
-    /// In production/staging we run multiple instances of the server
-    /// simultaneously, this means the varios cron jobs are run concurrently.
-    /// For some jobs that's fine, but for others it's a problem or even just
-    /// wasteful.
-    ///
-    /// To prevent concurrent jobs doing the same things we use Postgres
-    /// advisory locks. We lock a key, and as long as all keys are created using
-    /// the same method, we can ensure that only a single job of the same kind
-    /// runs concurrently.
-    ///
-    /// However if other code, not this cron system, starts using advisory locks
-    /// we might have an issue with two unrelated components using the same
-    /// locks.
-    ///
-    /// We could use row level locking as well, but then we lock all out all
-    /// other users of the rows, which is not ideal for rows that are accessed a
-    /// lot (especially if it's not needed).
-    pub(crate) async fn try_lock(
-        self,
-        tx: &mut DbTx<'_>,
-    ) -> Result<bool, DbErr> {
-        let mut query = SelectStatement::new();
-        query.expr(PgFunc::try_advisory_xact_lock(Expr::Constant(
-            self.0.into(),
-        )));
-        if tx
-            .query_one(&query)
-            .await?
-            .map_or(Ok(false), |r| r.try_get_by(0))?
-        {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
     }
 }

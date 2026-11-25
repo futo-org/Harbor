@@ -24,7 +24,7 @@ use crate::service::proto::{ContentDigest, Identity, PublicKey};
 const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
-/// and rebuilds its identity document. Used by bans and the operator command.
+/// and deletes its identity document. Used by bans and the operator command.
 pub async fn erase_identity(
     db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
@@ -68,7 +68,7 @@ pub async fn erase_identity(
         let mut txn = db.begin().await?;
         IdentityMutation::erase_derived(&mut txn, &[identity.to_string()])
             .await?;
-        IdentityMutation::rebuild_identity_document(&mut txn, identity).await?;
+        IdentityMutation::delete_identity_document(&mut txn, identity).await?;
         txn.commit().await
     };
     retry_deadlocks_inline!(run);

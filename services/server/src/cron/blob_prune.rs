@@ -8,7 +8,8 @@ use chrono::Utc;
 use sea_orm::DatabaseConnection;
 
 use crate::config;
-use crate::cron::{AdvisoryLock, Cron};
+use crate::cron::Cron;
+use crate::db::AdvisoryLock;
 use crate::db::{Connection, DbConn};
 use crate::service::content::content_filestore::{ContentFilestore, DateTime};
 use crate::service::content::repository::{Mutation, Query};
