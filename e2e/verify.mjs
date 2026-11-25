@@ -61,7 +61,10 @@ async function verifyNewestClaim(client, name) {
   const identity = await actAs(client, name);
   const bytes = await fetchQuery(
     client,
-    new Query.ListTargetedVerificationClaims({ targetIdentity: identity }),
+    new Query.ListTargetedVerificationClaims({
+      targetIdentity: identity,
+      omitLabels: [],
+    }),
   );
   const { claimBundles } = v2.ListTargetedVerificationClaimsResponse.fromBinary(
     new Uint8Array(bytes ?? []),

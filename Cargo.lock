@@ -5315,9 +5315,9 @@ dependencies = [
 
 [[package]]
 name = "uniffi-runtime-wasm"
-version = "0.31.0-7"
+version = "0.31.0-8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bad07d5cdae4c594ea8e30a00380b7c4b2f8eb3b0bf7939e629e2d711e6438d5"
+checksum = "be469e9708e98309bf7639e11317c2fb308d46d7979d9cd29dd58f789cfe62d8"
 
 [[package]]
 name = "uniffi_bindgen"

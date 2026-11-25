@@ -117,6 +117,26 @@ impl Query {
             .await
     }
 
+    /// VerificationClaim events an identity published at `sequence`, one per
+    /// signing key.
+    #[tracing::instrument(skip_all)]
+    pub async fn list_claim_events_at_sequence<C: Connection>(
+        db: &mut C,
+        identity: &str,
+        sequence: u64,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        event::Entity::find()
+            .select_also(content::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(JoinType::InnerJoin, claim_join())
+            .filter(event::Column::Collection.eq(VERIFICATIONS_COLLECTION))
+            .filter(event::Column::Identity.eq(identity))
+            .filter(event::Column::Sequence.eq(sequence))
+            .limit(MAX_ROWS)
+            .all(db)
+            .await
+    }
+
     /// VerificationClaim events whose decoded `fields` contain every pair in
     /// `match_fields` (JSONB containment), optionally restricted to a schema
     /// by its digest, AND that a `verified_by` identity has verified.

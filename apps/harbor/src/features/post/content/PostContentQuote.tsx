@@ -23,10 +23,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
-import { usePostModeration } from '../hooks/usePostModeration';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
 import { PostAuthor } from '../PostAuthor';
 import { openPostImage } from '../PostImageViewerScreen';
-import { PostWarnOverlay } from '../PostWarnOverlay';
+import { LabelWarnOverlay } from '@/src/features/moderation/LabelWarnOverlay';
 
 const QUOTE_PREVIEW_LIMIT = 200;
 const PLACEHOLDER_HEADER_HEIGHT = 24;
@@ -64,7 +64,7 @@ export function PostContentQuote({
   const post = quotePost ?? fetched.post;
   const isLoading = !quotePost && fetched.isLoading;
 
-  const { hasWarnContent, warnLabels } = usePostModeration(post?.labels);
+  const { hasWarnContent, warnLabels } = useLabelModeration(post?.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
@@ -88,7 +88,7 @@ export function PostContentQuote({
     >
       <AuthorRow post={post} postRoute={postRoute} />
       {hasWarnContent && !warnDismissed ? (
-        <PostWarnOverlay
+        <LabelWarnOverlay
           labels={warnLabels}
           authorIdentity={post.identity}
           onDismiss={handleWarnDismiss}

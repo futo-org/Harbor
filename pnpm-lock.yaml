@@ -186,11 +186,11 @@ catalogs:
       specifier: ^26.6.6
       version: 26.6.6
     '@ubjs/core':
-      specifier: 0.31.0-7
-      version: 0.31.0-7
+      specifier: 0.31.0-8
+      version: 0.31.0-8
     '@ubjs/wasm':
-      specifier: 0.31.0-7
-      version: 0.31.0-7
+      specifier: 0.31.0-8
+      version: 0.31.0-8
     jest:
       specifier: ^30.5.2
       version: 30.5.2
@@ -207,8 +207,8 @@ catalogs:
       specifier: ^5.9.3
       version: 5.9.3
     uniffi-bindgen-react-native:
-      specifier: 0.31.0-7
-      version: 0.31.0-7
+      specifier: 0.31.0-8
+      version: 0.31.0-8
 
 overrides:
   dompurify@<3.4.17: '>=3.4.17'
@@ -222,9 +222,9 @@ overrides:
 patchedDependencies:
   '@bsky.app/react-native-uitextview@2.7.1': 3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
+  expo-image-manipulator@58.0.16: 80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
   react-remove-scroll@2.7.2: e76968a09dcd0466b9527adb861f3386e4896bdbe7be22205007ea875abc8ba4
-  uniffi-bindgen-react-native@0.31.0-7: 598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c
 
 importers:
 
@@ -385,7 +385,7 @@ importers:
         version: 58.0.18(26996239ff28f192d408ceed058913d9)
       expo-image-manipulator:
         specifier: ~58.0.16
-        version: 58.0.16(0369df9bd959a733f1c64c03f20d4aac)
+        version: 58.0.16(patch_hash=80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2)(0369df9bd959a733f1c64c03f20d4aac)
       expo-image-picker:
         specifier: ~58.0.10
         version: 58.0.10(f4cb0030e0603a5a4a40396ad71a2c44)
@@ -788,10 +788,10 @@ importers:
     dependencies:
       '@ubjs/core':
         specifier: 'catalog:'
-        version: 0.31.0-7
+        version: 0.31.0-8
       '@ubjs/wasm':
         specifier: 'catalog:'
-        version: 0.31.0-7(@ubjs/core@0.31.0-7)
+        version: 0.31.0-8(@ubjs/core@0.31.0-8)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -801,7 +801,7 @@ importers:
         version: 5.9.3
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
 
   packages/js/drivers/video-transcoding:
     devDependencies:
@@ -960,7 +960,7 @@ importers:
         version: link:../drivers/js-wasm
       '@ubjs/core':
         specifier: 'catalog:'
-        version: 0.31.0-7
+        version: 0.31.0-8
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.4(f324e1ec92d7156deefb92dc8d9a97e2)
@@ -972,7 +972,7 @@ importers:
         version: 1.11.0(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+        version: 0.31.0-8
     devDependencies:
       '@react-native/babel-preset':
         specifier: 0.83.0
@@ -6113,13 +6113,13 @@ packages:
     peerDependencies:
       typescript: '*'
 
-  '@ubjs/core@0.31.0-7':
-    resolution: {integrity: sha512-a9EqpoYlMpnjvE8H8COIvM7jBDJEi6KC/7MZQakbq9RZlX7ex8wjlCQIp51HGWIRAOuxCo9MOcmm+RQ4c8cfbw==}
+  '@ubjs/core@0.31.0-8':
+    resolution: {integrity: sha512-jkCckXuDkjX8PUlNRAHg5JzvqzKKZVx9Qxk3s+tVbeuycqdtQYXVdXQse/yJxY4mQjGQzl30+t4jNeDbiDrQ5A==}
 
-  '@ubjs/wasm@0.31.0-7':
-    resolution: {integrity: sha512-woRooAeDv8h0WAZS3mkHjcs4wyOB3mKqIuegqu25ZcSyY2Qt8K7nntrYyRPM4LdblCYlwAwi0g0oRoI2yTLUwA==}
+  '@ubjs/wasm@0.31.0-8':
+    resolution: {integrity: sha512-wCG3Kzm1/E00x/yRWWNw8yOItocz1KrWJAdkbIMHNKdmhO+nJs7YkPg6fE1q9zVjyU0KioX7QknJpyQo5e5r7A==}
     peerDependencies:
-      '@ubjs/core': ^0.31.0-7
+      '@ubjs/core': ^0.31.0-8
 
   '@ungap/structured-clone@1.3.3':
     resolution: {integrity: sha512-60YRaenCQcVjYEKOcG824+DRGGIQ3VKErcBoAEDJZz5bKIs2ZG+X/H9Nk+Q6EVkwJk5QNApxbrc5QtBSwtrXAg==}
@@ -13063,8 +13063,8 @@ packages:
     resolution: {integrity: sha512-lzlXPoVB0Uy/FvTaUgX39RbixYiSKoc3JSoSf01+0c2B6FR3qdYIPN7Qjo/AV7n6sqLCk0509cT3LRj1oSZ1+A==}
     engines: {node: '>=20'}
 
-  uniffi-bindgen-react-native@0.31.0-7:
-    resolution: {integrity: sha512-nby2kXC+heUwtbOwKbJeZoGV5K8nNxp0kxoPhx2bK98k0MT9P6DA73jnbS7AER1eh0du8bR7Eeco7LcxxEs4bA==}
+  uniffi-bindgen-react-native@0.31.0-8:
+    resolution: {integrity: sha512-cW9ixYjkJw08vCcNlbK1/3icNnLuw1XRIvvHMzKt52iOs4mZXVVXzRnZYqaTB/ytFG8uwIZdg/6hLCGJxGgW7g==}
     hasBin: true
 
   unified@11.0.5:
@@ -20430,11 +20430,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ubjs/core@0.31.0-7': {}
+  '@ubjs/core@0.31.0-8': {}
 
-  '@ubjs/wasm@0.31.0-7(@ubjs/core@0.31.0-7)':
+  '@ubjs/wasm@0.31.0-8(@ubjs/core@0.31.0-8)':
     dependencies:
-      '@ubjs/core': 0.31.0-7
+      '@ubjs/core': 0.31.0-8
 
   '@ungap/structured-clone@1.3.3': {}
 
@@ -23016,7 +23016,7 @@ snapshots:
       - react-native-worklets
       - typescript
 
-  expo-image-manipulator@58.0.16(0369df9bd959a733f1c64c03f20d4aac):
+  expo-image-manipulator@58.0.16(patch_hash=80da2ab843092e2625b0d2015c6338105b3e6c14d0e0e97bf7fbc038adc5afe2)(0369df9bd959a733f1c64c03f20d4aac):
     dependencies:
       expo: 58.0.22(41d93b195ce3db3eda1596eac11de455)
       expo-image-loader: 58.0.3(f4cb0030e0603a5a4a40396ad71a2c44)
@@ -29154,7 +29154,7 @@ snapshots:
 
   unicorn-magic@0.4.1: {}
 
-  uniffi-bindgen-react-native@0.31.0-7(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c): {}
+  uniffi-bindgen-react-native@0.31.0-8: {}
 
   unified@11.0.5:
     dependencies:

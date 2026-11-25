@@ -2,10 +2,12 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
+use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    ContentDigest, ContentDigestType, EventBundle, EventHint,
-    ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse,
-    ListVerificationClaimsRequest, ListVerificationClaimsResponse, ListVerificationTargetsRequest,
+    ContentDigest, ContentDigestType, EventBundle, EventHint, GetVerificationClaimRequest,
+    GetVerificationClaimResponse, ListTargetedVerificationClaimsRequest,
+    ListTargetedVerificationClaimsResponse, ListVerificationClaimsRequest,
+    ListVerificationClaimsResponse, ListVerificationTargetsRequest,
     ListVerificationTargetsResponse, ListVerificationVerifiesRequest,
     ListVerificationVerifiesResponse, ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse,
     VerificationClaimBundle, verifications_service_client::VerificationsServiceClient,
@@ -18,12 +20,21 @@ use crate::query::event::merge::{
     EventBundleResponse, EventDedupKey, event_dedup_key, merge_bundle, merge_bundle_responses,
     merge_event_bundles, merge_event_hints,
 };
+use crate::query::event::{GetEventArgs, get_candidates};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationClaimsArgs {
     pub claimed_by_identity: String,
+    pub omit_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetVerificationClaimArgs {
+    pub identity: String,
+    pub sequence: u64,
+    pub signer_key_prefix: Option<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -39,6 +50,7 @@ pub struct ListVerificationVerifiesArgs {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListTargetedVerificationClaimsArgs {
     pub target_identity: String,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -51,6 +63,15 @@ pub struct ResolveVerifiedClaimsArgs {
     /// Trust-root identities; only claims verified by one of these are
     /// returned.
     pub verified_by_identities: Vec<String>,
+}
+
+impl EventBundleResponse for GetVerificationClaimResponse {
+    fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
+        &mut self.candidates
+    }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 impl EventBundleResponse for ListVerificationTargetsResponse {
@@ -192,6 +213,7 @@ pub fn list_verification_claims(
 ) -> Arc<dyn QueryObservable> {
     let request = ListVerificationClaimsRequest {
         claimed_by_identity: args.claimed_by_identity,
+        omit_labels: args.omit_labels,
     };
 
     let client = query_client.client().clone();
@@ -225,6 +247,48 @@ pub fn list_verification_claims(
         merge_claim_bundle_responses::<ListVerificationClaimsResponse>,
         opts,
     ))
+}
+
+/// Return the candidate claims matching a partial event key along with the
+/// hints that the servers shipped with them. Targets and verifies are not
+/// included. Emits serialized `GetVerificationClaimResponse` bytes.
+pub fn get_verification_claim(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetVerificationClaimArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetVerificationClaimArgs {
+        identity,
+        sequence,
+        signer_key_prefix,
+    } = args;
+    let request = GetVerificationClaimRequest {
+        identity: identity.clone(),
+        sequence,
+    };
+    let fetch_response = move |server_url: String| {
+        let request = request.clone();
+        async move {
+            Ok(VerificationsServiceClient::new(channel(&server_url).await?)
+                .get_verification_claim(request)
+                .await
+                .map_err(|e| format!("get_verification_claim [{server_url}]: {e}"))?
+                .into_inner())
+        }
+    };
+    get_candidates::<GetVerificationClaimResponse, _, _>(
+        query_client,
+        query_key,
+        GetEventArgs {
+            identity,
+            collection: collections::VERIFICATIONS,
+            sequence,
+            signer_key_prefix,
+        },
+        fetch_response,
+        opts,
+    )
 }
 
 /// List a claim's VerificationTarget events across servers — who has been
@@ -329,6 +393,7 @@ pub fn list_targeted_verification_claims(
 ) -> Arc<dyn QueryObservable> {
     let request = ListTargetedVerificationClaimsRequest {
         target_identity: args.target_identity,
+        omit_labels: args.omit_labels,
     };
 
     let client = query_client.client().clone();
