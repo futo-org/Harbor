@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 polycentric-common.workspace = true
-polycentric-core = { path = "../../packages/rs-core" }
+polycentric-core = { path = "../../packages/rust/rs-core" }
 ed25519-dalek.workspace = true
 prost.workspace = true
 sha2.workspace = true

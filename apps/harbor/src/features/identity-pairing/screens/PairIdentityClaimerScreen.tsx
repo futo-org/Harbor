@@ -28,7 +28,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode, type v2 } from '@polycentric/react-native';
+import { FetchMode, type v2 } from '@polycentric/react-native-sdk';
 import Animated from 'react-native-reanimated';
 
 export default function PairIdentityClaimerScreen() {

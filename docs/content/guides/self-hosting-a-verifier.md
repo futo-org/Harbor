@@ -1,4 +1,5 @@
 ---
+
 title: Host a Verifier Bot
 sidebar_label: Host a Verifier Bot
 sidebar_position: 2
@@ -12,7 +13,7 @@ The verifier bot lives at `services/verifier-bot` in the Harbor monorepo.
 
 The repo's root `compose.yml` includes a `verifier-bot` service built from
 `services/verifier-bot/Dockerfile.dev`. That image is **self-contained**: it
-builds every dependency from source (the Rust→wasm `rs-core-wasm`, the JS
+builds every dependency from source (the Rust→wasm `js-wasm`, the JS
 SDKs, and the bot), so no prebuilt artifacts are needed.
 
 ```bash
@@ -26,7 +27,7 @@ The bot listens on port `3002` by default (`HARBOR_VERIFIER_BOT_PORT`).
 ## Production image
 
 `services/verifier-bot/Dockerfile` is the production image built in CI. Unlike
-the dev image, it consumes the `js-core` / `js-node` / `rs-core-wasm`
+the dev image, it consumes the `js-sdk` / `node-sdk` / `js-wasm`
 `dist/` produced by the CI SDK jobs rather than building them. Both images
 compile the bot with `tsc` and run it with `node dist/app.js` (no tsx at
 runtime).
@@ -39,17 +40,17 @@ fill it in.
 
 ### Core
 
-| Variable | Description |
-|---|---|
-| `HARBOR_VERIFIER_BOT_SERVERS` | Harbor server(s) to sync with. Comma-delimited for multiple. |
-| `HARBOR_VERIFIER_BOT_DATABASE_URL` | Postgres connection string (`?schema=<name>` scopes the tables). Unset uses a local sqlite file under `./state`. |
-| `HARBOR_VERIFIER_BOT_ALLOWED_ORIGINS` | Comma-delimited CORS allow-list. |
-| `HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS` | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links). |
-| `HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |
-| `HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick). |
-| `HARBOR_VERIFIER_BOT_PROFILE_NAME` | Display name published for the bot's identity on first run. |
-| `HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION` | Profile description published alongside the name. |
-| `HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS` | How often every platform's health check runs (default `900`). `0` disables the loop. |
+| Variable                                            | Description                                                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `HARBOR_VERIFIER_BOT_SERVERS`                       | Harbor server(s) to sync with. Comma-delimited for multiple.                                                     |
+| `HARBOR_VERIFIER_BOT_DATABASE_URL`                  | Postgres connection string (`?schema=<name>` scopes the tables). Unset uses a local sqlite file under `./state`. |
+| `HARBOR_VERIFIER_BOT_ALLOWED_ORIGINS`               | Comma-delimited CORS allow-list.                                                                                 |
+| `HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS`             | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links).                |
+| `HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN`         | Public base domain of this bot, used to build OAuth callback URLs.                                               |
+| `HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH`     | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick).                                 |
+| `HARBOR_VERIFIER_BOT_PROFILE_NAME`                  | Display name published for the bot's identity on first run.                                                      |
+| `HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION`           | Profile description published alongside the name.                                                                |
+| `HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS` | How often every platform's health check runs (default `900`). `0` disables the loop.                             |
 
 ### OAuth credentials
 
@@ -68,14 +69,14 @@ Only needed for the OAuth platforms you enable. Each is a
 
 `GET /metrics` serves Prometheus metrics, all prefixed `verifier_bot_`:
 
-| Metric | Labels | Meaning |
-|---|---|---|
-| `verifier_bot_http_requests_total` / `_http_request_duration_seconds` | `platform`, `endpoint`, `status` | Requests by platform route and endpoint (`verify`, `check`, `url`, `token`, `health-check`, ...). |
+| Metric                                                                | Labels                            | Meaning                                                                                                                                                            |
+| --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `verifier_bot_http_requests_total` / `_http_request_duration_seconds` | `platform`, `endpoint`, `status`  | Requests by platform route and endpoint (`verify`, `check`, `url`, `token`, `health-check`, ...).                                                                  |
 | `verifier_bot_verifications_total` / `_verification_duration_seconds` | `platform`, `verifier`, `outcome` | Verify requests. `outcome` is `ok`, `rejected` (token not found), `bad_request`, `claim_fetch_failed`, `schema_mismatch`, `platform_mismatch` or `publish_failed`. |
-| `verifier_bot_health_checks_total` / `_health_check_duration_seconds` | `platform`, `verifier`, `outcome` | Health check runs, `ok` / `failed` / `error`. |
-| `verifier_bot_health_check_up` | `platform`, `verifier` | `1` when the platform's last health check passed. |
-| `verifier_bot_health_check_last_success_timestamp_seconds` | `platform`, `verifier` | When the platform last passed. |
-| `verifier_bot_oauth_sessions_pending` | | OAuth sign-ins started but not yet called back. |
+| `verifier_bot_health_checks_total` / `_health_check_duration_seconds` | `platform`, `verifier`, `outcome` | Health check runs, `ok` / `failed` / `error`.                                                                                                                      |
+| `verifier_bot_health_check_up`                                        | `platform`, `verifier`            | `1` when the platform's last health check passed.                                                                                                                  |
+| `verifier_bot_health_check_last_success_timestamp_seconds`            | `platform`, `verifier`            | When the platform last passed.                                                                                                                                     |
+| `verifier_bot_oauth_sessions_pending`                                 |                                   | OAuth sign-ins started but not yet called back.                                                                                                                    |
 
 Every verifier's `healthCheck` runs on boot and then every
 `HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS`. Text verifiers fetch

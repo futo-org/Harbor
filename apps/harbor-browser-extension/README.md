@@ -53,12 +53,12 @@ root `package.json` (`packageManager`), and Rust with the
 
 ```sh
 pnpm install
-pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
-wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+pnpm --filter @polycentric/js-wasm build --profile wasm-release
+wasm=packages/js/drivers/js-wasm/src/generated/wasm/polycentric_core.wasm
 wasm-opt -Oz -g "$wasm" -o "$wasm"
-pnpm --filter @polycentric/react-native generate
-pnpm --filter './packages/js-*' run build
-pnpm --filter @polycentric/react-native build
+pnpm --filter @polycentric/react-native-sdk generate
+pnpm --filter './packages/js/js-sdk' --filter './packages/js/node-sdk' --filter './packages/js/drivers/js-datastore-*' --filter './packages/js/drivers/js-filestore-*' run build
+pnpm --filter @polycentric/react-native-sdk build
 
 cd apps/harbor
 APP_VARIANT=production npx expo export --platform web

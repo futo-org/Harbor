@@ -1,4 +1,9 @@
-import { Query, QueryStatus, UpdateMode, v2 } from '@polycentric/react-native';
+import {
+  Query,
+  QueryStatus,
+  UpdateMode,
+  v2,
+} from '@polycentric/react-native-sdk';
 import { extractFeedToken } from '@/src/common/lib/polycentric-hooks';
 import { useChainedExtend } from './useChainedExtend';
 import { useFeedWindow } from './useFeedWindow';

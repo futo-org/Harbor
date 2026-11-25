@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { bytesToHex } from '@/src/common/lib/polycentric-hooks/helpers';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** No sequence means the latest event. */

@@ -4,7 +4,7 @@ import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { ActivityIndicator, View } from 'react-native';
 
 export function useModeratedPost(target: v2.EventKey | undefined) {

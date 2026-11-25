@@ -26,7 +26,7 @@ import {
 } from 'react-native';
 import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isAndroid, isWeb } from '@/src/common/util/platform';
 

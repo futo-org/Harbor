@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@polycentric/react-native-sdk": ["./src/index"],
+      "@polycentric/js-sdk": ["../js-sdk/dist/index.d.ts"],
+      "@polycentric/js-datastore-indexeddb": [
+        "../drivers/js-datastore-indexeddb/dist/index.d.ts"
+      ],
+      "@polycentric/js-filestore-opfs": [
+        "../drivers/js-filestore-opfs/dist/index.d.ts"
+      ]
+    },
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "allowImportingTsExtensions": true,
+    "customConditions": ["react-native-strict-api"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noImplicitUseStrict": false,
+    "noStrictGenericChecks": false,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ESNext",
+    "verbatimModuleSyntax": true
+  },
+  "exclude": ["src/generated"]
+}

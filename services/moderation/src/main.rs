@@ -16,8 +16,8 @@ use polycentric::{PolycentricClient, PublishError};
 use polycentric_common::models::{
     collections,
     protos_v2::{
-        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, Report, ReportCategory,
-        content::ContentBody,
+        Content, ContentDigest, Event, EventBundle, EventKey, FieldKind, ImageSet, Report,
+        ReportCategory, VerificationSchema, content::ContentBody,
     },
 };
 use providers::{
@@ -176,15 +176,34 @@ fn content_text(content: &Content) -> Option<String> {
             }
             (!parts.is_empty()).then(|| parts.join("\n"))
         }
+        ContentBody::VerificationClaim(claim) => {
+            // Claims carry their schema inline, and any client can publish any
+            // schema, so its texts are user-supplied too.
+            let schema =
+                VerificationSchema::decode(claim.schema.as_ref()?.schema_bytes.as_slice()).ok()?;
+            let mut parts = vec![schema.name.as_str(), schema.description.as_str()];
+            for field_def in &schema.fields {
+                parts.push(field_def.description.as_str());
+                if field_def.kind() == FieldKind::String
+                    && let Some(value) = claim.fields.get(&field_def.key)
+                    && let Ok(value) = std::str::from_utf8(value)
+                {
+                    parts.push(value);
+                }
+            }
+            parts.retain(|part| !part.is_empty());
+            (!parts.is_empty()).then(|| parts.join("\n"))
+        }
         _ => None,
     }
 }
 
-/// The image sets carried by the content (a post's images, or a profile's
-/// avatar and banner).
+/// The image sets carried by the content (a post's or a claim's images, or a
+/// profile's avatar and banner).
 fn image_sets(content: &Content) -> Vec<&ImageSet> {
     match content.content_body.as_ref() {
         Some(ContentBody::Post(post)) => post.images.iter().collect(),
+        Some(ContentBody::VerificationClaim(claim)) => claim.images.iter().collect(),
         Some(ContentBody::ProfileUpdate(profile)) => {
             profile.avatar.iter().chain(profile.banner.iter()).collect()
         }
@@ -244,7 +263,12 @@ async fn moderate(
         return Ok(no_findings());
     };
 
-    let text = content_text(content);
+    // Azure rejects text over 10k characters, or 1k when sent with an image,
+    // so we clip the rest.
+    // TODO: In the future might be worth switching to scoring it in chunks.
+    let max_text_chars = if images.is_empty() { 10_000 } else { 1_000 };
+    let text =
+        content_text(content).map(|text| text.chars().take(max_text_chars).collect::<String>());
 
     let analyze = |request| async {
         client.analyze(request).await.map_err(|e| {
@@ -801,6 +825,109 @@ async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
         }
         Err(PublishError::Transient(e)) => {
             tracing::error!(error = %e, key = ?key, "report publish failed, skipping");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use polycentric_common::models::protos_v2::{
+        Blob, FieldDef, Image, SerializedVerificationSchema, VerificationClaim,
+    };
+
+    use super::*;
+
+    #[test]
+    fn claim_text_joins_schema_texts_and_string_values() {
+        let content = claim_content(
+            vec![
+                field_def("handle", FieldKind::String, "Handle"),
+                field_def("age", FieldKind::Int, "Age"),
+            ],
+            &[("handle", b"some-handle"), ("age", &42i64.to_le_bytes())],
+            vec![],
+        );
+
+        assert_eq!(
+            content_text(&content).as_deref(),
+            Some("Schema name\nSchema description\nHandle\nsome-handle\nAge")
+        );
+    }
+
+    #[test]
+    fn claim_text_skips_missing_values() {
+        let content = claim_content(
+            vec![field_def("handle", FieldKind::String, "Handle")],
+            &[],
+            vec![],
+        );
+
+        assert_eq!(
+            content_text(&content).as_deref(),
+            Some("Schema name\nSchema description\nHandle")
+        );
+    }
+
+    #[test]
+    fn claim_images_are_scanned() {
+        let blob = Blob {
+            digest: Some(ContentDigest {
+                r#type: 1,
+                value: vec![1, 2, 3],
+            }),
+            mime_type: "image/png".to_string(),
+            size: 3,
+        };
+        let content = claim_content(
+            vec![],
+            &[],
+            vec![ImageSet {
+                images: vec![Image {
+                    blob: Some(blob.clone()),
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+        );
+
+        assert_eq!(
+            image_blobs(&content),
+            vec![(blob.digest.as_ref().unwrap(), "image/png")]
+        );
+    }
+
+    fn claim_content(
+        fields: Vec<FieldDef>,
+        values: &[(&str, &[u8])],
+        images: Vec<ImageSet>,
+    ) -> Content {
+        let schema = VerificationSchema {
+            name: "Schema name".to_string(),
+            description: "Schema description".to_string(),
+            fields,
+        };
+        let claim = VerificationClaim {
+            schema: Some(SerializedVerificationSchema {
+                schema_bytes: schema.encode_to_vec(),
+                digest: None,
+            }),
+            fields: values
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.to_vec()))
+                .collect(),
+            images,
+        };
+        Content {
+            content_body: Some(ContentBody::VerificationClaim(claim)),
+        }
+    }
+
+    fn field_def(key: &str, kind: FieldKind, description: &str) -> FieldDef {
+        FieldDef {
+            key: key.to_string(),
+            kind: kind as i32,
+            description: description.to_string(),
+            ..Default::default()
         }
     }
 }

@@ -8,7 +8,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
 import useReportAction from './hooks/useReportAction';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 type ReportSheetProps = {
   eventId: string;

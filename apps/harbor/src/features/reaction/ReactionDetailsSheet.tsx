@@ -5,7 +5,7 @@ import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { FlashList } from '@shopify/flash-list';
 import {
   useCallback,

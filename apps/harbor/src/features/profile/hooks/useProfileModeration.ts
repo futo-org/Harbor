@@ -1,5 +1,5 @@
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
-import { usePostModeration } from '@/src/features/post/hooks/usePostModeration';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
 import { create } from 'zustand';
 import { useProfile } from './useProfile';
 
@@ -28,7 +28,7 @@ export function useProfileModeration(identity: string | null | undefined): {
   reveal: () => void;
   hide: () => void;
 } {
-  const { hasWarnContent, warnLabels } = usePostModeration(
+  const { hasWarnContent, warnLabels } = useLabelModeration(
     useProfile(identity).labels,
   );
   const revealed = useRevealed((s) => !!identity && s.revealed.has(identity));

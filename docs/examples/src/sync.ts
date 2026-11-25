@@ -1,6 +1,6 @@
 // Shown on docs/content/developer/examples.md under "Staying in sync".
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-sdk';
 
 export function liveSync(client: PolycentricClient) {
   // #region live-sync

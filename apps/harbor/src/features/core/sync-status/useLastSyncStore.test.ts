@@ -1,4 +1,4 @@
-import type { ServerPushResult } from '@polycentric/react-native';
+import type { ServerPushResult } from '@polycentric/react-native-sdk';
 import { useLastSyncStore } from './useLastSyncStore';
 
 const result = (r: Partial<ServerPushResult>) =>

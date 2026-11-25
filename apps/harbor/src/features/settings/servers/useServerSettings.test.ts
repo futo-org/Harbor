@@ -1,6 +1,6 @@
 // The barrel pulls in native uniffi init at import time — expose just what
 // the hook needs.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   ServerAlreadyAddedError: class ServerAlreadyAddedError extends Error {},
 }));
 
@@ -34,7 +34,7 @@ jest.mock('@/src/common/lib/dialogs/alert', () => ({
 }));
 
 import { invalidateAllQueries } from '@/src/common/query/hooks/useQuery';
-import { ServerAlreadyAddedError } from '@polycentric/react-native';
+import { ServerAlreadyAddedError } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';

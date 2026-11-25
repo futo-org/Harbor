@@ -1,11 +1,12 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
+// `@polycentric/react-native-sdk`'s barrel pulls in native uniffi init at import
 // time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+jest.mock('@polycentric/react-native-sdk', () => ({
+  v2: jest.requireActual('../../../../../../packages/js/js-sdk/src/proto/v2'),
   Query: {
     ListTargetedVerificationClaims:
       function ListTargetedVerificationClaims() {},
   },
+  labelsFromTargetedVerificationClaimsResponse: () => [],
 }));
 
 // ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
@@ -21,10 +22,16 @@ jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
     bytesToHex: helpers.bytesToHex,
     getKeyFingerprint: () => 'fingerprint',
     eventKeyId: helpers.eventKeyId,
+    labelMapFromSets: () => mockLabelMap,
   };
 });
 
+jest.mock('@/src/common/settings/useOmitLabels', () => ({
+  useOmitLabels: () => [],
+}));
+
 let mockQueryData: Uint8Array | null = null;
+let mockLabelMap = new Map<string, PostLabel[]>();
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
     _key: unknown,
@@ -39,7 +46,11 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import {
+  eventKeyId,
+  type PostLabel,
+} from '@/src/common/lib/polycentric-hooks/helpers';
+import { v2 } from '@polycentric/react-native-sdk';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -74,6 +85,19 @@ function claimBundle(owner: string, sequence: number): v2.EventBundle {
       contentBytes: v2.Content.toBinary(content),
     }),
   });
+}
+
+const VIOLENCE: PostLabel = { value: 'violence', labeledBy: 'moderator' };
+
+// The id `decodeClaimBundle` gives the claim `claimBundle` builds.
+function claimId(owner: string, sequence: number): string {
+  return eventKeyId(
+    v2.EventKey.create({
+      identity: owner,
+      collection: 8,
+      sequence: BigInt(sequence),
+    }),
+  );
 }
 
 function targetBundle(
@@ -123,6 +147,7 @@ function renderHook(identity: string | undefined): { current: HookResult } {
 
 beforeEach(() => {
   mockQueryData = null;
+  mockLabelMap = new Map();
 });
 
 describe('useRequestedVerifications', () => {
@@ -158,6 +183,13 @@ describe('useRequestedVerifications', () => {
       verifiedCount: 0,
       totalCount: 2,
     });
+  });
+
+  it('attaches each claim’s labels', () => {
+    respond([{ claim: claimBundle('alice', 1), targets: [], verifies: [] }]);
+    mockLabelMap = new Map([[claimId('alice', 1), [VIOLENCE]]]);
+
+    expect(renderHook('me').current.claims[0].labels).toEqual([VIOLENCE]);
   });
 
   it('returns nothing without an identity', () => {

@@ -4,7 +4,7 @@ import {
   COMPACT_IMAGE_WIDTH,
   LinkPreviewCard,
 } from '@/src/features/post/content/LinkPreviewCard';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text } from '@/src/common/components/primitives';

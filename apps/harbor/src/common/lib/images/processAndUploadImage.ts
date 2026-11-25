@@ -1,4 +1,4 @@
-import { v2, type PolycentricClient } from '@polycentric/react-native';
+import { v2, type PolycentricClient } from '@polycentric/react-native-sdk';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { loadBoundedImage, type DecodedImageRef } from './loadBoundedImage';
 import { isWeb } from '@/src/common/util/platform';

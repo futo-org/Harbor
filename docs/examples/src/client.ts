@@ -1,7 +1,7 @@
 // Shown on docs/content/developer/examples.md under "Creating a client".
 
 // #region node-client
-import { createPolycentricNodeClient } from '@polycentric/js-node';
+import { createPolycentricNodeClient } from '@polycentric/node-sdk';
 
 // #endregion node-client
 

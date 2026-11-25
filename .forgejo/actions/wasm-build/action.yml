@@ -1,5 +1,5 @@
 name: wasm-build
-description: rs-core-wasm release build (wasm-release profile optimized with wasm-opt), plus generated react-native bindings from rs-core, uploaded as rs-core-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
+description: js-wasm release build (wasm-release profile optimized with wasm-opt), plus generated react-native bindings from rs-core, uploaded as js-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
 runs:
   using: composite
   steps:
@@ -10,33 +10,33 @@ runs:
       with:
         install: "false"
     - shell: bash
-      run: pnpm install --filter @polycentric/rs-core-wasm
+      run: pnpm install --filter @polycentric/js-wasm
     - shell: bash
-      run: pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
+      run: pnpm --filter @polycentric/js-wasm build --profile wasm-release
     - shell: bash
       run: |
-        wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+        wasm=packages/js/drivers/js-wasm/src/generated/wasm/polycentric_core.wasm
         before=$(stat -c%s "$wasm")
         wasm-opt -Oz -g "$wasm" -o "$wasm"
         echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
     - shell: bash
-      run: pnpm --filter @polycentric/react-native generate
+      run: pnpm --filter @polycentric/react-native-sdk generate
     - uses: forgejo/upload-artifact@v4
       with:
-        name: rs-core-wasm-build
+        name: js-wasm-build
         path: |
-          packages/rs-core-wasm/src/generated/wasm
-          packages/rs-core-wasm/dist
-          packages/react-native/src/generated
-          packages/react-native/src/NativeReactNative.ts
-          packages/react-native/src/uniffi-init.tsx
-          packages/react-native/cpp
-          packages/react-native/ios/ReactNative.h
-          packages/react-native/ios/ReactNative.mm
-          packages/react-native/ReactNative.podspec
-          packages/react-native/android/CMakeLists.txt
-          packages/react-native/android/build.gradle
-          packages/react-native/android/cpp-adapter.cpp
-          packages/react-native/android/src/main/AndroidManifest.xml
-          packages/react-native/android/src/main/java
+          packages/js/drivers/js-wasm/src/generated/wasm
+          packages/js/drivers/js-wasm/dist
+          packages/js/react-native-sdk/src/generated
+          packages/js/react-native-sdk/src/NativeReactNativeSdk.ts
+          packages/js/react-native-sdk/src/uniffi-init.tsx
+          packages/js/react-native-sdk/cpp
+          packages/js/react-native-sdk/ios/ReactNativeSdk.h
+          packages/js/react-native-sdk/ios/ReactNativeSdk.mm
+          packages/js/react-native-sdk/ReactNativeSdk.podspec
+          packages/js/react-native-sdk/android/CMakeLists.txt
+          packages/js/react-native-sdk/android/build.gradle
+          packages/js/react-native-sdk/android/cpp-adapter.cpp
+          packages/js/react-native-sdk/android/src/main/AndroidManifest.xml
+          packages/js/react-native-sdk/android/src/main/java
         retention-days: 7

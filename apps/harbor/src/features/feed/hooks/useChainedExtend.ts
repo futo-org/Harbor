@@ -1,6 +1,6 @@
 import { shouldExtend } from '@/src/common/lib/polycentric-hooks';
 import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
-import { QueryStatus } from '@polycentric/react-native';
+import { QueryStatus } from '@polycentric/react-native-sdk';
 import { useEffect, useRef } from 'react';
 
 const MIN_REVEAL = 8;

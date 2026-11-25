@@ -2,10 +2,10 @@
 # is the repo root.
 #
 # Self-contained: unlike the production Dockerfile (which consumes the js SDK
-# and rs-core-wasm dist built by CI), this image builds EVERYTHING from
-# source, including the Rust->wasm rs-core-wasm package — so no host
+# and js-wasm dist built by CI), this image builds EVERYTHING from
+# source, including the Rust->wasm js-wasm package — so no host
 # prebuild or CI artifacts are needed. The bot is tsc-compiled to dist/ and runs
-# under plain node (rs-core-wasm ships a compiled .js via its node export).
+# under plain node (js-wasm ships a compiled .js via its node export).
 
 # Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
 FROM rust:1.100-slim-trixie@sha256:86993c97389ebb5487eb09e88168e2a00b0de29aa08dff9ae896049b9be96ed9 AS build
@@ -27,7 +27,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 RUN rustup target add wasm32-unknown-unknown
-# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
+# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rust/rs-core/Cargo.toml.
 # renovate: datasource=crate depName=wasm-bindgen-cli
 ARG WASM_BINDGEN_CLI_VERSION=0.2.130
 RUN cargo install wasm-bindgen-cli@${WASM_BINDGEN_CLI_VERSION}
@@ -36,8 +36,8 @@ RUN cargo install wasm-bindgen-cli@${WASM_BINDGEN_CLI_VERSION}
 # resolve, even though only rs-core (+ rs-common) is compiled to wasm here.
 COPY Cargo.toml Cargo.lock ./
 COPY protos protos
-COPY packages/rs-common packages/rs-common
-COPY packages/rs-core packages/rs-core
+COPY packages/rust/rs-common packages/rust/rs-common
+COPY packages/rust/rs-core packages/rust/rs-core
 COPY services services
 COPY tools tools
 
@@ -47,11 +47,11 @@ COPY tools tools
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
-COPY packages/rs-core-wasm packages/rs-core-wasm
-COPY packages/js-core packages/js-core
-COPY packages/js-storage-sqlite packages/js-storage-sqlite
-COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
+COPY packages/js/drivers/js-wasm packages/js/drivers/js-wasm
+COPY packages/js/js-sdk packages/js/js-sdk
+COPY packages/js/drivers/js-datastore-sqlite packages/js/drivers/js-datastore-sqlite
+COPY packages/js/drivers/js-datastore-postgres packages/js/drivers/js-datastore-postgres
+COPY packages/js/node-sdk packages/js/node-sdk
 
 # allowUnusedPatches: patchedDependencies target frontend packages absent here.
 RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
@@ -59,11 +59,11 @@ RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 # Build the Rust->wasm core (its postbuild compiles the generated bindings to
 # .js so plain node can load them), then the JS SDKs, then typecheck and
 # tsc-compile the bot to dist/.
-RUN pnpm --filter @polycentric/rs-core-wasm build
-RUN pnpm --filter @polycentric/js-core \
-         --filter @polycentric/js-storage-sqlite \
-         --filter @polycentric/js-storage-postgres \
-         --filter @polycentric/js-node build
+RUN pnpm --filter @polycentric/js-wasm build
+RUN pnpm --filter @polycentric/js-sdk \
+         --filter @polycentric/js-datastore-sqlite \
+         --filter @polycentric/js-datastore-postgres \
+         --filter @polycentric/node-sdk build
 RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
 RUN pnpm --filter @polycentric/verifier-bot build
 
@@ -87,7 +87,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
+# tsc-compiled dist/. js-wasm's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json

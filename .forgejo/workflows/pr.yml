@@ -255,6 +255,7 @@ jobs:
       #    make db_schema
       #    git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -275,7 +276,7 @@ jobs:
         with:
           install-args: --filter polycentric
       - name: Biome
-        run: pnpm exec biome check packages/js-core --diagnostic-level=error
+        run: pnpm exec biome check packages/js/js-sdk --diagnostic-level=error
 
   js-services-lint:
     name: Lint JS services
@@ -364,12 +365,12 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric
-      - name: js-core protos
+      - name: js-sdk protos
         run: |
-          pnpm -C packages/js-core generate
+          pnpm -C packages/js/js-sdk generate
           stale=$(git status --porcelain)
           [ -z "$stale" ] ||
-            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js-core generate' and commit the result"; exit 1; }
+            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js/js-sdk generate' and commit the result"; exit 1; }
 
   # Unit tests ---------------------------------------------------------------
 
@@ -400,11 +401,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-packages
-          path: target/nextest/ci/junit.xml
           retention-days: 7
 
   rust-services:
@@ -433,12 +429,6 @@ jobs:
           mode: save
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-rust-services
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
 
   js-packages:
     name: Test JS packages
@@ -450,19 +440,13 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # js-core's tests call into the real rs-core wasm.
+      # js-sdk's tests call into the real rs-core wasm.
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
-          install-args: --filter @polycentric/js-core...
-      - name: js-core
-        run: pnpm --filter @polycentric/js-core test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-js-core
-          path: packages/js-core/junit.xml
-          retention-days: 7
+          install-args: --filter @polycentric/js-sdk...
+      - name: js-sdk
+        run: pnpm --filter @polycentric/js-sdk test:ci
 
   scraper:
     name: Test scraper
@@ -482,12 +466,6 @@ jobs:
         run: pnpm --filter @polycentric/scraper build
       - name: Tests
         run: pnpm --filter @polycentric/scraper test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   app:
     name: Test app
@@ -503,12 +481,6 @@ jobs:
           install-args: --filter polycentric-app...
       - name: Tests
         run: pnpm --filter polycentric-app test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-app
-          path: apps/harbor/junit.xml
-          retention-days: 7
 
   app-typecheck:
     name: Typecheck app code
@@ -591,10 +563,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
-  kt-core-lint:
+  kotlin-sdk-lint:
     name: Lint Kotlin
     needs: [ changes, setup-images ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_lint && needs.setup-images.result != 'failure' }}
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kotlin_sdk_lint && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
@@ -607,7 +579,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kotlin-sdk-build
         with:
           task: ":core:ktlintCheck"
           upload-artifact: "false"
@@ -620,10 +592,10 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
-  kt-core:
+  kotlin-sdk:
     name: Build Kotlin
-    needs: [ changes, setup-images, kt-core-lint ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kt_core_build && needs.kt-core-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
+    needs: [ changes, setup-images, kotlin-sdk-lint ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.kotlin_sdk_build && needs.kotlin-sdk-lint.result != 'failure' && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
     container:
@@ -636,7 +608,7 @@ jobs:
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           environment: global
-      - uses: ./.forgejo/actions/kt-core-build
+      - uses: ./.forgejo/actions/kotlin-sdk-build
         with:
           task: ":core:assembleRelease :core:compileDebugUnitTestKotlin"
       - uses: ./.forgejo/actions/r2-cache
@@ -904,14 +876,10 @@ jobs:
 
   # Tests on the builds ------------------------------------------------------
 
-  # Both suites share one Compose project name and host ports, so they run
-  # in one job, one after the other (GitLab: resource_group).
-  services-integration:
-    name: Test services integration
+  server-integration:
+    name: Test server integration
     needs: [ changes, service-images ]
-    if: >-
-      ${{ !cancelled() && needs.service-images.result != 'failure' &&
-      (fromJSON(needs.changes.outputs.plan).flags.server_integration || fromJSON(needs.changes.outputs.plan).flags.moderation_integration) }}
+    if: ${{ !cancelled() && needs.service-images.result != 'failure' && fromJSON(needs.changes.outputs.plan).flags.server_integration }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
@@ -928,25 +896,40 @@ jobs:
           environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
-          cache: services-integration
+          cache: server-integration
       - name: Server integration tests
-        if: fromJSON(needs.changes.outputs.plan).flags.server_integration && needs.service-images.result == 'success'
         run: .forgejo/scripts/integration-server.sh --ci
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.server_integration
+      - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
+        continue-on-error: true
         with:
-          name: junit-server-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
+          mode: save
+          key: ${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
+
+  moderation-integration:
+    name: Test moderation integration
+    needs: [ changes, service-images ]
+    if: ${{ !cancelled() && needs.service-images.result != 'failure' && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
+    env:
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      RUST_LOG: warn
+      HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
+          environment: global
+      - uses: ./.forgejo/actions/rust-env
+        with:
+          cache: moderation-integration
       - name: Moderation integration tests
-        if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration }}
         run: .forgejo/scripts/integration-moderation.sh
-      - uses: forgejo/upload-artifact@v4
-        if: always() && fromJSON(needs.changes.outputs.plan).flags.moderation_integration
-        with:
-          name: junit-moderation-integration
-          path: target/nextest/ci/junit.xml
-          retention-days: 7
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -975,12 +958,6 @@ jobs:
           install-args: --filter @polycentric/scraper...
       - name: Integration tests
         run: pnpm --filter @polycentric/scraper test:integration
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-scraper-integration
-          path: services/scraper/junit.xml
-          retention-days: 7
 
   # VERIFIER_BOT_ENV_VARS is the base64 .env content (GitLab: a file variable).
   verifier-bot:
@@ -1011,12 +988,6 @@ jobs:
         run: if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env; fi
       - name: Tests
         run: pnpm --filter @polycentric/verifier-bot test:ci
-      - uses: forgejo/upload-artifact@v4
-        if: always()
-        with:
-          name: junit-verifier-bot-tests
-          path: services/verifier-bot/junit.xml
-          retention-days: 7
 
   # Drives the web image this run built, started as a job service, against
   # this run's server image, which e2e-web.sh starts with Compose.
@@ -1162,8 +1133,8 @@ jobs:
       - wasm
       - android
       - ios
-      - kt-core
-      - kt-core-lint
+      - kotlin-sdk
+      - kotlin-sdk-lint
       - sdks
       - service-binaries
       - service-images
@@ -1175,7 +1146,8 @@ jobs:
       - web-image
       - browser-extension
       - browser-extension-safari
-      - services-integration
+      - server-integration
+      - moderation-integration
       - scraper-integration
       - verifier-bot
       - web-e2e

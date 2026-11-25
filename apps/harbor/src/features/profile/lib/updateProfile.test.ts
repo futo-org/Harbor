@@ -1,6 +1,6 @@
 // Avoid the native barrel; updateProfile only needs COLLECTION and
 // v2.ImageSet at runtime. The image helper is mocked so no encoding runs.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   COLLECTION: { PROFILE: 3 },
   v2: { ImageSet: { create: (x: unknown) => x } },
 }));

@@ -1,10 +1,10 @@
 import type { PostData, PostLabel } from '@/src/common/lib/polycentric-hooks';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 // `labelsChanged` is an `rs-core` call, and jest can't load the native module.
 // Mock `labels_changed` with the same characteristics: order-insensitive,
 // comparing (value, labeledBy).
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   labelsChanged: (a: PostLabel[], b: PostLabel[]) =>
     a.length !== b.length ||
     b.some(

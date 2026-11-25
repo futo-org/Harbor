@@ -3,7 +3,7 @@ import { hexToBytes } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useAnywhereLink } from '@/src/features/anywhere/hooks/useAnywhereLink';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
-import { type types, v2 } from '@polycentric/react-native';
+import { type types, v2 } from '@polycentric/react-native-sdk';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ComposeSheet } from './ComposeSheet';
