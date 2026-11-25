@@ -116,6 +116,7 @@ export function Button({
       hitSlop={8}
       style={(state) => [
         styles.base,
+        Atoms.max_w_full,
         Atoms.border,
         fullWidth && Atoms.w_full,
         !fullWidth && styles.fitContent,
@@ -138,7 +139,7 @@ export function Button({
       ]}
       {...props}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, Atoms.max_w_full]}>
         {icon &&
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: textColor })
@@ -151,6 +152,7 @@ export function Button({
             fontWeight={FONT_WEIGHT}
             color={textColor}
             numberOfLines={1}
+            style={Atoms.flex_shrink_1}
           >
             {title}
           </Text>
