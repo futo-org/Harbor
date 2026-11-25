@@ -63,8 +63,6 @@ pub async fn handle(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use sea_orm::{DbBackend, MockDatabase};
 
     use crate::service::context::ServiceContext;
@@ -76,10 +74,8 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let kafka_producer = common_kafka::build_producer()
+        let ctx = ServiceContext::new_test(db)
             .await
-            .expect("failed to build Kafka producer");
-        let ctx = Arc::new(ServiceContext::new(db.clone(), db, kafka_producer))
             .public_ro(&tonic::Request::new(()))
             .await
             .unwrap();

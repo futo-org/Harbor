@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use entity::identity_audit_log;
 use polycentric_common::models::collections;
 use sea_orm::{DbErr, RuntimeErr};
 use tonic::Status;
@@ -39,11 +40,16 @@ const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
 /// and drops its cached chain state. Used by bans and the operator command.
+///
+/// The `by_identity` and `by_public_key` fields are stored in the identity
+/// audit log. One of them must be `Some`.
 pub async fn erase_identity(
     db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
     proof_cache: Option<&ProofCache>,
     identity: &str,
+    by_identity: Option<String>,
+    by_public_key: Option<String>,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
     loop {
@@ -70,7 +76,7 @@ pub async fn erase_identity(
             events = total.events,
             content = total.content,
             blobs = total.blobs,
-            batch_ms = started.elapsed().as_millis(),
+            elapsed = ?started.elapsed(),
             "erased batch"
         );
 
@@ -93,6 +99,18 @@ pub async fn erase_identity(
             cache.invalidate_canonical(identity, collection).await;
         }
     }
+
+    if total.events + total.content + total.blobs != 0 {
+        IdentityMutation::audit_action(
+            db,
+            identity.to_owned(),
+            identity_audit_log::Action::DataRemoved,
+            by_identity,
+            by_public_key,
+        )
+        .await?;
+    }
+
     Ok(total)
 }
 

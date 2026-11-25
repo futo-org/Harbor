@@ -4,8 +4,7 @@
 use ::entity::identity_audit_log;
 use tonic::Status;
 
-use crate::service::auth::AuthenticatedIdentity;
-use crate::service::context::RequestContext;
+use crate::service::context::{AuthenticatedIdentity, RequestContext};
 use crate::service::identity::repository;
 use crate::service::proto::{DeleteIdentityRequest, DeleteIdentityResponse};
 

@@ -45,7 +45,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<SetBanStatusRequest>,
     ) -> Result<Response<SetBanStatusResponse>, Status> {
-        let ctx = self.ctx.authenticted_rw(&request).await?;
+        let ctx = self.ctx.authenticted_rw2(&request).await?;
         Ok(Response::new(
             set_ban_status::handle(ctx, request.into_inner()).await?,
         ))

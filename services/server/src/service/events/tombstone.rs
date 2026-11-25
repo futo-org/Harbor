@@ -264,10 +264,8 @@ mod tests {
 
     async fn mock_ctx() -> PublicContext {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let kafka_producer = common_kafka::build_producer()
+        ServiceContext::new_test(db)
             .await
-            .expect("failed to build Kafka producer");
-        ServiceContext::new(db.clone(), db, kafka_producer)
             .public_ro(&tonic::Request::new(()))
             .await
             .unwrap()

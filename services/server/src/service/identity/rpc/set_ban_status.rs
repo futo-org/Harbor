@@ -5,7 +5,7 @@
 
 use tonic::Status;
 
-use crate::service::context::AuthContext;
+use crate::service::context::{AuthenticatedIdentity, RequestContext};
 use crate::service::identity::repository;
 use crate::service::identity::rpc::common::require_moderator;
 use crate::service::identity::service::erase_identity;
@@ -13,17 +13,17 @@ use crate::service::moderation::repository as moderation_repo;
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 
 pub async fn handle(
-    mut ctx: AuthContext,
+    mut ctx: RequestContext<AuthenticatedIdentity>,
     req: SetBanStatusRequest,
 ) -> Result<SetBanStatusResponse, Status> {
     require_moderator(&mut ctx).await?;
-    let moderator = &*ctx.auth;
+    let moderator = ctx.auth;
 
     repository::Mutation::set_banned(
         &mut ctx.db,
         &req.target_identity,
         req.banned,
-        moderator,
+        &*moderator.identity,
     )
     .await
     .map_err(|e| {
@@ -32,7 +32,7 @@ pub async fn handle(
     })?;
 
     tracing::info!(
-        moderator = moderator,
+        moderator = &*moderator.identity,
         target = req.target_identity,
         banned = req.banned,
         "ban status changed"
@@ -44,6 +44,8 @@ pub async fn handle(
             None,
             Some(&ctx.proof_cache),
             &req.target_identity,
+            Some(moderator.identity.clone()),
+            Some(moderator.public_key.to_string()),
         )
         .await
         .map_err(|e| {
@@ -53,7 +55,7 @@ pub async fn handle(
         moderation_repo::Mutation::resolve_reports_by_author(
             &mut ctx.db,
             &req.target_identity,
-            moderator,
+            &*moderator.identity,
         )
         .await
         .map_err(|e| {

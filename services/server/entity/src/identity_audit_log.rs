@@ -40,4 +40,6 @@ pub enum Action {
     Banned = 3,
     /// Identity was unbanned.
     Unbanned = 4,
+    /// The identity's data was removed.
+    DataRemoved = 5,
 }

@@ -1,6 +1,5 @@
 //! Tests for banned identities.
 
-use std::sync::Once;
 use std::time::Duration;
 
 use tokio::time::sleep;
@@ -351,16 +350,6 @@ async fn set_ban_status(identity: &str, banned: bool) {
 }
 
 async fn prune_blob(blobs: &[Blob]) {
-    // Build the admin CLI tool once and use the created binary below.
-    static BUILD: Once = Once::new();
-    BUILD.call_once(|| {
-        std::process::Command::new("cargo")
-            .args(["build", "--quiet", "--bin", "server"])
-            .current_dir("..")
-            .status()
-            .expect("failed to build server");
-    });
-
     let mut output;
     let mut i = 0;
     loop {
@@ -378,20 +367,20 @@ async fn prune_blob(blobs: &[Blob]) {
             return;
         }
 
-        output = tokio::process::Command::new("../../target/debug/server")
-            .args(["prune-blobs", "--grace-period-secs", "0"])
-            .current_dir("..")
-            .stdin(std::process::Stdio::null())
-            .output()
-            .await
-            .expect("failed to prune blobs via admin CLI");
+        output =
+            run_admin_cli(&["prune-blobs", "--grace-period-secs", "0"]).await;
 
-        if String::from_utf8_lossy(&output.stdout).contains("skip") {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if stdout.contains("skip") {
             // If we skipped the pruning (e.g. when another process is holding
             // the lock) we need to try again to ensure the blob(s) the caller
             // cares about are pruned.
             sleep(Duration::from_millis(50)).await;
             continue;
+        }
+
+        if stdout.contains("WARN") || stdout.contains("ERROR") {
+            break;
         }
 
         if output.status.success() {
@@ -416,5 +405,5 @@ async fn prune_blob(blobs: &[Blob]) {
     let mut stderr = stderr.lock();
     _ = stdout.write_all(&output.stdout);
     _ = stderr.write_all(&output.stderr);
-    panic!("running prune blob admin CLI failed");
+    panic!("running admin CLI to prune blobs failed");
 }
