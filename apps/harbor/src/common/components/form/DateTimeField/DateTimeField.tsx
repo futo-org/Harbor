@@ -1,10 +1,11 @@
 import { Atoms, BorderRadius, useTheme } from '@/src/common/theme';
 import { isAndroid } from '@/src/common/util/platform';
-import DateTimePicker, {
-  DateTimePickerAndroid,
-} from '@react-native-community/datetimepicker';
-import { Pressable, View } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { useState } from 'react';
+import { Keyboard, Pressable, View } from 'react-native';
 import { Text } from '../../primitives';
+import { CLEAR_BUTTON_SPACE, ClearButton } from './ClearButton';
+import { DateTimePickerSheet } from './DateTimePickerSheet';
 import {
   type DateTimeMode,
   formatValue,
@@ -32,6 +33,7 @@ export function DateTimeField({
   testID,
 }: DateTimeFieldProps) {
   const { theme } = useTheme();
+  const [open, setOpen] = useState(false);
 
   const box = [
     Atoms.border,
@@ -40,27 +42,10 @@ export function DateTimeField({
     disabled && Atoms.faded,
   ];
 
-  // iOS picker always shows a value, so only render it once we have one
-  if (!isAndroid && value) {
-    return (
-      <View style={[box, Atoms.items_start, { padding: 6 }]}>
-        <DateTimePicker
-          testID={testID}
-          mode={mode}
-          display="compact"
-          value={toDate(mode, value)}
-          disabled={disabled}
-          themeVariant={theme.scheme}
-          accentColor={theme.colors.accent}
-          onValueChange={(_event, date) => onChange(fromDate(mode, date))}
-        />
-      </View>
-    );
-  }
-
   const onPress = () => {
     if (!isAndroid) {
-      onChange(fromDate(mode, new Date()));
+      Keyboard.dismiss();
+      setOpen(true);
       return;
     }
 
@@ -72,18 +57,42 @@ export function DateTimeField({
     });
   };
 
+  const canClear = !!value && !disabled;
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={placeholder}
-      testID={testID}
-      disabled={disabled}
-      onPress={onPress}
-      style={[box, { padding: 12 }]}
-    >
-      <Text variant="body" color={value ? 'primary' : 'muted'}>
-        {value ? formatValue(mode, value) : placeholder}
-      </Text>
-    </Pressable>
+    <View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={placeholder}
+        testID={testID}
+        disabled={disabled}
+        onPress={onPress}
+        style={[
+          box,
+          { padding: 12 },
+          canClear && { paddingRight: CLEAR_BUTTON_SPACE },
+        ]}
+      >
+        <Text variant="body" color={value ? 'primary' : 'muted'}>
+          {value ? formatValue(mode, value) : placeholder}
+        </Text>
+      </Pressable>
+      {canClear ? (
+        <ClearButton
+          onPress={() => onChange('')}
+          testID={testID ? `${testID}-clear` : undefined}
+        />
+      ) : null}
+      {isAndroid ? null : (
+        <DateTimePickerSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          mode={mode}
+          value={value}
+          onChange={onChange}
+          title={placeholder}
+        />
+      )}
+    </View>
   );
 }

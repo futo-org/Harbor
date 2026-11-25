@@ -11,6 +11,7 @@ import {
 import DropdownMenu from '../../DropdownMenu';
 import Icon from '../../Icon';
 import { Text } from '../../primitives';
+import { CLEAR_BUTTON_SPACE, ClearButton } from './ClearButton';
 import type { DateTimeFieldProps } from './DateTimeField';
 import {
   formatValue,
@@ -58,8 +59,7 @@ function Field({
   placeholder,
   disabled = false,
   testID,
-  // Not for the Pressable
-  onChange: _onChange,
+  onChange,
   // Props from the dropdown trigger
   ...trigger
 }: FieldProps) {
@@ -79,37 +79,48 @@ function Field({
     };
   }, [open]);
 
+  const canClear = !!value && !disabled;
+
   return (
-    <Pressable
-      {...trigger}
-      accessibilityLabel={placeholder}
-      testID={testID}
-      disabled={disabled}
-      style={[
-        Atoms.flex_row,
-        Atoms.align_center,
-        Atoms.gap_sm,
-        Atoms.border,
-        { borderRadius: BorderRadius.md, padding: 12 },
-        open ? theme.atoms.outline_strong : theme.atoms.outline,
-        disabled && Atoms.faded,
-      ]}
-    >
-      <Icon
-        name={mode === 'date' ? 'calendar' : 'time'}
-        size={20}
-        color="muted"
-      />
-      <Text
-        variant="body"
-        color={value ? 'primary' : 'muted'}
-        numberOfLines={1}
-        selectable={false}
-        style={Atoms.flex_shrink_1}
+    <View>
+      <Pressable
+        {...trigger}
+        accessibilityLabel={placeholder}
+        testID={testID}
+        disabled={disabled}
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.gap_sm,
+          Atoms.border,
+          { borderRadius: BorderRadius.md, padding: 12 },
+          open ? theme.atoms.outline_strong : theme.atoms.outline,
+          disabled && Atoms.faded,
+          canClear && { paddingRight: CLEAR_BUTTON_SPACE },
+        ]}
       >
-        {value ? formatValue(mode, value) : placeholder}
-      </Text>
-    </Pressable>
+        <Icon
+          name={mode === 'date' ? 'calendar' : 'time'}
+          size={20}
+          color="muted"
+        />
+        <Text
+          variant="body"
+          color={value ? 'primary' : 'muted'}
+          numberOfLines={1}
+          selectable={false}
+          style={Atoms.flex_shrink_1}
+        >
+          {value ? formatValue(mode, value) : placeholder}
+        </Text>
+      </Pressable>
+      {canClear ? (
+        <ClearButton
+          onPress={() => onChange('')}
+          testID={testID ? `${testID}-clear` : undefined}
+        />
+      ) : null}
+    </View>
   );
 }
 

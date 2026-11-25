@@ -8,8 +8,12 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  type TextInputInstance,
+} from 'react-native';
 import { CalendarEventFormFields } from './CalendarEventFormFields';
 import { createCalendarEvent } from '../lib/calendar-actions';
 import { useCoverPhoto } from '../hooks/useCoverPhoto';
@@ -37,6 +41,7 @@ export function CalendarEventCreateSheet({
   const [error, setError] = useState<string | null>(null);
   const [isPending, setPending] = useState(false);
   const coverPhoto = useCoverPhoto(isPending, setError);
+  const titleRef = useRef<TextInputInstance>(null);
 
   const patch = (changes: Partial<CalendarEventForm>) => {
     setError(null);
@@ -100,6 +105,7 @@ export function CalendarEventCreateSheet({
       open={open}
       onClose={close}
       detents={[1]}
+      onPresented={() => titleRef.current?.focus()}
       header={
         <Sheet.Header
           title="New event"
@@ -138,6 +144,7 @@ export function CalendarEventCreateSheet({
             onChange={patch}
             coverPhoto={coverPhoto}
             disabled={isPending}
+            titleRef={titleRef}
           />
           {error ? (
             <Text variant="body" color="danger">

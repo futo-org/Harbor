@@ -7,7 +7,7 @@ import { DateTimeField } from '@/src/common/components/form/DateTimeField/DateTi
 import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { Pressable, Switch, View } from 'react-native';
+import { Pressable, Switch, type TextInputInstance, View } from 'react-native';
 import { HostField } from './HostField';
 import type { CoverPhoto } from '../hooks/useCoverPhoto';
 import type { CalendarEventForm } from '../lib/calendar-event';
@@ -19,6 +19,7 @@ type CalendarEventFormFieldsProps = {
   onChange: (changes: Partial<CalendarEventForm>) => void;
   coverPhoto: CoverPhoto;
   disabled: boolean;
+  titleRef?: React.Ref<TextInputInstance>;
 };
 
 /** Fields of the create event form */
@@ -27,16 +28,17 @@ export function CalendarEventFormFields({
   onChange,
   coverPhoto,
   disabled,
+  titleRef,
 }: CalendarEventFormFieldsProps) {
   return (
     <>
       <Field label="Title *">
         <TextInput
+          ref={titleRef}
           value={form.title}
           onChangeText={(title) => onChange({ title })}
           placeholder="What's happening?"
           maxLength={200}
-          autoFocus
           disabled={disabled}
           testID="calendar-event-create-title"
         />
