@@ -7,12 +7,10 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::lock::LockRecover;
+use crate::query::client::fetch_local_first;
 use crate::query::event::merge::{decode_event, merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
-use crate::query::{
-    FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
-};
-use crate::rx::observable::Observable;
+use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 use crate::store::keys::EventKey as StoreEventKey;
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -84,15 +82,8 @@ fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> O
 }
 
 /// Fetch `identity`'s profile (its `PROFILE` collection events plus the
-/// follow counters). Emits serialized `GetProfileResponse` bytes.
-///
-/// - `OfflineOnly`: emits whatever's in the local store (or an empty
-///   response) and completes.
-/// - `OfflineFirst` with local data: emits local data and completes.
-/// - `OfflineFirst` with no local data: falls through to the network.
-/// - `Default` (and `None`): wraps the network observable so the
-///   first emission is the local store snapshot (stale-while-revalidate)
-///   while the server fan-out runs in the background.
+/// follow counters). Emits serialized `GetProfileResponse` bytes. The local
+/// store answers first, following `fetch_mode` (`fetch_local_first`).
 pub fn get_profile(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,
@@ -100,28 +91,9 @@ pub fn get_profile(
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
     let GetProfileArgs { identity } = args;
-    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
 
     let local_bytes = local_profile_bytes(query_client, &identity);
 
-    let offline_only = matches!(fetch_mode, Some(FetchMode::OfflineOnly));
-    let offline_first = matches!(fetch_mode, Some(FetchMode::OfflineFirst));
-    let skip_network = offline_only || (offline_first && local_bytes.is_some());
-    if skip_network {
-        let bytes = local_bytes.unwrap_or_else(|| GetProfileResponse::default().encode_to_vec());
-        let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
-            subscriber.next(QueryResult {
-                data: Some(bytes.clone()),
-                status: QueryStatus::Success,
-                successful_servers: 0,
-                pending_servers: 0,
-            });
-            subscriber.complete();
-        });
-        return Arc::new(observable);
-    }
-
-    // Network path. Build the query_fn and hand off to QueryClient.
     let client = query_client.client().clone();
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
@@ -148,42 +120,9 @@ pub fn get_profile(
         }
     };
 
-    let underlying = query_client.fetch(query_key, query_fn, merge_profile_responses, opts);
-
-    let Some(local_bytes) = local_bytes else {
-        return Arc::new(underlying);
-    };
-
-    // Wrap the underlying observable so any `data: None` emission
-    // (e.g. the initial Loading before any server has responded) is
-    // substituted with the local-store snapshot. The status is left
-    // untouched so the UI can still differentiate "loading" from
-    // "fresh".
-    let wrapped: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
-        let subscriber = Arc::new(subscriber);
-        let local_bytes = local_bytes.clone();
-        let next_subscriber = subscriber.clone();
-        let error_subscriber = subscriber.clone();
-        let complete_subscriber = subscriber;
-        // We deliberately drop the underlying subscription handle —
-        // the fan-out completes on its own once every server has
-        // responded.
-        let _ = underlying.subscribe(
-            move |r: QueryResult<Vec<u8>>| {
-                let data = r.data.or_else(|| Some(local_bytes.clone()));
-                next_subscriber.next(QueryResult {
-                    data,
-                    status: r.status,
-                    successful_servers: r.successful_servers,
-                    pending_servers: r.pending_servers,
-                });
-            },
-            move |msg: String| error_subscriber.error(msg),
-            move || complete_subscriber.complete(),
-        );
-    });
-
-    Arc::new(wrapped)
+    fetch_local_first(local_bytes, opts, |opts| {
+        query_client.fetch(query_key, query_fn, merge_profile_responses, opts)
+    })
 }
 
 #[cfg(test)]

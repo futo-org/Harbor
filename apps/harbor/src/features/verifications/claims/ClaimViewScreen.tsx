@@ -7,7 +7,7 @@ import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
 import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
@@ -20,6 +20,9 @@ import { resolveClaimTitle } from '../utils/render';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
+import { LabelPill } from '@/src/features/moderation/LabelPill';
+import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
+import { LabelWarnOverlay } from '@/src/features/moderation/LabelWarnOverlay';
 import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,6 +59,12 @@ export default function ViewClaimScreen() {
     isRefreshing: verifiersRefreshing,
     refresh: refreshVerifiers,
   } = useClaimVerifiers(claim?.id, claim?.schemaName);
+
+  const { hasWarnContent, warnLabels } = useLabelModeration(claim?.labels);
+  const [warnDismissed, setWarnDismissed] = useState(false);
+  const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
+  const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
+  const isHidden = hasWarnContent && !warnDismissed;
 
   const claimType = CLAIM_TYPES.find((t) => t.name === claim?.schemaName);
   // Platform claims chip as their platform (brand logo + name).
@@ -128,28 +137,48 @@ export default function ViewClaimScreen() {
                   avatarSize="md"
                 />
 
-                <View
-                  style={[
-                    Atoms.flex_row,
-                    Atoms.align_center,
-                    Atoms.gap_md,
-                    Atoms.justify_between,
-                    Atoms.flex_wrap,
-                  ]}
-                >
-                  <Text variant="body" style={Atoms.flex_shrink_1}>
-                    {title}
-                  </Text>
-                </View>
+                {isHidden ? (
+                  <LabelWarnOverlay
+                    labels={warnLabels}
+                    authorIdentity={claim.identity}
+                    onDismiss={handleWarnDismiss}
+                  />
+                ) : (
+                  <>
+                    <View
+                      style={[
+                        Atoms.flex_row,
+                        Atoms.align_center,
+                        Atoms.gap_md,
+                        Atoms.justify_between,
+                        Atoms.flex_wrap,
+                      ]}
+                    >
+                      <Text variant="body" style={Atoms.flex_shrink_1}>
+                        {title}
+                      </Text>
+                    </View>
+                    {claim.labels && claim.labels.length > 0 ? (
+                      <LabelPill
+                        labels={claim.labels}
+                        action={hasWarnContent ? 'Hide' : undefined}
+                        onPress={handleWarnRestore}
+                      />
+                    ) : null}
+                  </>
+                )}
                 <View
                   style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}
                 >
-                  <ClaimTypeChip
-                    name={platform?.name ?? claim.schemaName}
-                    icon={claimType?.icon ?? 'verify'}
-                    logo={platform?.logo}
-                    tint={platform?.tint ?? claimType?.tint}
-                  />
+                  {/* A custom schema's name is claim text, hidden with the rest. */}
+                  {isHidden ? null : (
+                    <ClaimTypeChip
+                      name={platform?.name ?? claim.schemaName}
+                      icon={claimType?.icon ?? 'verify'}
+                      logo={platform?.logo}
+                      tint={platform?.tint ?? claimType?.tint}
+                    />
+                  )}
                   {/* Verified status */}
                   <StatusChip
                     verifiedCount={verifiedCount}
@@ -157,45 +186,47 @@ export default function ViewClaimScreen() {
                   />
                 </View>
 
-                <View style={Atoms.gap_lg}>
-                  {bodyFields.map((field) => {
-                    const value = field.value.trim();
-                    // URL values (e.g. a Platform claim's profile URL) open
-                    // the linked account.
-                    const isLink = /^https?:\/\//i.test(value);
-                    return (
-                      <View key={field.key} style={Atoms.gap_xs}>
-                        <Text
-                          variant="small"
-                          color="secondary"
-                          fontWeight="semibold"
-                        >
-                          {field.label}
-                        </Text>
-                        {isLink ? (
+                {isHidden ? null : (
+                  <View style={Atoms.gap_lg}>
+                    {bodyFields.map((field) => {
+                      const value = field.value.trim();
+                      // URL values (e.g. a Platform claim's profile URL) open
+                      // the linked account.
+                      const isLink = /^https?:\/\//i.test(value);
+                      return (
+                        <View key={field.key} style={Atoms.gap_xs}>
                           <Text
-                            variant="body"
-                            color="accent"
-                            onPress={() =>
-                              void Linking.openURL(value).catch(() => {})
-                            }
+                            variant="small"
+                            color="secondary"
+                            fontWeight="semibold"
                           >
-                            {value}
+                            {field.label}
                           </Text>
-                        ) : (
-                          <Text
-                            variant="body"
-                            color={value ? 'primary' : 'secondary'}
-                          >
-                            {value || 'N/A'}
-                          </Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
+                          {isLink ? (
+                            <Text
+                              variant="body"
+                              color="accent"
+                              onPress={() =>
+                                void Linking.openURL(value).catch(() => {})
+                              }
+                            >
+                              {value}
+                            </Text>
+                          ) : (
+                            <Text
+                              variant="body"
+                              color={value ? 'primary' : 'secondary'}
+                            >
+                              {value || 'N/A'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
 
-                {claim.images.length > 0 && (
+                {!isHidden && claim.images.length > 0 && (
                   <ImageGrid images={claim.images} onOpenImage={openImage} />
                 )}
 

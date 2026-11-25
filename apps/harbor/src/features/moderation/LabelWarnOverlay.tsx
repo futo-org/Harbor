@@ -8,11 +8,11 @@ import { useModerationWarningStore } from '@/src/features/moderation/useModerati
 import { Pressable, View } from 'react-native';
 
 /**
- * Rendered in place of a post's content when a label the user has set to
- * "warn" applies: names the labels, says who applied them, and offers a
- * button to reveal the post.
+ * Rendered in place of labeled content (a post, a claim) when a label the
+ * user has set to "warn" applies: names the labels, says who applied them,
+ * and offers a button to reveal the content.
  */
-export function PostWarnOverlay({
+export function LabelWarnOverlay({
   labels,
   authorIdentity,
   onDismiss,
@@ -72,7 +72,7 @@ export function PostWarnOverlay({
           openWarning({
             labels,
             identity: authorIdentity,
-            subject: 'post',
+            subject: 'content',
             onConfirm: onDismiss,
           })
         }

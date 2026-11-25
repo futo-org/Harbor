@@ -1,7 +1,7 @@
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { type ModerationLabel, useSettings } from '@/src/common/settings';
 
-export function usePostModeration(labels: PostLabel[] | undefined): {
+export function useLabelModeration(labels: PostLabel[] | undefined): {
   hasWarnContent: boolean;
   warnLabels: PostLabel[];
 } {
@@ -11,8 +11,8 @@ export function usePostModeration(labels: PostLabel[] | undefined): {
     return { hasWarnContent: false, warnLabels: [] };
   }
 
-  // `hide` filters posts out of feeds server-side; any that still reach
-  // the client (threads, direct views) get the same warn treatment.
+  // `hide` filters entities out of lists server-side; any that still reach the
+  // client (threads, direct views) get the same warn treatment.
   const warnLabels = labels.filter((label) => {
     const level = moderation[label.value as ModerationLabel];
     return level === 'warn' || level === 'hide';

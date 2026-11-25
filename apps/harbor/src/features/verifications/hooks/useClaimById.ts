@@ -1,9 +1,16 @@
 import {
   eventKeyId,
   getKeyFingerprint,
+  labelMapFromSets,
+  type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native-sdk';
+import {
+  COLLECTION,
+  Query,
+  labelsFromGetVerificationClaimResponse,
+  v2,
+} from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import { decodeFieldValue } from '../utils/schemas';
 
@@ -23,6 +30,7 @@ export interface DecodedClaim {
   keyFingerprint: string;
   sequence: bigint;
   createdAt: bigint;
+  labels?: PostLabel[];
 }
 
 /**
@@ -71,8 +79,7 @@ export function decodeClaimBundle(bundle: v2.EventBundle): DecodedClaim | null {
 
 /**
  * Load a single verification claim by its (identity, sequence) route params.
- * Mirrors `usePostById`: `keyFingerprint` verifies the returned bundle matches
- * the expected signer.
+ * Mirrors `usePostById`: `keyFingerprint` picks the expected signer's claim.
  */
 export function useClaimById(
   identityId: string | undefined,
@@ -95,9 +102,8 @@ export function useClaimById(
       keyFingerprint ?? '',
       sequence?.toString() ?? '',
     ],
-    new Query.GetEvent({
+    new Query.GetVerificationClaim({
       identity: identityId ?? '',
-      collection: COLLECTION.VERIFICATIONS,
       sequence: sequence ?? 0n,
       signerKeyPrefix: keyFingerprint,
     }),
@@ -109,18 +115,15 @@ export function useClaimById(
     if (!enabled) return null;
     if (!query.data || query.data.byteLength === 0) return null;
     try {
-      const bundle = v2.EventBundle.fromBinary(new Uint8Array(query.data));
-      const decoded = decodeClaimBundle(bundle);
-      if (!decoded) return null;
-      // Verify the bundle matches the requested signer/sequence so a sequence
-      // collision across signers doesn't render the wrong claim.
-      if (
-        decoded.keyFingerprint !== keyFingerprint ||
-        decoded.sequence !== sequence
-      ) {
-        return null;
-      }
-      return decoded;
+      const response = v2.GetVerificationClaimResponse.fromBinary(
+        new Uint8Array(query.data),
+      );
+      const claim = pickClaim(response, keyFingerprint, sequence);
+      if (!claim) return null;
+      const labelMap = labelMapFromSets(
+        labelsFromGetVerificationClaimResponse(query.data),
+      );
+      return { ...claim, labels: labelMap.get(claim.id) };
     } catch {
       return null;
     }
@@ -133,4 +136,26 @@ export function useClaimById(
     error: query.error ? new Error(query.error) : null,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
+}
+
+/**
+ * Pick the claim matching the route's signer and sequence, so a sequence
+ * collision across signers doesn't render the wrong claim.
+ */
+export function pickClaim(
+  response: v2.GetVerificationClaimResponse,
+  keyFingerprint: string | undefined,
+  sequence: bigint | undefined,
+): DecodedClaim | null {
+  for (const bundle of response.candidates) {
+    const claim = decodeClaimBundle(bundle);
+    if (!claim) continue;
+    if (
+      claim.keyFingerprint === keyFingerprint &&
+      claim.sequence === sequence
+    ) {
+      return claim;
+    }
+  }
+  return null;
 }
