@@ -107,7 +107,7 @@ impl Query {
         if let Some(identity) = filter.awaiting_host {
             let mut named_host = SelectStatement::new();
             named_host
-                .expr(Expr::value(1))
+                .expr(Expr::Constant(1.into()))
                 .from(content_calendar_event_host::Entity)
                 .and_where(
                     Expr::col(
@@ -263,6 +263,11 @@ impl Query {
                     calendar_event_rsvp::Column::EventId.count(),
                     "count",
                 )
+                // Not from deleted identities, whose events are gone
+                .join(
+                    JoinType::InnerJoin,
+                    calendar_event_rsvp::Relation::Event.def(),
+                )
                 .filter(
                     calendar_event_rsvp::Column::OnEvent
                         .is_in(event_ids.iter().copied()),
@@ -307,6 +312,11 @@ impl Query {
             .select_only()
             .column(calendar_event_rsvp::Column::OnEvent)
             .column(calendar_event_rsvp::Column::Identity)
+            // Not from deleted identities, whose events are gone
+            .join(
+                JoinType::InnerJoin,
+                calendar_event_rsvp::Relation::Event.def(),
+            )
             .filter(
                 calendar_event_rsvp::Column::OnEvent
                     .is_in(event_ids.iter().copied()),
@@ -429,7 +439,7 @@ pub(crate) fn ends_at() -> Expr {
 fn rsvp_by(identity: &str) -> SelectStatement {
     let mut query = SelectStatement::new();
     query
-        .expr(Expr::value(1))
+        .expr(Expr::Constant(1.into()))
         .from(calendar_event_rsvp::Entity)
         .and_where(
             Expr::col(calendar_event_rsvp::Column::OnEvent.as_column_ref())

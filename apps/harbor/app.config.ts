@@ -219,6 +219,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           // http:// local servers on a LAN IP (e.g. for running e2e tests locally)
           usesCleartextTraffic: IS_DEV,
         },
+        ios: {
+          ccacheEnabled: true,
+        },
       },
     ],
     'expo-image',

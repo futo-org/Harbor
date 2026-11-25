@@ -286,7 +286,10 @@ CREATE TABLE public.content_calendar_event (
     location_address text,
     latitude double precision,
     longitude double precision,
-    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector(((((((title || ' '::text) || COALESCE(description, ''::text)) || ' '::text) || COALESCE(location_name, ''::text)) || ' '::text) || COALESCE(location_address, ''::text)))) STORED NOT NULL
+    location_url text,
+    timezone text,
+    labels text[] DEFAULT '{}'::text[] NOT NULL,
+    search_data tsvector GENERATED ALWAYS AS ((((public.create_tsvector(title) || public.create_tsvector(description)) || public.create_tsvector(location_name)) || public.create_tsvector(location_address))) STORED NOT NULL
 );
 
 
