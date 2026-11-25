@@ -6,7 +6,7 @@ import {
   QueryStatus,
   UpdateMode,
   v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 
 const PAGE_SIZE = 20;

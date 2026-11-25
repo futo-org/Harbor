@@ -4,7 +4,7 @@ import {
   type PostLabel,
   Query,
   type v2,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 

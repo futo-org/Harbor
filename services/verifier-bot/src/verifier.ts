@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders } from 'http';
-import { type PolycentricClient, SyncStrategy } from '@polycentric/js-core';
+import { type PolycentricClient, SyncStrategy } from '@polycentric/js-sdk';
 import {
   type DecodedClaim,
   fetchClaim,

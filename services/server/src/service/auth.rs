@@ -192,7 +192,7 @@ mod tests {
             .layer(axum::middleware::from_fn_with_state(state, auth_middleware))
     }
 
-    /// Mint a token matching js-core's `createServerJwt` format.
+    /// Mint a token matching js-sdk's `createServerJwt` format.
     fn mint(iss: &str, aud: &str) -> String {
         let key = SigningKey::from_bytes(&[7u8; 32]);
         let kid: String = hex::encode(key.verifying_key().to_bytes());

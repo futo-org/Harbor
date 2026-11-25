@@ -3,7 +3,7 @@ import {
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native';
+import { COLLECTION, Query, v2 } from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import { decodeFieldValue } from '../utils/schemas';
 

@@ -4,7 +4,7 @@ import {
   setQueryCache,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import { FetchMode, Query, v2 } from '@polycentric/react-native';
+import { FetchMode, Query, v2 } from '@polycentric/react-native-sdk';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface BanListState {

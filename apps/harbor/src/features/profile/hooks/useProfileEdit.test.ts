@@ -1,5 +1,5 @@
 // The barrel can't load under jest; `ImageImportError` imports it.
-jest.mock('@polycentric/react-native', () => ({}));
+jest.mock('@polycentric/react-native-sdk', () => ({}));
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));

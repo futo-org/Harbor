@@ -6,7 +6,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { FeedPage } from '@/src/features/feed/FeedPage';
 import { EMPTY_FEED } from '@/src/features/feed/hooks/types';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import {
   router,
   useFocusEffect,

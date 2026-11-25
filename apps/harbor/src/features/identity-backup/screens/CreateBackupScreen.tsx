@@ -13,7 +13,7 @@ import { saveBackupFile } from '@/src/features/identity-backup/saveBackupFile';
 import {
   SyncStrategy,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';

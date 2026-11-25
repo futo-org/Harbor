@@ -1,5 +1,5 @@
 {
-  // An app resolves @polycentric/react-native through the "react-native"
+  // An app resolves @polycentric/react-native-sdk through the "react-native"
   // export condition, as Metro does, rather than the Node build.
   "extends": "../../tools/tsconfig/base.jsonc",
   "compilerOptions": {

@@ -42,7 +42,7 @@ jest.mock('./PostHeader', () => ({ PostHeader: () => null }));
 jest.mock('./PostMenu', () => ({ __esModule: true, default: () => null }));
 jest.mock('./toolbar/PostToolbar', () => ({ PostToolbar: () => null }));
 jest.mock('./PostWarnOverlay', () => ({ PostWarnOverlay: () => null }));
-jest.mock('@polycentric/react-native', () => ({ COLLECTION: { FEED: 1 } }));
+jest.mock('@polycentric/react-native-sdk', () => ({ COLLECTION: { FEED: 1 } }));
 
 import { render } from '@testing-library/react-native';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';

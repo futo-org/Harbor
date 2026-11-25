@@ -1,6 +1,6 @@
 import { Routes } from '@/src/common/constants';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { COLLECTION, type v2 } from '@polycentric/react-native';
+import { COLLECTION, type v2 } from '@polycentric/react-native-sdk';
 import type { Href } from 'expo-router';
 
 /** The parts of an event key that locate an event, for routing. */

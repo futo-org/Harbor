@@ -15,7 +15,7 @@ import {
   type ServerPushResult,
   v2,
   FetchMode,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
   useCallback,

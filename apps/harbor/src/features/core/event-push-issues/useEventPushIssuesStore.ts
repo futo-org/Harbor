@@ -1,5 +1,5 @@
 import { ffiEventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
-import type { EventKey, ServerPushResult } from '@polycentric/react-native';
+import type { EventKey, ServerPushResult } from '@polycentric/react-native-sdk';
 import { create } from 'zustand';
 
 /** A server's errors/warnings for a pushed event. */

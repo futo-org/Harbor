@@ -7,7 +7,7 @@ import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import type { types, v2 } from '@polycentric/react-native';
+import type { types, v2 } from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView } from 'react-native';

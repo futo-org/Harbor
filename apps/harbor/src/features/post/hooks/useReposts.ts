@@ -8,7 +8,7 @@ import {
   COLLECTION,
   v2,
   type PolycentricClient,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { create } from 'zustand';
 import {
   feedQueryKeys,
