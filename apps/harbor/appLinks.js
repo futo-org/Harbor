@@ -6,7 +6,7 @@ const appLinks = {
   production: {
     host: 'harbor.social',
     // The identity the bare domain resolves to as an alias (the `*` entry of
-    // /.well-known/polycentric.json; see js-core's alias-resolver).
+    // /.well-known/polycentric.json; see js-sdk's alias-resolver).
     polycentricIdentity:
       '743817767bdaf220694c7a4316916a7487d70cc9bb10e171108fcc8f20b19a86',
     iosBundleId: 'org.futo.polycentric',

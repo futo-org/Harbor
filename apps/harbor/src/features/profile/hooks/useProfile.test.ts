@@ -1,4 +1,4 @@
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   FetchMode: { OfflineOnly: 'OfflineOnly', Default: 'Default' },
   Query: {
     GetProfile: class {

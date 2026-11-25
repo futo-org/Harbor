@@ -9,7 +9,7 @@ import {
   decodeClaimBundle,
   type DecodedClaim,
 } from '@/src/features/verifications/hooks/useClaimById';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 
 /** Attach labels applied to `post` from the labels map. */
 function withLabels<T extends PostData | null | undefined>(

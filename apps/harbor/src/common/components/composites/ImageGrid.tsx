@@ -6,7 +6,7 @@ import {
   MIN_ASPECT_RATIO,
 } from '@/src/common/lib/images/attachmentLayout';
 import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { memo, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';

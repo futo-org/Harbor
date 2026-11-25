@@ -1,4 +1,4 @@
-import { Query, UpdateMode } from '@polycentric/react-native';
+import { Query, UpdateMode } from '@polycentric/react-native-sdk';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';

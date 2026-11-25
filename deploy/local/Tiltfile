@@ -11,7 +11,7 @@ config.define_string_list('to-run', args=True, usage='Resources to run, with the
 config.set_enabled_resources(config.parse().get('to-run', []))
 
 ROOT = os.path.abspath('../..')
-RUST_SOURCES = ['Cargo.toml', 'Cargo.lock', 'protos', 'packages/rs-common', 'packages/rs-core', 'services', 'tools']
+RUST_SOURCES = ['Cargo.toml', 'Cargo.lock', 'protos', 'packages/rust/rs-common', 'packages/rust/rs-core', 'services', 'tools']
 RUST_IGNORE = ['services/scraper', 'services/verifier-bot']
 JS_SOURCES = ['turbo.jsonc', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package.json', 'patches']
 
@@ -33,7 +33,7 @@ WIRING = {
     'harbor-verifier-bot': {
         'image': {
             'dockerfile': 'services/verifier-bot/Dockerfile.dev',
-            'only': RUST_SOURCES + JS_SOURCES + ['packages/rs-core-wasm', 'packages/js-core', 'packages/js-storage-sqlite', 'packages/js-storage-postgres', 'packages/js-node'],
+            'only': RUST_SOURCES + JS_SOURCES + ['packages/js/drivers/js-wasm', 'packages/js/js-sdk', 'packages/js/drivers/js-datastore-sqlite', 'packages/js/drivers/js-datastore-postgres', 'packages/js/node-sdk'],
             'ignore': ['services/scraper'],
         },
         'ports': ['3002:3002'],

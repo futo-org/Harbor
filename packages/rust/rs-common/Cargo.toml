@@ -1,0 +1,36 @@
+[package]
+name = "polycentric-common"
+version = "0.0.0"
+edition = "2024"
+description = "Common rust code for the Polycentric protocol"
+license-file = "../../../LICENSE"
+repository = ""
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Enable generation of transport code.
+transport = ["tonic/transport"]
+# Enable exporting types via uniffi.
+uniffi = ["dep:uniffi"]
+
+[dependencies]
+thiserror.workspace = true
+prost.workspace = true
+tonic.workspace = true
+tonic-prost.workspace = true
+ed25519-dalek.workspace = true
+sha2.workspace = true
+base64.workspace = true
+hex = { workspace = true, features = ["std"] }
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl", "perf"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Enable with uniffi feature.
+uniffi = { workspace = true, optional = true }
+
+[build-dependencies]
+prost-build.workspace = true
+tonic-prost-build = "0.14"

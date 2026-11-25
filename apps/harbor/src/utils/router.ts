@@ -5,7 +5,7 @@ import type { LinkProps } from 'expo-router';
  */
 export function flattenHref(href?: LinkProps['href']): string | undefined {
   if (!href) return undefined;
-  if (typeof href === 'string') return href;
+  if (typeof href === 'string') return href.replace(/\([^)]+\)\//g, '');
 
   let path = href.pathname as string;
   const params = href.params as Record<string, string> | undefined;

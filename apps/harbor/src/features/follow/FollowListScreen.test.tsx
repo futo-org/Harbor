@@ -140,6 +140,7 @@ jest.mock('expo-router', () => ({
   Link: { resolveHref: (href: string) => href },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
   useFocusEffect: () => undefined,
+  useIsFocused: () => true,
 }));
 
 jest.mock('@/src/features/follow/FollowingBadge', () => ({
@@ -147,7 +148,9 @@ jest.mock('@/src/features/follow/FollowingBadge', () => ({
   FollowingBadge: () => null,
 }));
 
-jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
+jest.mock('@polycentric/react-native-sdk', () => ({
+  FetchMode: { Default: 'd' },
+}));
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),

@@ -12,7 +12,7 @@ common-kafka = { path = "../common/kafka" }
 push-notifications-entity = { path = "./entity" }
 push-notifications-migration = { path = "./migration" }
 polycentric-common.workspace = true
-polycentric-core = { path = "../../packages/rs-core" }
+polycentric-core = { path = "../../packages/rust/rs-core" }
 
 common-telemetry = { path = "../common/telemetry" }
 

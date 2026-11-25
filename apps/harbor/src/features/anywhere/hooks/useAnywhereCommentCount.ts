@@ -1,6 +1,6 @@
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { linkAttribution } from '@/src/features/feed/hooks/useAttributionFeed';
-import { Query, v2 } from '@polycentric/react-native';
+import { Query, v2 } from '@polycentric/react-native-sdk';
 import { useEffect, useMemo, useRef } from 'react';
 
 function decodePostCount(data: ArrayBuffer | undefined): number | undefined {

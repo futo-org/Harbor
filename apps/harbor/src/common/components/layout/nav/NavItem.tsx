@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Text } from '@/src/common/components/primitives';
 import {
@@ -17,7 +17,9 @@ import {
   type TextColor,
   useTheme,
 } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { flattenHref } from '@/src/utils/router';
+import { useNavDrawerStore } from './drawer/hooks/useNavDrawerStore';
 
 type NavItemProps = Omit<LinkProps, 'href' | 'children'> & {
   href?: LinkProps['href'];
@@ -25,6 +27,7 @@ type NavItemProps = Omit<LinkProps, 'href' | 'children'> & {
   label: string;
   /** Overrides the width-based default (labels only above xl). */
   showLabel?: boolean;
+  large?: boolean;
   /** Counter drawn over the icon. */
   badge?: string | null;
 };
@@ -34,6 +37,7 @@ export function NavItem({
   icon,
   label,
   showLabel,
+  large,
   badge,
   ...props
 }: NavItemProps) {
@@ -67,7 +71,13 @@ export function NavItem({
       : iconNode;
 
     return (
-      <View style={[{ width: 30 }, Atoms.items_center, Atoms.justify_center]}>
+      <View
+        style={[
+          { width: large ? 34 : 30 },
+          Atoms.items_center,
+          Atoms.justify_center,
+        ]}
+      >
         {colored}
         {badge && (
           <View
@@ -104,49 +114,75 @@ export function NavItem({
     Atoms.gap_sm,
   ];
 
+  const style = [
+    linkContainerStyle,
+    Atoms.py_md,
+    Atoms.pl_lg,
+    Atoms.pr_2xl,
+    !labelVisible && Atoms.pr_lg,
+    Atoms.gap_md,
+    isActive
+      ? theme.atoms.box.secondary.bg
+      : hovering && theme.atoms.box.secondary.bg_hover,
+  ];
+
+  const content = (
+    <>
+      {renderIcon(icon)}
+      {labelVisible && (
+        <Text
+          fontSize={large ? 'xl' : 'lg'}
+          lineHeight={large ? 28 : 24}
+          fontWeight={isActive ? 'bold' : 'regular'}
+        >
+          {label}
+        </Text>
+      )}
+    </>
+  );
+
+  const onPress: LinkProps['onPress'] = (e) => {
+    e.preventDefault();
+    // Re-tapping the current route only refreshes; navigating again
+    // would remount the screen.
+    if (pathname === flatHref) {
+      useNavDrawerStore.getState().hide();
+      emitFocusedRefresh();
+      return;
+    }
+    // MH HACK!
+    // Switching destination, not going deeper. Web keeps pushed screens
+    // mounted and subscribed, so drop what is stacked over the tabs.
+    if (router.canDismiss()) router.dismissAll();
+    router.navigate(href!);
+  };
+
+  if (!isWeb) {
+    return (
+      <Link href={href!} onPress={onPress} asChild {...props}>
+        <Pressable
+          accessibilityLabel={label}
+          onPressIn={() => setHovering(true)}
+          onPressOut={() => setHovering(false)}
+          style={StyleSheet.flatten([style, Atoms.self_stretch])}
+        >
+          {content}
+        </Pressable>
+      </Link>
+    );
+  }
+
   return (
     <Link
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       href={href!}
       accessibilityLabel={label}
-      onPress={(e) => {
-        e.preventDefault();
-        // Re-tapping the current route only refreshes; navigating again
-        // would remount the screen.
-        if (pathname === flatHref) {
-          emitFocusedRefresh();
-          return;
-        }
-        // MH HACK!
-        // Switching destination, not going deeper. Web keeps pushed screens
-        // mounted and subscribed, so drop what is stacked over the tabs.
-        if (router.canDismiss()) router.dismissAll();
-        router.navigate(href!);
-      }}
-      style={[
-        linkContainerStyle,
-        Atoms.py_md,
-        Atoms.pl_lg,
-        Atoms.pr_2xl,
-        !labelVisible && Atoms.pr_lg,
-        Atoms.gap_md,
-        isActive
-          ? theme.atoms.box.secondary.bg
-          : hovering && theme.atoms.box.secondary.bg_hover,
-      ]}
+      onPress={onPress}
+      style={style}
       {...props}
     >
-      {renderIcon(icon)}
-      {labelVisible && (
-        <Text
-          fontSize="lg"
-          lineHeight={24}
-          fontWeight={isActive ? 'bold' : 'regular'}
-        >
-          {label}
-        </Text>
-      )}
+      {content}
     </Link>
   );
 }

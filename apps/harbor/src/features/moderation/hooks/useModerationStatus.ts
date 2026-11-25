@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
-import { decodeStatusByServer, Query } from '@polycentric/react-native';
+import { decodeStatusByServer, Query } from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 
 export type ModerationStatus = {

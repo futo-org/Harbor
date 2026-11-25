@@ -1,0 +1,43 @@
+name: kotlin-sdk-build
+description: Build the Kotlin SDK as an AAR
+inputs:
+  task:
+    description: Gradle tasks to run
+    default: ":core:assembleRelease"
+  save-cache:
+    description: Save Gradle wrapper and dependency cache. Disable for check-only jobs.
+    default: "true"
+  upload-artifact:
+    description: Upload the build directory as the kotlin-sdk-build artifact the release job downloads.
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: ./.forgejo/actions/rust-env
+      with:
+        cache: kotlin-sdk
+    - uses: ./.forgejo/actions/r2-cache
+      with:
+        mode: restore
+        key: gradle-${{ hashFiles('packages/kotlin/kotlin-sdk/gradle/libs.versions.toml', 'packages/kotlin/kotlin-sdk/gradle/wrapper/gradle-wrapper.properties') }}
+        path: |
+          .gradle/wrapper
+          .gradle/caches
+    - shell: bash
+      env:
+        KOTLIN_SDK_GRADLE_TASK: ${{ inputs.task }}
+      run: cd packages/kotlin/kotlin-sdk && ./gradlew ${KOTLIN_SDK_GRADLE_TASK:-:core:assembleRelease}
+    - uses: ./.forgejo/actions/r2-cache
+      if: inputs.save-cache == 'true'
+      with:
+        mode: save
+        key: gradle-${{ hashFiles('packages/kotlin/kotlin-sdk/gradle/libs.versions.toml', 'packages/kotlin/kotlin-sdk/gradle/wrapper/gradle-wrapper.properties') }}
+        path: |
+          .gradle/wrapper
+          .gradle/caches
+    - uses: forgejo/upload-artifact@v4
+      if: inputs.upload-artifact == 'true'
+      with:
+        name: kotlin-sdk-build
+        path: packages/kotlin/kotlin-sdk/core/build/
+        retention-days: 7

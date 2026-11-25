@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Collections (packages/rs-common/src/models/collections.rs).
+// Collections (packages/rust/rs-common/src/models/collections.rs).
 const (
 	CollIdentity      int32 = 1
 	CollFeed          int32 = 2 // posts, reposts, and every Delete

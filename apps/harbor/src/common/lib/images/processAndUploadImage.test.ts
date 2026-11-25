@@ -10,7 +10,7 @@ jest.mock('@/src/common/util/platform', () => ({
 }));
 
 // Minimal protobuf factories: just echo the input so we can assert shapes.
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   v2: {
     Image: { create: (x: unknown) => ({ ...(x as object) }) },
     ImageSet: { create: (x: unknown) => ({ ...(x as object) }) },

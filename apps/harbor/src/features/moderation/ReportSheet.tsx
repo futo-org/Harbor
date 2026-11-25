@@ -9,7 +9,7 @@ import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useEffect, useState } from 'react';
 import useReportAction from './hooks/useReportAction';
 import { create } from 'zustand';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 
 export const useReportSheetStore = create<{
   /** Kept after closing so the native dismiss animation has content. */

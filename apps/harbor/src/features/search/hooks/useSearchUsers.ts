@@ -1,6 +1,11 @@
 import { shouldExtend } from '@/src/common/lib/polycentric-hooks';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { Query, QueryStatus, UpdateMode, v2 } from '@polycentric/react-native';
+import {
+  Query,
+  QueryStatus,
+  UpdateMode,
+  v2,
+} from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import { searchQueryKeys } from './useSearchPosts';
 

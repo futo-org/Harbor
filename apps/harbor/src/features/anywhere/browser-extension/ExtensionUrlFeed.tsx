@@ -2,7 +2,7 @@ import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { ComposerInput, ComposeSheet } from '@/src/features/composer';
 import FeedList from '@/src/features/feed/FeedList';
 import { useAttributionFeed } from '@/src/features/feed/hooks/useAttributionFeed';
-import type { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { AnywhereCard } from '../AnywhereCard';

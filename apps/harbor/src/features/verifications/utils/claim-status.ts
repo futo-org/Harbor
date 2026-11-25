@@ -1,4 +1,4 @@
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { type DecodedClaim, decodeClaimBundle } from '../hooks/useClaimById';
 import { PLATFORM_SCHEMA_NAME } from './platforms';
 
