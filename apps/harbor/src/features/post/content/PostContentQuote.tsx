@@ -22,6 +22,7 @@ import type { Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { CalendarEventEmbed } from '@/src/features/calendar-events/card/CalendarEventEmbed';
 import { usePostById } from '../hooks/usePostById';
 import { useLabelModeration } from '@/src/features/moderation/hooks/useLabelModeration';
 import { PostAuthor } from '../PostAuthor';
@@ -54,9 +55,11 @@ export function PostContentQuote({
       return null;
     }
   }, [quoteId]);
+  // Shown whatever the flag is, or it would look like a broken post
+  const isCalendarEvent = eventKey?.collection === COLLECTION.CALENDAR;
 
   const fetched = usePostById(
-    quotePost ? undefined : eventKey?.identity,
+    quotePost || isCalendarEvent ? undefined : eventKey?.identity,
     getKeyFingerprint(eventKey?.signedBy),
     eventKey?.sequence,
     { fetchMode: FetchMode.OfflineFirst },
@@ -73,6 +76,8 @@ export function PostContentQuote({
     : null;
   const cardLinkProps = useCardLinkPress(postRoute);
 
+  if (isCalendarEvent && eventKey)
+    return <CalendarEventEmbed eventKey={eventKey} />;
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
 
   return (

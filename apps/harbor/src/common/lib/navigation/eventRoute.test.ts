@@ -34,6 +34,12 @@ describe('eventRoute', () => {
     ).toBeNull();
   });
 
+  it('routes a calendar event to its page', () => {
+    expect(eventRoute(key(COLLECTION.CALENDAR))).toBe(
+      `/${IDENTITY}/event/${FINGERPRINT}/7`,
+    );
+  });
+
   it('routes profile and identity updates to the profile', () => {
     expect(eventRoute(key(COLLECTION.PROFILE))).toBe(`/${IDENTITY}`);
     expect(eventRoute(key(COLLECTION.IDENTITY))).toBe(`/${IDENTITY}`);
