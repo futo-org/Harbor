@@ -122,8 +122,7 @@ export const IconHeights: Story = {
   },
   render: (args) => (
     <OutlinedRow>
-      {/* An Ionicons glyph's line box is ~1.1x the icon size, taller than the
-          label at md and lg; other icon sets match the icon size */}
+      {/* Icons of different heights; the button heights must all match */}
       {([undefined, 'personAdd', 'add'] as const).map(
         (icon: IconName | undefined) => (
           <Button

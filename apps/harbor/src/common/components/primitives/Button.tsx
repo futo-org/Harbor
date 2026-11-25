@@ -44,25 +44,31 @@ interface ButtonProps extends Omit<PressableProps, 'style' | 'href'> {
 const SIZE_CONFIG: Record<
   ButtonSize,
   {
-    paddingV: number;
+    // Fixed, so icons of any set or size never change it
+    height: number;
     paddingH: number;
     iconSize: number;
     borderRadius: BorderRadiusToken;
   }
 > = {
   sm: {
-    paddingV: 4,
+    height: 30,
     paddingH: Spacing['md'],
     iconSize: 16,
     borderRadius: 'full',
   },
   md: {
-    paddingV: 12,
+    height: 46,
     paddingH: Spacing['xl'],
     iconSize: 20,
     borderRadius: 'full',
   },
-  lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: 'full' },
+  lg: {
+    height: 58,
+    paddingH: 24,
+    iconSize: 24,
+    borderRadius: 'full',
+  },
 };
 
 export function Button({
@@ -84,9 +90,6 @@ export function Button({
   const sizeConfig = SIZE_CONFIG[size];
   const borderRadius = BorderRadius[sizeConfig.borderRadius];
   const iconOnly = !!icon && !title;
-  const paddingHorizontal = iconOnly
-    ? sizeConfig.paddingV
-    : sizeConfig.paddingH;
   const isDisabled = !!disabled;
   const textColor = isDisabled ? 'muted' : textColorMap[variant];
   const hoverStyle =
@@ -117,10 +120,13 @@ export function Button({
         fullWidth && Atoms.w_full,
         !fullWidth && styles.fitContent,
         {
-          paddingVertical: sizeConfig.paddingV,
-          paddingHorizontal,
+          height: sizeConfig.height,
           borderRadius,
         },
+        // Icon only: a circle
+        iconOnly
+          ? { width: sizeConfig.height }
+          : { paddingHorizontal: sizeConfig.paddingH },
         isDisabled
           ? [
               theme.atoms.box.raised.bg,
@@ -133,7 +139,7 @@ export function Button({
       ]}
       {...props}
     >
-      <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
+      <View style={styles.content}>
         {icon &&
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: textColor })
@@ -170,9 +176,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  iconOnlyContent: {
-    aspectRatio: 1,
   },
 });
 
