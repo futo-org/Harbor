@@ -184,7 +184,10 @@ function RootStack() {
         />
 
         <Stack.Protected guard={APP_VARIANT === 'dev'}>
-          <Stack.Screen name="storybook" />
+          <Stack.Screen
+            name="storybook"
+            options={isWeb ? undefined : { orientation: 'all' }}
+          />
         </Stack.Protected>
       </Stack>
     </>
