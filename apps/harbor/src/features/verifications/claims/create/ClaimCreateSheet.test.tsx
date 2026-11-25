@@ -144,6 +144,7 @@ type FormProps = {
     keyFingerprint: string;
     sequence: string;
   }) => void;
+  alsoRequestFrom?: string[];
 };
 let mockFormProps: FormProps | null = null;
 jest.mock('./ClaimCreateForm', () => ({
@@ -153,6 +154,15 @@ jest.mock('./ClaimCreateForm', () => ({
   },
 }));
 
+jest.mock('@/src/features/calendar-events/card/CalendarEventCard', () => ({
+  CalendarEventCard: () => null,
+}));
+jest.mock('./ClaimCreateEventPicker', () => ({
+  ClaimCreateEventPicker: () => null,
+}));
+jest.mock('./ClaimCreateEventNew', () => ({
+  ClaimCreateEventNew: () => null,
+}));
 jest.mock('./ClaimCreatePlatformPicker', () => ({
   ClaimCreatePlatformPicker: () => null,
 }));
@@ -202,11 +212,51 @@ beforeEach(() => {
   mockFormProps = null;
 });
 
+describe('ClaimCreateSheet for a calendar event', () => {
+  const calendarEvent = {
+    id: 'ab12',
+    identity: 'alice',
+    keyFingerprint: 'cafe',
+    sequence: '3',
+    title: 'Harbor meetup',
+    startAt: 0,
+    allDay: false,
+    hosts: ['alice', 'me'],
+  };
+
+  it('asks the hosts to verify, but not ourselves', async () => {
+    await render(
+      <ClaimCreateSheet open onClose={onClose} calendarEvent={calendarEvent} />,
+    );
+
+    expect(mockFormProps!.alsoRequestFrom).toEqual(['alice']);
+
+    await act(async () => mockFormProps!.onSubmitted(CLAIM_REF));
+
+    expect(mockToast.success).toHaveBeenCalledWith(
+      'Claim created — verification requested',
+    );
+    // No share prompt, as the hosts have been asked
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.not.stringContaining('requestVerification'),
+    );
+  });
+});
+
 describe('ClaimCreateSheet without a verifier', () => {
   it('starts at the claim type step', async () => {
     const screen = await renderSheet();
     expect(screen.getByTestId('sheet-title')).toHaveTextContent(
       'Create a claim',
+    );
+  });
+
+  it('offers attendance claims, which start by choosing the event', async () => {
+    const screen = await renderSheet();
+    await fireEvent.press(screen.getByText('Attendance'));
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent(
+      'Choose the event',
     );
   });
 

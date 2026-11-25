@@ -1,4 +1,5 @@
 import {
+  bytesToHex,
   decodeBundle,
   eventKeyId,
   getKeyFingerprint,
@@ -19,6 +20,8 @@ export type CalendarEventData = {
   identity: string;
   keyFingerprint: string;
   sequence: string;
+  /** Hex digest of the content. Identifies the event even if it's deleted */
+  contentDigest?: string;
   title: string;
   description?: string;
   startAt: number;
@@ -45,13 +48,15 @@ export function decodeCalendarEventBundle(
   const key = decoded?.event.key;
   if (!decoded || !key?.signedBy) return null;
 
-  const { content } = decoded;
+  const { content, event } = decoded;
+  const digest = event.contentDigest?.value;
 
   return {
     id: eventKeyId(key),
     identity: key.identity,
     keyFingerprint: getKeyFingerprint(key.signedBy),
     sequence: key.sequence.toString(),
+    contentDigest: digest ? bytesToHex(digest) : undefined,
     title: content.title,
     description: content.description || undefined,
     startAt: Number(content.startAt),

@@ -1,10 +1,16 @@
 import type { ClaimField } from '../hooks/useClaimById';
+import {
+  ATTENDANCE_FIELD,
+  ATTENDANCE_SCHEMA_NAME,
+  attendanceBodyFields,
+} from './attendance';
 import { getPlatformFromClaim, PLATFORM_SCHEMA_NAME } from './platforms';
 
 // Claim types whose title reads better as a field value than the schema name.
 const TITLE_FIELD: Record<string, string> = {
   Freeform: 'name',
   Skill: 'skill',
+  [ATTENDANCE_SCHEMA_NAME]: ATTENDANCE_FIELD.event,
 };
 
 /**
@@ -39,8 +45,15 @@ export function resolveClaimTitle(
     ? fields.find((f) => f.key === titleKey)
     : undefined;
 
+  const bodyFields = titleField
+    ? fields.filter((f) => f.key !== titleKey)
+    : fields;
+
   return {
     title: titleField?.value || schemaName,
-    bodyFields: titleField ? fields.filter((f) => f.key !== titleKey) : fields,
+    bodyFields:
+      schemaName === ATTENDANCE_SCHEMA_NAME
+        ? attendanceBodyFields(bodyFields)
+        : bodyFields,
   };
 }
