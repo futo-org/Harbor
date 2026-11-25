@@ -28,7 +28,8 @@ impl Validate for CalendarEventRsvp {
             CalendarEventRsvpStatus::try_from(*status),
             Ok(CalendarEventRsvpStatus::Going
                 | CalendarEventRsvpStatus::Maybe
-                | CalendarEventRsvpStatus::NotGoing)
+                | CalendarEventRsvpStatus::NotGoing
+                | CalendarEventRsvpStatus::Hosting)
         ) {
             errors.push(map_err(ValidationError::StatusInvalid));
         }

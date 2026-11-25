@@ -24,6 +24,7 @@ import {
   type TextInputKeyPressEvent,
   View,
 } from 'react-native';
+import { ComposerQuote } from './ComposerQuote';
 import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native-sdk';
@@ -57,7 +58,8 @@ type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 type ComposerFieldsProps = {
   isReply: boolean;
   replyTo?: PostData | null;
-  quote?: PostData | null;
+  /** Event being quoted */
+  quote?: v2.EventKey;
   error: string | null;
   currentIdentityKey: string | null;
   placeholder: string;
@@ -307,7 +309,7 @@ export function ComposerFields({
             onRemove={onRemoveLinkPreview}
           />
           {/* Quote preview */}
-          {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
+          {!!quote && <ComposerQuote eventKey={quote} />}
           {/* Tap-to-focus filler for the space below the content */}
           <Pressable
             style={Atoms.flex_grow_1}

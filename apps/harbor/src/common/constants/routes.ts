@@ -70,6 +70,7 @@ export const Routes = {
         panel: '/anywhere/browser-extension/panel',
       },
     },
+    calendarEvents: '/events',
     claims: '/claims',
     profile: (identityId: string) => `/${identityId}` as const,
     profileVerificationClaims: (identityId: string) =>
@@ -98,6 +99,11 @@ export const Routes = {
       keyFingerprint: string,
       sequence: string,
     ) => `/${identityId}/verifications/${keyFingerprint}/${sequence}` as const,
+    calendarEvent: (
+      identityId: string,
+      keyFingerprint: string,
+      sequence: string,
+    ) => `/${identityId}/event/${keyFingerprint}/${sequence}` as const,
     claimImage: (
       identityId: string,
       keyFingerprint: string,

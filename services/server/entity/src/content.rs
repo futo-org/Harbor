@@ -49,6 +49,13 @@ pub struct Model {
         HasMany<super::content_verification_target::Entity>,
     #[sea_orm(has_one)]
     pub verification_verify: HasOne<super::content_verification_verify::Entity>,
+    #[sea_orm(has_one)]
+    pub calendar_event: HasOne<super::content_calendar_event::Entity>,
+    #[sea_orm(has_many)]
+    pub calendar_event_hosts:
+        HasMany<super::content_calendar_event_host::Entity>,
+    #[sea_orm(has_one)]
+    pub calendar_event_rsvp: HasOne<super::content_calendar_event_rsvp::Entity>,
 
     // Timestamp the server received the content
     pub synced_at: DateTimeWithTimeZone,

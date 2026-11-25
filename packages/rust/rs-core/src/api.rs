@@ -136,6 +136,10 @@ pub enum Query {
     ListBans(crate::query::moderation::ListBansArgs),
     ListReports(crate::query::moderation::ListReportsArgs),
     GetReactions(crate::query::reactions::GetReactionsArgs),
+    ListCalendarEvents(crate::query::calendar::ListCalendarEventsArgs),
+    GetCalendarEvent(crate::query::calendar::GetCalendarEventArgs),
+    ListCalendarEventAttendees(crate::query::calendar::ListCalendarEventAttendeesArgs),
+    SearchCalendarEvents(crate::query::calendar::SearchCalendarEventsArgs),
 }
 
 /// Oneshot sender for [`FirstSuccessObserver`].
@@ -604,6 +608,32 @@ impl PolycentricCore {
             Query::GetReactions(args) => {
                 crate::query::reactions::get_reactions(&self.query_client, query_key, args, opts)
             }
+            Query::ListCalendarEvents(args) => crate::query::calendar::list_calendar_events(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
+            Query::GetCalendarEvent(args) => crate::query::calendar::get_calendar_event(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
+            Query::ListCalendarEventAttendees(args) => {
+                crate::query::calendar::list_calendar_event_attendees(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::SearchCalendarEvents(args) => crate::query::calendar::search_calendar_events(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
         }
     }
 

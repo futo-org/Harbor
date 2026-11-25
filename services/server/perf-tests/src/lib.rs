@@ -19,7 +19,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
-const COLLECTION_MAX: i32 = collections::VERIFICATIONS;
+const COLLECTION_MAX: i32 = collections::CALENDAR;
 
 #[derive(Debug)]
 pub struct Client {

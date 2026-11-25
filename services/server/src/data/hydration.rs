@@ -425,6 +425,14 @@ pub fn event_identities(
                         .filter(|identity| !identity.is_empty()),
                 );
             }
+            Some(ContentBody::CalendarEvent(event)) => {
+                identities.extend(
+                    event
+                        .hosts
+                        .into_iter()
+                        .filter(|identity| !identity.is_empty()),
+                );
+            }
             // TODO: Delete, Block, Reaction, Report, Labels,
             // VerificationVerify, VerificationTarget.claim_event_key. Currently
             // not needed.

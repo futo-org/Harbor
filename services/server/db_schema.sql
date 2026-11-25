@@ -212,6 +212,18 @@ CREATE TABLE public.block (
 
 
 --
+-- Name: calendar_event_rsvp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendar_event_rsvp (
+    event_id bigint NOT NULL,
+    identity text NOT NULL,
+    on_event bigint NOT NULL,
+    status smallint NOT NULL
+);
+
+
+--
 -- Name: content; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -256,6 +268,53 @@ CREATE TABLE public.content_blob (
 CREATE TABLE public.content_block (
     content_id bigint NOT NULL,
     identity_id character varying NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event (
+    content_id bigint NOT NULL,
+    title text NOT NULL,
+    description text,
+    start_at timestamp with time zone NOT NULL,
+    end_at timestamp with time zone,
+    all_day boolean NOT NULL,
+    location_name text,
+    location_address text,
+    latitude double precision,
+    longitude double precision,
+    location_url text,
+    timezone text,
+    labels text[] DEFAULT '{}'::text[] NOT NULL,
+    search_data tsvector GENERATED ALWAYS AS ((((public.create_tsvector(title) || public.create_tsvector(description)) || public.create_tsvector(location_name)) || public.create_tsvector(location_address))) STORED NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event_host; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event_host (
+    content_id bigint NOT NULL,
+    identity character varying NOT NULL
+);
+
+
+--
+-- Name: content_calendar_event_rsvp; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.content_calendar_event_rsvp (
+    content_id bigint NOT NULL,
+    status smallint NOT NULL,
+    event_key_collection smallint NOT NULL,
+    event_key_identity character varying NOT NULL,
+    event_key_public_key_type smallint NOT NULL,
+    event_key_public_key bytea NOT NULL,
+    event_key_sequence bigint NOT NULL
 );
 
 
@@ -873,6 +932,14 @@ ALTER TABLE ONLY public.block
 
 
 --
+-- Name: calendar_event_rsvp calendar_event_rsvp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_event_rsvp
+    ADD CONSTRAINT calendar_event_rsvp_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: content_attributed_to_reaction content_attributed_to_reaction_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -894,6 +961,30 @@ ALTER TABLE ONLY public.content_blob
 
 ALTER TABLE ONLY public.content_block
     ADD CONSTRAINT content_block_pkey PRIMARY KEY (content_id);
+
+
+--
+-- Name: content_calendar_event_host content_calendar_event_host_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event_host
+    ADD CONSTRAINT content_calendar_event_host_pkey PRIMARY KEY (content_id, identity);
+
+
+--
+-- Name: content_calendar_event content_calendar_event_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event
+    ADD CONSTRAINT content_calendar_event_pkey PRIMARY KEY (content_id);
+
+
+--
+-- Name: content_calendar_event_rsvp content_calendar_event_rsvp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.content_calendar_event_rsvp
+    ADD CONSTRAINT content_calendar_event_rsvp_pkey PRIMARY KEY (content_id);
 
 
 --
@@ -1187,6 +1278,41 @@ CREATE INDEX ban_created_at_identity_idx ON public.ban USING btree (created_at, 
 --
 
 CREATE INDEX block_blocker_blocked_idx ON public.block USING btree (blocker, blocked);
+
+
+--
+-- Name: calendar_event_rsvp_event_identity_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX calendar_event_rsvp_event_identity_unique ON public.calendar_event_rsvp USING btree (on_event, identity);
+
+
+--
+-- Name: content_calendar_event_host_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_host_identity ON public.content_calendar_event_host USING btree (identity);
+
+
+--
+-- Name: content_calendar_event_rsvp_event_key_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_rsvp_event_key_idx ON public.content_calendar_event_rsvp USING btree (event_key_collection, event_key_identity, event_key_public_key_type, event_key_public_key, event_key_sequence);
+
+
+--
+-- Name: content_calendar_event_search_data; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_search_data ON public.content_calendar_event USING gin (search_data);
+
+
+--
+-- Name: content_calendar_event_start_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_calendar_event_start_at ON public.content_calendar_event USING btree (start_at);
 
 
 --

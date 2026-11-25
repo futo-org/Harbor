@@ -16,7 +16,9 @@ import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { ClaimVerifyActions } from './ClaimVerifyActions';
 import { CLAIM_TYPES } from '../utils/forms';
 import { getPlatformFromClaim } from '../utils/platforms';
+import { ATTENDANCE_SCHEMA_NAME } from '../utils/attendance';
 import { resolveClaimTitle } from '../utils/render';
+import { ClaimAttendanceEvent } from './ClaimAttendanceEvent';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
@@ -188,6 +190,10 @@ export default function ViewClaimScreen() {
 
                 {isHidden ? null : (
                   <View style={Atoms.gap_lg}>
+                    {claim.schemaName === ATTENDANCE_SCHEMA_NAME ? (
+                      <ClaimAttendanceEvent fields={claim.fields} />
+                    ) : null}
+
                     {bodyFields.map((field) => {
                       const value = field.value.trim();
                       // URL values (e.g. a Platform claim's profile URL) open

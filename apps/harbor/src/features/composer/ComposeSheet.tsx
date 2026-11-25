@@ -21,7 +21,8 @@ type ComposeSheetProps = {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
-  quote?: PostData | null;
+  /** Event to quote. A post, or eg a calendar event */
+  quote?: v2.EventKey;
   /** The page the post is about, if any. */
   attributedTo?: v2.Link;
   /** Open the image picker as soon as the composer mounts. */
@@ -78,7 +79,7 @@ export function ComposeSheet({
     <ComposerFields
       isReply={composer.isReply}
       replyTo={composer.replyTo}
-      quote={composer.quote}
+      quote={quote}
       error={composer.error}
       currentIdentityKey={composer.currentIdentityKey}
       placeholder={composer.placeholder}

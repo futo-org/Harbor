@@ -1,0 +1,97 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/calendar.proto";
+import "polycentric/v2/common.proto";
+import "polycentric/v2/event_key.proto";
+import "polycentric/v2/events.proto";
+
+// RSVP counts. Latest RSVP per identity. Hosts aren't counted
+message CalendarEventStats {
+  int64 going_count = 1;
+  int64 maybe_count = 2;
+  int64 not_going_count = 3;
+}
+
+// A calendar event with its stats
+message CalendarEventBundle {
+  EventBundle event_bundle = 1;
+  CalendarEventStats stats = 2;
+  // Hosts who have accepted. Includes the creator if they named themselves
+  repeated string confirmed_hosts = 3;
+}
+
+message ListCalendarEventsFilters {
+  // Only events this identity created or is hosting
+  optional string identity = 1;
+  // Only events this identity has been asked to host and hasn't answered
+  optional string awaiting_host = 2;
+  // Only events that finish at or after this time, in ms since the Unix epoch (UTC)
+  optional uint64 ends_after = 3;
+  // Only events that finish before this time, in ms since the Unix epoch (UTC)
+  optional uint64 ends_before = 4;
+}
+
+message ListCalendarEventsRequest {
+  ListCalendarEventsFilters filters = 1;
+  optional PageParams page_params = 2;
+  // Latest first. Soonest first if not set
+  bool latest_first = 3;
+}
+
+message ListCalendarEventsResponse {
+  repeated CalendarEventBundle events = 1;
+  // Identity and profile events for the creators, and any labels
+  repeated EventHint event_hints = 2;
+  optional PageInfo page_info = 3;
+}
+
+message GetCalendarEventRequest {
+  // Key of the calendar event
+  EventKey event_key = 1;
+}
+
+message GetCalendarEventResponse {
+  CalendarEventBundle event = 1;
+  repeated EventHint event_hints = 2;
+}
+
+message ListCalendarEventAttendeesRequest {
+  // Key of the calendar event
+  EventKey event_key = 1;
+  // Only RSVPs with this status
+  optional CalendarEventRsvpStatus status = 2;
+  optional PageParams page_params = 3;
+}
+
+message ListCalendarEventAttendeesResponse {
+  // RSVP events. One per identity, newest first
+  repeated EventBundle event_bundles = 1;
+  // Identity and profile events for the attendees
+  repeated EventHint event_hints = 2;
+  optional PageInfo page_info = 3;
+}
+
+message SearchCalendarEventsRequest {
+  // Matches the title, description and location
+  string query = 1;
+  optional PageParams page_params = 2;
+}
+
+message SearchCalendarEventsResponse {
+  // Most relevant first
+  repeated CalendarEventBundle events = 1;
+  repeated EventHint event_hints = 2;
+  optional PageInfo page_info = 3;
+}
+
+service CalendarService {
+  // List calendar events
+  rpc ListCalendarEvents(ListCalendarEventsRequest) returns (ListCalendarEventsResponse);
+  // Get a calendar event with its stats
+  rpc GetCalendarEvent(GetCalendarEventRequest) returns (GetCalendarEventResponse);
+  // List the RSVPs for a calendar event
+  rpc ListCalendarEventAttendees(ListCalendarEventAttendeesRequest) returns (ListCalendarEventAttendeesResponse);
+  // Search calendar events
+  rpc SearchCalendarEvents(SearchCalendarEventsRequest) returns (SearchCalendarEventsResponse);
+}
