@@ -56,7 +56,6 @@ export function CalendarEventCard({
       {...cardLinkProps}
       disabled={!linkToEvent}
       style={({ hovered, pressed }) => [
-        Atoms.flex_row,
         embedded
           ? [
               Atoms.rounded_md,
@@ -66,6 +65,7 @@ export function CalendarEventCard({
               theme.atoms.outline,
             ]
           : [
+              Atoms.flex_row,
               Atoms.align_center,
               Atoms.gap_md,
               Atoms.px_lg,
@@ -79,7 +79,12 @@ export function CalendarEventCard({
           theme.atoms.box.primary.bg_hover,
       ]}
     >
-      <View style={[Atoms.flex_1, Atoms.gap_xs, embedded && Atoms.p_md]}>
+      <View
+        style={[
+          Atoms.gap_xs,
+          embedded ? [Atoms.p_md, { marginRight: COVER_WIDTH }] : Atoms.flex_1,
+        ]}
+      >
         <Text variant="body" fontWeight="bold" numberOfLines={2}>
           {/* Anchor on web so it can open in a new tab */}
           {eventRoute ? (
@@ -120,7 +125,10 @@ export function CalendarEventCard({
         targetSize={256}
         style={
           embedded
-            ? [Atoms.self_stretch, { width: COVER_WIDTH }]
+            ? [
+                Atoms.absolute,
+                { top: 0, bottom: 0, right: 0, width: COVER_WIDTH },
+              ]
             : {
                 width: COVER_WIDTH,
                 aspectRatio: 16 / 9,
