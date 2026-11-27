@@ -27,13 +27,13 @@ function splitBundle(source: string): string[] {
   return parts;
 }
 
-// Packages the Harbor web export (apps/harbor/dist) into the extension, with
+// Packages the Harbor static web export (apps/harbor/dist-static) into the extension, with
 // its extension page as browser-extension.html. Dev frames the Expo dev server instead.
 const APP_ROUTE = '/anywhere/browser-extension/panel';
 export default defineWxtModule((wxt) => {
   if (wxt.config.command === 'serve') return;
 
-  const exportDir = resolve(wxt.config.root, '../harbor/dist');
+  const exportDir = resolve(wxt.config.root, '../harbor/dist-static');
   const clientDir = join(exportDir, 'client');
   const pagePath = join(exportDir, `server${APP_ROUTE}.html`);
 

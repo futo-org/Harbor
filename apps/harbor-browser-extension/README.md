@@ -30,11 +30,13 @@ sign the extension in.
 
 ## Build
 
-Builds package the Harbor web export into the extension.
+Builds package a static export of the Harbor web app into the extension. The
+web app itself is rendered on request, so this is a separate export
+(`HARBOR_WEB_OUTPUT=static`).
 
 ```sh
 pnpm build:all     # web export, then dist/chrome-mv3, firefox-mv3, safari-mv3
-pnpm build:app     # only the web export (apps/harbor/dist)
+pnpm build:app     # only the web export (apps/harbor/dist-static)
 pnpm build:chrome  # only one browser, from the existing web export
 pnpm zip           # store upload zips for Chrome and Firefox
 ```
@@ -61,7 +63,7 @@ pnpm --filter './packages/js/js-sdk' --filter './packages/js/node-sdk' --filter 
 pnpm --filter @polycentric/react-native-sdk build
 
 cd apps/harbor
-APP_VARIANT=production npx expo export --platform web
+APP_VARIANT=production HARBOR_WEB_OUTPUT=static npx expo export --platform web --output-dir dist-static
 cd ../harbor-browser-extension
 APP_VARIANT=production EXTENSION_VERSION=<version> pnpm exec wxt zip -b firefox --mv3
 ```
