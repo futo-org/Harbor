@@ -529,7 +529,11 @@ export enum ReportCategory {
     /**
      * @generated from protobuf enum value: REPORT_CATEGORY_HATE = 11;
      */
-    HATE = 11
+    HATE = 11,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_SEXUALLY_SUGGESTIVE = 12;
+     */
+    SEXUALLY_SUGGESTIVE = 12
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Content$Type extends MessageType<Content> {
