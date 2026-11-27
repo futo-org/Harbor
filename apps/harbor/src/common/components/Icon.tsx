@@ -89,6 +89,7 @@ export const IconsMap = {
   personOutline: defineIcon(MaterialCommunityIcons, 'account-outline'),
   personRemove: defineIcon(MaterialCommunityIcons, 'account-minus'),
   pound: defineIcon(MaterialCommunityIcons, 'pound'),
+  qrCode: defineIcon(Ionicons, 'qr-code-outline'),
   quote: defineHarborIcon('quote'),
   reaction: defineHarborIcon('reaction'),
   reactionOutline: defineHarborIcon('reactionOutline'),

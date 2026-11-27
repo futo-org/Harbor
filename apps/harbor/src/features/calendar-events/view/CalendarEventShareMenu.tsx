@@ -1,15 +1,13 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
-import { HARBOR_APP_URL, Routes, openCompose } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import PostActionButton from '@/src/features/post/toolbar/PostActionButton';
-import type { CalendarEventData } from '../lib/calendar-event';
-
-/** Public link to the event */
-function eventLink(event: CalendarEventData): string {
-  return `${HARBOR_APP_URL}${Routes.tabs.calendarEvent(event.identity, event.keyFingerprint, event.sequence)}`;
-}
+import {
+  type CalendarEventData,
+  calendarEventLink,
+} from '../lib/calendar-event';
 
 type CalendarEventShareMenuProps = {
   event: CalendarEventData;
@@ -40,7 +38,9 @@ export function CalendarEventShareMenu({ event }: CalendarEventShareMenuProps) {
           <Text fontWeight="bold">Quote</Text>
         </DropdownMenu.Item>
         {canShareUrl ? (
-          <DropdownMenu.Item onPress={() => nativeShareUrl(eventLink(event))}>
+          <DropdownMenu.Item
+            onPress={() => nativeShareUrl(calendarEventLink(event))}
+          >
             <Icon name="share" color="muted" size={16} />
             <Text fontWeight="bold">Share link</Text>
           </DropdownMenu.Item>

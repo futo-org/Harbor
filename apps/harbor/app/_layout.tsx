@@ -146,6 +146,7 @@ function RootStack() {
             options={transparentScreenOptions}
           />
           <Stack.Screen name="verifications/index" />
+          <Stack.Screen name="verifications/create" />
           <Stack.Screen name="events/index" />
         </Stack.Protected>
 
