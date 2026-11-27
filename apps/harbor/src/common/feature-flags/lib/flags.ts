@@ -17,6 +17,11 @@ export const FEATURE_FLAGS = {
     description: 'Comments on any page on the web, in the navigation.',
     default: false,
   },
+  'calendar-events': {
+    label: 'Events',
+    description: 'Calendar events: create them, RSVP, and share them in posts.',
+    default: false,
+  },
 } as const satisfies Record<string, FeatureFlagDefinition>;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

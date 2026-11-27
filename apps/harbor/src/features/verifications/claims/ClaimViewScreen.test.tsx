@@ -204,6 +204,9 @@ jest.mock('../hooks/useClaimVerifiers', () => ({
 
 type SheetProps = { open: boolean; onClose: () => void };
 let mockSheetProps: SheetProps | null = null;
+jest.mock('./ClaimAttendanceEvent', () => ({
+  ClaimAttendanceEvent: () => null,
+}));
 jest.mock('../RequestVerificationSheet', () => ({
   RequestVerificationSheet: (props: SheetProps) => {
     mockSheetProps = props;

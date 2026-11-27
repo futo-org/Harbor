@@ -695,6 +695,8 @@ const CACHE_EVENT_ID_COLUMNS: &[(&str, &str)] = &[
     ("quote", "event_id"),
     ("reply", "event_id"),
     ("profile", "event_id"),
+    ("calendar_event_rsvp", "event_id"),
+    ("calendar_event_rsvp", "on_event"),
 ];
 
 /// Cache tables and the columns in them that hold identities.
@@ -714,10 +716,13 @@ const CACHE_EVENT_IDENTITY_COLUMNS: &[(&str, &str)] = &[
     // (hence it's included above).
 ];
 
-const CONTENT_CHILD_TABLES: [&str; 17] = [
+const CONTENT_CHILD_TABLES: [&str; 20] = [
     "content_attributed_to_reaction",
     "content_blob",
     "content_block",
+    "content_calendar_event",
+    "content_calendar_event_host",
+    "content_calendar_event_rsvp",
     "content_delete",
     "content_follow",
     "content_identity",

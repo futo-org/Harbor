@@ -94,6 +94,8 @@ mod m20261119_000001_fill_content_image_table;
 mod m20261120_000001_deleted_events_table;
 mod m20261120_000002_identity_audit_log;
 mod m20261124_000001_relax_identity_fixing_checks;
+mod m20261124_000002_add_calendar_tables;
+mod m20261125_000001_add_calendar_event_columns;
 
 mod old_entity;
 
@@ -197,6 +199,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20261120_000001_deleted_events_table::Migration),
             Box::new(m20261120_000002_identity_audit_log::Migration),
             Box::new(m20261124_000001_relax_identity_fixing_checks::Migration),
+            Box::new(m20261124_000002_add_calendar_tables::Migration),
+            Box::new(m20261125_000001_add_calendar_event_columns::Migration),
         ]
     }
 }

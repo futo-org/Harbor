@@ -41,6 +41,7 @@ export const IconsMap = {
   basketball: defineIcon(MaterialCommunityIcons, 'basketball'),
   bookOutline: defineIcon(MaterialCommunityIcons, 'book-open-outline'),
   briefcaseOutline: defineIcon(MaterialCommunityIcons, 'briefcase-outline'),
+  calendar: defineIcon(Ionicons, 'calendar-outline'),
   camera: defineIcon(Ionicons, 'camera-outline'),
   cardOutline: defineIcon(
     MaterialCommunityIcons,
@@ -76,6 +77,7 @@ export const IconsMap = {
   infoOutline: defineIcon(MaterialCommunityIcons, 'information-outline'),
   key: defineIcon(MaterialIcons, 'vpn-key'),
   lightbulb: defineIcon(MaterialCommunityIcons, 'lightbulb-variant-outline'),
+  location: defineIcon(Ionicons, 'location-outline'),
   menu: defineIcon(Ionicons, 'menu'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),

@@ -34,12 +34,6 @@ export default function ComposeScreen() {
     ? v2.EventKey.fromBinary(hexToBytes(params.quote))
     : undefined;
 
-  const { post: quote } = usePostById(
-    quoteEventKey?.identity,
-    getKeyFingerprint(quoteEventKey?.signedBy),
-    quoteEventKey?.sequence,
-  );
-
   const { link: attributedTo } = useAnywhereLink(params.about);
 
   const attachOnMount = params.attach === '1';
@@ -56,7 +50,7 @@ export default function ComposeScreen() {
     <ComposeSheet
       onPostCreated={handlePostCreated}
       replyTo={replyTo}
-      quote={quote}
+      quote={quoteEventKey}
       attributedTo={attributedTo}
       attachOnMount={attachOnMount}
     />

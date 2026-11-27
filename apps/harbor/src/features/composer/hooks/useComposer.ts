@@ -49,7 +49,8 @@ export type UseComposerArgs = {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
-  quote?: PostData | null;
+  /** Event to quote. A post, or eg a calendar event */
+  quote?: v2.EventKey;
   /** The page the post is about, if any. */
   attributedTo?: v2.Link;
   /** Open the image picker as soon as the composer mounts. */
@@ -142,8 +143,12 @@ export function useComposer({
   // While the link preview is fetching, hold the Post button so the user
   // either waits for the card (it gets embedded in the signed post) or
   // removes it with the X, which clears the loading state.
+  // Quoting something that isn't a post doesn't need any text
+  const quotesPost = quote?.collection === COLLECTION.FEED;
+  const textOptional = !!quote && !quotesPost;
+
   const canPost =
-    hasDraft &&
+    (hasDraft || textOptional) &&
     text.length <= MAX_POST_LENGTH &&
     !submitting &&
     !linkPreviewLoading;
@@ -192,7 +197,8 @@ export function useComposer({
 
   const handlePost = useCallback(async () => {
     if (submitting) return;
-    if (text.trim().length === 0 && attachments.length === 0) return;
+    if (text.trim().length === 0 && attachments.length === 0 && !textOptional)
+      return;
 
     setError(null);
     setSubmitting(true);
@@ -225,9 +231,7 @@ export function useComposer({
         };
       }
 
-      if (quote) {
-        post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
-      }
+      if (quote) post.quote = quote;
 
       const content = client.contentManager.build({
         oneofKind: 'post',
@@ -250,7 +254,7 @@ export function useComposer({
         identity,
         newBundle,
         replyTo ?? undefined,
-        quote ?? undefined,
+        quotesPost ? quote : undefined,
       );
       if (attributedTo) {
         injectPostIntoFeedCache(
@@ -292,6 +296,8 @@ export function useComposer({
     currentIdentityKey,
     isReply,
     quote,
+    quotesPost,
+    textOptional,
     attributedTo,
     replyTo,
     replyToEventKey,
@@ -327,7 +333,6 @@ export function useComposer({
     attachDisabled,
     currentIdentityKey,
     replyTo,
-    quote,
     // handlers
     handleClose,
     handlePost,
@@ -415,7 +420,7 @@ function injectLocally(
   identity: string,
   bundle: v2.EventBundle,
   replyTo: PostData | undefined,
-  quoted: PostData | undefined,
+  quoted: v2.EventKey | undefined,
 ): void {
   if (replyTo) {
     injectReplyIntoThreadCache(bundle);
@@ -430,10 +435,12 @@ function injectLocally(
   }
 
   if (quoted) {
-    alterPostQuoteCount(threadQueryKey(quoted.id), quoted.id, 1);
-    alterPostQuoteCount(feedQueryKeys.following(identity), quoted.id, 1);
-    alterPostQuoteCount(feedQueryKeys.identity(quoted.identity), quoted.id, 1);
-    alterPostQuoteCount(feedQueryKeys.explore(identity), quoted.id, 1);
+    const quotedId = eventKeyId(quoted);
+
+    alterPostQuoteCount(threadQueryKey(quotedId), quotedId, 1);
+    alterPostQuoteCount(feedQueryKeys.following(identity), quotedId, 1);
+    alterPostQuoteCount(feedQueryKeys.identity(quoted.identity), quotedId, 1);
+    alterPostQuoteCount(feedQueryKeys.explore(identity), quotedId, 1);
   }
 
   injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);
