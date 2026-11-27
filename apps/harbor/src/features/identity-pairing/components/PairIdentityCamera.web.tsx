@@ -2,7 +2,10 @@ import { LinkButton, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
+import {
+  PAIRING_SCAN_COPY,
+  type PairIdentityCameraComponent,
+} from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 
 // Cached promise used by `supportsQrScanning()` so that we only need to check once
@@ -34,6 +37,7 @@ function supportsQrScanning(): Promise<boolean> {
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
+  copy = PAIRING_SCAN_COPY,
 }) => {
   const [input, setInput] = useState('');
   const [useCamera, setUseCamera] = useState(true);
@@ -137,7 +141,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
       {canUseCamera ? (
         <>
           <Text variant="body" color="muted">
-            On your other device, go to Settings {'->'} Pair Identity.
+            {copy.hint}
           </Text>
           <View
             style={[
@@ -173,6 +177,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             input={input}
             setInput={setInput}
             onContinue={handleContinue}
+            copy={copy}
           />
 
           {canProbeCamera ? (

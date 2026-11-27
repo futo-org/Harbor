@@ -7,12 +7,16 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
+import {
+  PAIRING_SCAN_COPY,
+  type PairIdentityCameraComponent,
+} from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 import { useQrCodeOutput } from './useQrCodeOutput';
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
+  copy = PAIRING_SCAN_COPY,
 }) => {
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
@@ -49,7 +53,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
       {canUseCamera && device ? (
         <>
           <Text variant="body" color="muted">
-            On your other device, go to Settings {'->'} Pair Identity.
+            {copy.hint}
           </Text>
           <View
             style={[
@@ -81,6 +85,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             input={input}
             setInput={setInput}
             onContinue={handleContinue}
+            copy={copy}
           />
 
           {device !== undefined && (

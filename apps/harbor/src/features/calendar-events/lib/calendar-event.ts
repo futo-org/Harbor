@@ -10,6 +10,7 @@ import {
   TIME_FORMAT,
   TIME_PATTERN,
 } from '@/src/common/components/form/DateTimeField/lib/date-time-value';
+import { HARBOR_APP_URL, Routes } from '@/src/common/constants';
 import type { v2 } from '@polycentric/react-native-sdk';
 import type { Place } from './geocoder-api';
 
@@ -328,4 +329,9 @@ export function isWebUrl(
   url: string,
 ): url is `https://${string}` | `http://${string}` {
   return /^https?:\/\//i.test(url);
+}
+
+/** Public link to the event */
+export function calendarEventLink(event: CalendarEventData): string {
+  return `${HARBOR_APP_URL}${Routes.tabs.calendarEvent(event.identity, event.keyFingerprint, event.sequence)}`;
 }

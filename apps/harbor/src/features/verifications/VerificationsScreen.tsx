@@ -15,6 +15,7 @@ import { Pressable, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { ClaimList } from './claims/ClaimList';
 import { ClaimCreateSheet } from './claims/create/ClaimCreateSheet';
+import { ClaimLinkHandler } from './claims/link/ClaimLinkHandler';
 import { useClaimsList } from './hooks/useClaimsList';
 import { useRequestedVerifications } from './hooks/useRequestedVerifications';
 
@@ -98,7 +99,14 @@ function OutboxPage({
   );
 }
 
-export default function VerificationsScreen() {
+type VerificationsScreenProps = {
+  /** Open the claim form the URL's claim link asks for */
+  claimLink?: boolean;
+};
+
+export default function VerificationsScreen({
+  claimLink = false,
+}: VerificationsScreenProps) {
   usePageTitle('Verifications');
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -155,6 +163,7 @@ export default function VerificationsScreen() {
           open={createOpen}
           onClose={() => setCreateOpen(false)}
         />
+        {claimLink ? <ClaimLinkHandler /> : null}
       </Screen.PrimaryColumn>
     </Screen>
   );
