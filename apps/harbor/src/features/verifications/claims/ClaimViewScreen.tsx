@@ -1,6 +1,7 @@
 import { Text } from '@/src/common/components';
 import { ImageGrid } from '@/src/common/components/composites';
 import { Screen } from '@/src/common/components/layout';
+import { useHead } from '@/src/common/lib/head/useHead';
 import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { ScrollView } from '@/src/common/components/ScrollView';
@@ -11,12 +12,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
 import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
+import { useVerificationHead } from '@/src/features/verifications/head/useVerificationHead';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { ClaimVerifyActions } from './ClaimVerifyActions';
 import { CLAIM_TYPES } from '../utils/forms';
 import { getPlatformFromClaim } from '../utils/platforms';
+import { ATTENDANCE_SCHEMA_NAME } from '../utils/attendance';
 import { resolveClaimTitle } from '../utils/render';
+import { ClaimAttendanceEvent } from './ClaimAttendanceEvent';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
@@ -59,6 +63,8 @@ export default function ViewClaimScreen() {
     isRefreshing: verifiersRefreshing,
     refresh: refreshVerifiers,
   } = useClaimVerifiers(claim?.id, claim?.schemaName);
+
+  useHead(useVerificationHead(claim, verifiedCount, isLoading));
 
   const { hasWarnContent, warnLabels } = useLabelModeration(claim?.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
@@ -188,6 +194,10 @@ export default function ViewClaimScreen() {
 
                 {isHidden ? null : (
                   <View style={Atoms.gap_lg}>
+                    {claim.schemaName === ATTENDANCE_SCHEMA_NAME ? (
+                      <ClaimAttendanceEvent fields={claim.fields} />
+                    ) : null}
+
                     {bodyFields.map((field) => {
                       const value = field.value.trim();
                       // URL values (e.g. a Platform claim's profile URL) open

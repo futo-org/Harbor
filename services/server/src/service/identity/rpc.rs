@@ -45,7 +45,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<SetBanStatusRequest>,
     ) -> Result<Response<SetBanStatusResponse>, Status> {
-        let ctx = self.ctx.authenticted_rw(&request).await?;
+        let ctx = self.ctx.authenticted_rw2(&request).await?;
         Ok(Response::new(
             set_ban_status::handle(ctx, request.into_inner()).await?,
         ))
@@ -93,9 +93,11 @@ pub fn build_identity_service(
 mod tests {
     use chrono::Utc;
     use entity::{ban, moderator};
+    use polycentric_common::models::protos_v2::PublicKey;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
+    use crate::service::context::RequestContext;
     use crate::service::verifications::rpc::common::tests::ctx;
 
     use super::*;
@@ -244,6 +246,18 @@ mod tests {
     #[tokio::test]
     async fn set_ban_status_rejects_non_moderator() {
         let ctx = ctx_moderator(false).await.test_auth(OTHER).await;
+        let RequestContext {
+            db,
+            proof_cache,
+            kafka_producer,
+            auth,
+        } = ctx;
+        let ctx = RequestContext {
+            db,
+            proof_cache,
+            kafka_producer,
+            auth: auth.with_public_key(PublicKey::default()),
+        };
         let request = SetBanStatusRequest {
             target_identity: "target".to_string(),
             banned: true,

@@ -1,5 +1,6 @@
 use std::future;
 use std::pin::pin;
+use std::sync::Arc;
 use std::task::Poll;
 use std::time::Duration;
 
@@ -16,10 +17,12 @@ use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_layer::Layer;
 
+use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
+use crate::service::notifications::rpc::build_notifications_service;
+use crate::service::proofs::cache::ProofCache;
 use crate::service::server::rpc::ServerConfig;
-use crate::service::{self, notifications::rpc::build_notifications_service};
 
 const HANDLER_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -43,11 +46,12 @@ fn build_reflection_service() -> Result<
 pub fn build_grpc_router(
     db: DatabaseConnection,
     ro_db: DatabaseConnection,
+    proof_cache: Arc<ProofCache>,
     kafka_producer: FutureProducer,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let ctx = ServiceContext::new(db, ro_db, kafka_producer);
+    let ctx = ServiceContext::new(db, ro_db, proof_cache, kafka_producer);
     let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
     let events_service =
         service::events::rpc::build_events_service(ctx.clone());
@@ -63,6 +67,8 @@ pub fn build_grpc_router(
         service::search::rpc::build_search_service(ctx.clone());
     let verifications_service =
         service::verifications::rpc::build_verifications_service(ctx.clone());
+    let calendar_service =
+        service::calendar::rpc::build_calendar_service(ctx.clone());
     let graph_service = service::graph::rpc::build_graph_service(ctx.clone());
     let profile_service =
         service::profile::rpc::build_profile_service(ctx.clone());
@@ -83,6 +89,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(server_info_service))
         .add_service(grpc_web.layer(search_service))
         .add_service(grpc_web.layer(verifications_service))
+        .add_service(grpc_web.layer(calendar_service))
         .add_service(grpc_web.layer(graph_service))
         .add_service(grpc_web.layer(profile_service))
         .add_service(grpc_web.layer(moderation_service))

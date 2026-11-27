@@ -1,7 +1,11 @@
 //! Tests for deleting identities.
 
 use std::slice;
+use std::time::Duration;
 
+use tokio::time::sleep;
+
+use crate::calendar::{counts, get_event, list_attendees};
 use crate::event_sync::{ExpectError, expect_errors};
 use crate::feeds::{
     following_feed, identity_feed, post_thread, recommended_feed, test_get_post,
@@ -13,13 +17,6 @@ use crate::pairing::new_session;
 use crate::search_posts::expect_searched_posts;
 use crate::search_users::expect_searched_users;
 use crate::*;
-
-// TODO: things to fix:
-// * full_resync_after_deletion: not sure what to do yet.
-// * checking followers on deleted identity still returns results.
-// * recommended feed still behaves like the identity wasn't deleted.
-// * getting pairing session currently works for deleted identities.
-// * getting recommended and following feed for a deleted identity succeeds.
 
 #[tokio::test]
 async fn no_more_events() {
@@ -136,7 +133,7 @@ async fn following_excludes_deleted_identities() {
 
     // To deleted: nothing.
     check_following(&mut search, to_delete_identity.clone(), &[]).await;
-    // FIXME: still returns a result.
+    // NOTE: still returns a result, requires pruning (see below).
     //check_followers(&mut search, to_delete_identity.clone(), &[]).await;
     suggest_follow(&to_delete_client, Vec::new(), Vec::new()).await;
     // Other: to deleted shouldn't be returned anywhere.
@@ -167,6 +164,10 @@ async fn following_excludes_deleted_identities() {
         Vec::new(),
     )
     .await;
+
+    prune_identities().await;
+
+    check_followers(&mut search, to_delete_identity.clone(), &[]).await;
 }
 
 #[tokio::test]
@@ -275,7 +276,6 @@ async fn following_feed_excludes_posts_from_deleted_identities() {
 }
 
 #[tokio::test]
-#[ignore = "this fails"]
 async fn following_feed_for_deleted_identity_returns_nothing() {
     let mut follower_client = TestClient::new().await;
     follower_client.post_text("Some text", current_timestamp());
@@ -288,14 +288,17 @@ async fn following_feed_for_deleted_identity_returns_nothing() {
         current_timestamp(),
     );
     to_delete_client.submit_events().await;
-    let to_delete_identity = to_delete_client.identity().to_owned();
 
-    following_feed(&to_delete_identity, &[post_key]).await;
+    following_feed(to_delete_client.identity(), &[post_key]).await;
 
     to_delete_client.delete_self().await;
     no_events(&mut to_delete_client).await;
 
-    following_feed(&to_delete_identity, &[]).await;
+    // The initial soft-delete isn't sufficient to stop the following feed from
+    // working, so we need to actually delete the data.
+    prune_identities().await;
+
+    following_feed(to_delete_client.identity(), &[]).await;
 }
 
 #[tokio::test]
@@ -464,9 +467,7 @@ async fn recommended_feed_excludes_anything_from_deleted_identities() {
     recommended_feed(
         follower_identity,
         &[
-            // FIXME: these posts shouldn't be returned as the follower isn't
-            // connected to other identity (which created these posts) anymore,
-            // as the in between identity has been deleted.
+            // NOTE: these are only removed after a prune (see below).
             post_reply_key,
             post_quote_key,
             post_repost_key,
@@ -474,10 +475,13 @@ async fn recommended_feed_excludes_anything_from_deleted_identities() {
         ],
     )
     .await;
+
+    prune_identities().await;
+
+    recommended_feed(follower_identity, &[]).await;
 }
 
 #[tokio::test]
-#[ignore = "this fails"]
 async fn recommended_feed_for_deleted_identity_returns_nothing() {
     let mut other_client = TestClient::new().await;
     other_client.post_text("Some post", current_timestamp());
@@ -496,6 +500,9 @@ async fn recommended_feed_for_deleted_identity_returns_nothing() {
 
     to_delete_client.delete_self().await;
     no_events(&mut to_delete_client).await;
+
+    // For the feed to stop working the identity needs to be pruned.
+    prune_identities().await;
 
     recommended_feed(to_delete_client.identity(), &[]).await;
 }
@@ -554,7 +561,6 @@ async fn getting_profile_for_deleted_identity_returns_nothing() {
 }
 
 #[tokio::test]
-#[ignore = "this fails"]
 async fn pairing_sessions_are_not_listed_for_deleted_identity() {
     let mut to_delete_client = TestClient::new().await;
     let identity_state = to_delete_client.get_last_event_bundle();
@@ -590,11 +596,44 @@ async fn pairing_sessions_are_not_listed_for_deleted_identity() {
     to_delete_client.delete_self().await;
     no_events(&mut to_delete_client).await;
 
+    // Requires pruning.
+    prune_identities().await;
+
     let status = pairing
         .get_pairing_session(GetPairingSessionRequest { digest_sha256 })
         .await
         .unwrap_err();
     assert_eq!(status.code(), tonic::Code::NotFound);
+}
+
+#[tokio::test]
+async fn calendar_events_exclude_deleted_identities() {
+    let mut host = TestClient::new().await;
+    host.calendar_event_titled("Meetup", 24, current_timestamp());
+    let event_key = host.get_last_event_key();
+    host.submit_events().await;
+
+    let mut attendee = TestClient::new().await;
+    attendee.rsvp(
+        event_key.clone(),
+        CalendarEventRsvpStatus::Going,
+        current_timestamp(),
+    );
+    attendee.submit_events().await;
+
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (1, 0, 0));
+
+    // A deleted attendee no longer counts
+    attendee.delete_self().await;
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (0, 0, 0));
+    assert_eq!(list_attendees(&event_key, None).await, Vec::<String>::new());
+
+    // A deleted host takes their events with them
+    host.delete_self().await;
+    let error = get_event(&event_key).await.unwrap_err();
+    assert_eq!(error.code(), tonic::Code::NotFound);
 }
 
 async fn no_events(client: &mut TestClient) {
@@ -613,4 +652,38 @@ async fn no_events(client: &mut TestClient) {
         .into_inner();
     assert!(response.event_bundles.is_empty());
     assert!(response.event_hints.is_empty());
+}
+
+async fn prune_identities() {
+    let mut i = 0;
+    loop {
+        i += 1;
+
+        let output =
+            run_admin_cli(&["prune-identities", "--grace-period-secs", "0"])
+                .await;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if stdout.contains("skip") {
+            // If we skipped the pruning (e.g. when another process is holding
+            // the lock) we need to try again to ensure the blob(s) the caller
+            // cares about are pruned.
+            sleep(Duration::from_millis(50)).await;
+            continue;
+        }
+
+        if stdout.contains("WARN") || stdout.contains("ERROR") {
+            break;
+        }
+
+        if output.status.success() {
+            return;
+        }
+
+        if i >= 3 {
+            break;
+        }
+    }
+
+    panic!("running admin CLI to prune identities failed");
 }

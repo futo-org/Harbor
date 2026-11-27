@@ -20,6 +20,12 @@ import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileTabs } from './ProfileTabs';
+import { useAuthor } from '@/src/features/profile/head/useAuthor';
+import {
+  PROFILE_VIEWS,
+  type ProfileView,
+  profileHead,
+} from '@/src/features/profile/head';
 import { normalizeAlias } from './alias/helpers';
 import { useAliasResolutionStore } from './alias/useAliasResolutionStore';
 import { useIdentityHandle } from './hooks/useIdentityHandle';
@@ -31,9 +37,15 @@ import {
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { ProfileVerifiesList } from './ProfileVerifiesList';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
 import { truncateText } from '@/src/common/util/truncateText';
 import { isIdentityKey } from '@/src/common/util/isIdentityKey';
+
+const PROFILE_VIEW_BY_FEED: Record<ActiveFeed, ProfileView> = {
+  posts: PROFILE_VIEWS.profile,
+  'verification-claims': PROFILE_VIEWS.verificationClaims,
+  'verification-verifies': PROFILE_VIEWS.verificationVerifies,
+};
 
 /** Page order behind the profile's tab bar. */
 const PROFILE_TABS: readonly ActiveFeed[] = [
@@ -73,11 +85,10 @@ function ProfileScreenContent() {
 
   // The screen's one network fetch; the headers and tabs read the shared cache.
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  const handle = useIdentityHandle(identityKey);
-  usePageTitle(
-    profile.name
-      ? `${truncateText(profile.name, 30)} (${handle.text})`
-      : handle.text,
+  const author = useAuthor(identityKey);
+
+  useHead(
+    author ? profileHead(author, PROFILE_VIEW_BY_FEED[activeFeed]) : null,
   );
 
   const isFocused = useIsFocused();

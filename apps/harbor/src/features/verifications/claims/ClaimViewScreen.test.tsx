@@ -75,6 +75,14 @@ jest.mock('@/src/common/components/ScrollView', () => {
   };
 });
 
+// The document head is a web concern with its own tests.
+jest.mock('@/src/features/verifications/head/useVerificationHead', () => ({
+  useVerificationHead: () => null,
+}));
+jest.mock('@/src/common/lib/head/useHead', () => ({
+  useHead: () => undefined,
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -204,6 +212,9 @@ jest.mock('../hooks/useClaimVerifiers', () => ({
 
 type SheetProps = { open: boolean; onClose: () => void };
 let mockSheetProps: SheetProps | null = null;
+jest.mock('./ClaimAttendanceEvent', () => ({
+  ClaimAttendanceEvent: () => null,
+}));
 jest.mock('../RequestVerificationSheet', () => ({
   RequestVerificationSheet: (props: SheetProps) => {
     mockSheetProps = props;

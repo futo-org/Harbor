@@ -143,10 +143,7 @@ mod tests {
                 blocked: "bob".to_string(),
             }]])
             .into_connection();
-        let kafka_producer = common_kafka::build_producer()
-            .await
-            .expect("failed to build Kafka producer");
-        ServiceContext::new(db.clone(), db, kafka_producer)
+        ServiceContext::new_test(db).await
     }
 
     #[tokio::test]

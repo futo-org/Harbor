@@ -11,13 +11,14 @@ pub struct Model {
     pub id: i64,
     pub identity: String,
     pub action: Action,
+    /// Who performed the action.
+    ///
+    /// `by_identity` and `by_public_key` must be set if this is
+    /// [`PerformedBy::Identity`].
+    pub by: PerformedBy,
     /// Action was performend by the identity.
     ///
     /// This is retrieved from the JWT token's payload "iss" field.
-    ///
-    /// # Notes
-    ///
-    /// At least of the `by_*` fields must be not null.
     pub by_identity: Option<String>,
     /// Action was performend by a public key.
     ///
@@ -40,4 +41,23 @@ pub enum Action {
     Banned = 3,
     /// Identity was unbanned.
     Unbanned = 4,
+    /// The identity's data was removed.
+    DataRemoved = 5,
+}
+
+/// Who performed the action.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "i16", db_type = "SmallInteger")]
+pub enum PerformedBy {
+    /// System (the server) performed the action.
+    System = 1,
+    /// Performed by the admin CLI.
+    AdminCli = 2,
+    /// Performed via the gRPC API by an identity.
+    ///
+    /// See [`by_identity`] and [`by_public_key`] fields.
+    ///
+    /// [`by_identity`]: Model::by_identity
+    /// [`by_public_key`]: Model::by_public_key
+    Identity = 3,
 }

@@ -20,6 +20,7 @@ import {
   routeLabels,
 } from './metrics.js';
 import { platforms } from './platforms/platforms.js';
+import { ensureProfile } from './profile.js';
 import {
   decodeObject,
   handleBinaryOrJson,
@@ -28,12 +29,7 @@ import {
 } from './utility.js';
 import { OAuthVerifier, TextVerifier } from './verifier.js';
 
-import {
-  COLLECTION,
-  type PolycentricClient,
-  SyncStrategy,
-  v2,
-} from '@polycentric/js-sdk';
+import type { PolycentricClient } from '@polycentric/js-sdk';
 import { createPolycentricNodeClient } from '@polycentric/node-sdk';
 
 const oauthSecrets = new Map<
@@ -140,36 +136,6 @@ async function loadClient(): Promise<PolycentricClient> {
   }
 
   return client;
-}
-
-/** Publish the bot's profile (name shown next to its verifications) once. */
-async function ensureProfile(client: PolycentricClient): Promise<void> {
-  if (!client.activeIdentityKey) return;
-  try {
-    const existing = await client.listEvents({
-      identity: client.activeIdentityKey,
-      collection: COLLECTION.PROFILE,
-    });
-    if (existing.length > 0) return;
-
-    const content = v2.Content.create({
-      contentBody: {
-        oneofKind: 'profileUpdate',
-        profileUpdate: {
-          name: process.env.HARBOR_VERIFIER_BOT_PROFILE_NAME || 'Verifier',
-          description:
-            process.env.HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION ||
-            'Automated verifier of platform claims.',
-        },
-      },
-    });
-    await client.createEvent({ collection: COLLECTION.PROFILE, content });
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
-    console.log('Published bot profile');
-  } catch (e) {
-    // Non-fatal: verifying still works, the bot just shows unnamed.
-    console.warn('Failed to publish bot profile:', e);
-  }
 }
 
 (async () => {

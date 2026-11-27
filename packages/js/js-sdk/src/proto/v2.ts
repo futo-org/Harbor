@@ -2,6 +2,9 @@
 // Re-exports the generated protobuf-ts modules as the `v2` namespace.
 
 export * from './polycentric/v2/backup';
+export * from './polycentric/v2/calendar';
+export * from './polycentric/v2/calendar_service';
+export * from './polycentric/v2/calendar_service.client';
 export * from './polycentric/v2/common';
 export * from './polycentric/v2/content';
 export * from './polycentric/v2/content.client';

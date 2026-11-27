@@ -1,11 +1,11 @@
 //! Tests for banned identities.
 
-use std::sync::Once;
 use std::time::Duration;
 
 use tokio::time::sleep;
 
 use crate::blobs::{get_blob, random_image, test_blob_upload};
+use crate::calendar::{counts, get_event, list_attendees};
 use crate::search_users::expect_searched_users;
 use crate::*;
 
@@ -297,6 +297,36 @@ async fn banning_removes_reactions() {
     );
 }
 
+#[tokio::test]
+async fn banning_removes_calendar_events_and_rsvps() {
+    let mut host = TestClient::new().await;
+    host.calendar_event_titled("Meetup", 24, current_timestamp());
+    let event_key = host.get_last_event_key();
+    host.submit_events().await;
+
+    let mut attendee = TestClient::new().await;
+    attendee.rsvp(
+        event_key.clone(),
+        CalendarEventRsvpStatus::Going,
+        current_timestamp(),
+    );
+    attendee.submit_events().await;
+
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (1, 0, 0));
+
+    // A banned attendee no longer counts
+    set_ban_status(attendee.identity(), true).await;
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (0, 0, 0));
+    assert_eq!(list_attendees(&event_key, None).await, Vec::<String>::new());
+
+    // A banned host takes their events with them
+    set_ban_status(host.identity(), true).await;
+    let error = get_event(&event_key).await.unwrap_err();
+    assert_eq!(error.code(), tonic::Code::NotFound);
+}
+
 // TODO: add more tests:
 // repost
 // quote
@@ -348,17 +378,6 @@ async fn set_ban_status(identity: &str, banned: bool) {
 }
 
 async fn prune_blob(blobs: &[Blob]) {
-    // Build the admin CLI tool once and use the created binary below.
-    static BUILD: Once = Once::new();
-    BUILD.call_once(|| {
-        std::process::Command::new("cargo")
-            .args(["build", "--quiet", "--bin", "server"])
-            .current_dir("..")
-            .status()
-            .expect("failed to build server");
-    });
-
-    let mut output;
     let mut i = 0;
     loop {
         i += 1;
@@ -375,20 +394,20 @@ async fn prune_blob(blobs: &[Blob]) {
             return;
         }
 
-        output = tokio::process::Command::new("../../target/debug/server")
-            .args(["prune-blobs", "--grace-period-secs", "0"])
-            .current_dir("..")
-            .stdin(std::process::Stdio::null())
-            .output()
-            .await
-            .expect("failed to prune blobs via admin CLI");
+        let output =
+            run_admin_cli(&["prune-blobs", "--grace-period-secs", "0"]).await;
 
-        if String::from_utf8_lossy(&output.stdout).contains("skip") {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if stdout.contains("skip") {
             // If we skipped the pruning (e.g. when another process is holding
             // the lock) we need to try again to ensure the blob(s) the caller
             // cares about are pruned.
             sleep(Duration::from_millis(50)).await;
             continue;
+        }
+
+        if stdout.contains("WARN") || stdout.contains("ERROR") {
+            break;
         }
 
         if output.status.success() {
@@ -406,12 +425,5 @@ async fn prune_blob(blobs: &[Blob]) {
         }
     }
 
-    use std::io::Write;
-    let stdout = std::io::stdout();
-    let mut stdout = stdout.lock();
-    let stderr = std::io::stderr();
-    let mut stderr = stderr.lock();
-    _ = stdout.write_all(&output.stdout);
-    _ = stderr.write_all(&output.stderr);
-    panic!("running prune blob admin CLI failed");
+    panic!("running admin CLI to prune blobs failed");
 }

@@ -8,6 +8,7 @@ use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
 use crate::service::context::ServiceContext;
+use crate::service::proofs::cache::ProofCache;
 use crate::service::server::rpc::ServerConfig;
 
 mod admin;
@@ -76,6 +77,7 @@ async fn main() {
         Some("prune-content") => admin::prune_content(rest).await,
         Some("sync-blob-index") => admin::sync_blob_index(rest).await,
         Some("prune-blobs") => admin::blob_prune(rest).await,
+        Some("prune-identities") => admin::identities_prune(rest).await,
         Some(other) => {
             // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(
@@ -130,11 +132,14 @@ async fn run_server() {
     let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
-    let cron = cron::start_jobs(db.clone(), filestore.clone());
+    let proof_cache = ProofCache::new();
+    let cron =
+        cron::start_jobs(db.clone(), filestore.clone(), proof_cache.clone());
 
     let grpc_router = build_grpc_router(
         db.clone(),
         ro_db.clone(),
+        proof_cache,
         kafka_producer,
         filestore.clone(),
         server_cfg,
@@ -157,7 +162,7 @@ async fn run_server() {
         tracing::error!(error = %err, "error serving");
     }
 
-    cron.wait().await;
+    cron.cancel_and_wait().await;
     common_telemetry::trace::shutdown();
 }
 
@@ -194,10 +199,11 @@ async fn run_workers(only: Vec<String>) {
             return;
         }
     };
+    let proof_cache = ProofCache::new();
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
-    let ctx = ServiceContext::new(db, ro_db, kafka_producer);
+    let ctx = ServiceContext::new(db, ro_db, proof_cache, kafka_producer);
 
     workers::run_all_workers(ctx, only).await;
     common_telemetry::trace::shutdown();

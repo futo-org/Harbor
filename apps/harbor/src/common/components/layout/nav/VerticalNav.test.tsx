@@ -20,8 +20,12 @@ jest.mock(
 );
 
 let mockAnywhereEnabled = false;
+let mockCalendarEventsEnabled = false;
 jest.mock('@/src/common/feature-flags', () => ({
-  useFeatureFlag: () => mockAnywhereEnabled,
+  useFeatureFlag: (flag: string) =>
+    flag === 'calendar-events'
+      ? mockCalendarEventsEnabled
+      : mockAnywhereEnabled,
 }));
 
 jest.mock('@/src/common/components/Icon', () => ({
@@ -49,6 +53,7 @@ beforeEach(() => {
   mockIdentity = { identityKey: 'me' };
   mockCount = 0;
   mockAnywhereEnabled = false;
+  mockCalendarEventsEnabled = false;
   mockUseUnreadNotificationCount.mockClear();
 });
 
@@ -65,6 +70,22 @@ describe('VerticalNav Anywhere item', () => {
     const { getByTestId } = await render(<VerticalNav />);
 
     expect(getByTestId('nav-Anywhere')).toBeTruthy();
+  });
+});
+
+describe('VerticalNav Events item', () => {
+  it('is left out while its feature flag is off', async () => {
+    const { queryByTestId } = await render(<VerticalNav />);
+
+    expect(queryByTestId('nav-Events')).toBeNull();
+  });
+
+  it('is there once the flag is on', async () => {
+    mockCalendarEventsEnabled = true;
+
+    const { getByTestId } = await render(<VerticalNav />);
+
+    expect(getByTestId('nav-Events')).toBeTruthy();
   });
 });
 

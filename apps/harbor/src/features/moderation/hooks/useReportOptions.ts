@@ -18,6 +18,10 @@ export const REPORT_OPTIONS: ReportOptions = {
     label: 'Violence',
     value: v2.ReportCategory.VIOLENCE,
   },
+  sexuallySuggestive: {
+    label: 'Sexually Suggestive',
+    value: v2.ReportCategory.SEXUALLY_SUGGESTIVE,
+  },
   sexuallyExplicit: {
     label: 'Sexually Explicit',
     value: v2.ReportCategory.SEXUALLY_EXPLICIT,

@@ -24,6 +24,7 @@ export function VerticalNav({ style, showLabels, large }: VerticalNavProps) {
   const iconSize = large ? 28 : 24;
   const { identity } = useCurrentIdentity();
   const anywhereEnabled = useFeatureFlag('anywhere');
+  const calendarEventsEnabled = useFeatureFlag('calendar-events');
   const unreadNotificationsLabel = unreadNotificationsBadgeLabel(
     useUnreadNotificationCount(),
   );
@@ -76,6 +77,16 @@ export function VerticalNav({ style, showLabels, large }: VerticalNavProps) {
             showLabel={showLabels}
             large={large}
           />
+
+          {calendarEventsEnabled && (
+            <NavItem
+              label="Events"
+              icon={<Icon name="calendar" size={iconSize} />}
+              href={Routes.tabs.calendarEvents}
+              showLabel={showLabels}
+              large={large}
+            />
+          )}
 
           {identity.identityKey && (
             <NavItem

@@ -4,14 +4,18 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import ReportSheet from '../../moderation/ReportSheet';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import useClaimActions from '../hooks/useClaimActions';
+import { ClaimLinkShareSheet } from './link/ClaimLinkShareSheet';
+import { claimCloneLink } from './link/lib/claim-clone-link';
+import { claimLinkRoute } from './link/lib/claim-link';
 
-// Overflow menu for a claim: the author can delete it, everyone else can
-// report it.
+// Overflow menu for a claim: anyone can clone it, the author can delete it,
+// everyone else can report it.
 export function ClaimMenu({
   claim,
   icon = 'dotsVertical',
@@ -27,6 +31,8 @@ export function ClaimMenu({
 
   const { deleteAsync } = useClaimActions(claim);
   const [showReportSheet, setShowReportSheet] = useState(false);
+  const [showClone, setShowClone] = useState(false);
+  const cloneLink = useMemo(() => claimCloneLink(claim), [claim]);
 
   const onDeletePress = async () => {
     await new Promise((resolve, reject) => {
@@ -56,6 +62,17 @@ export function ClaimMenu({
           )}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
+          {cloneLink ? (
+            <DropdownMenu.Item
+              onPress={() => setShowClone(true)}
+              testID="claim-clone"
+            >
+              <Icon name="copy" color="muted" size={16} />
+              <Text variant="secondary" fontWeight="bold">
+                Clone
+              </Text>
+            </DropdownMenu.Item>
+          ) : null}
           {isAuthor ? (
             <DropdownMenu.Item onPress={onDeletePress}>
               <Icon name="trashBin" color="danger" size={16} />
@@ -73,6 +90,24 @@ export function ClaimMenu({
           )}
         </DropdownMenu.Content>
       </DropdownMenu>
+
+      {cloneLink ? (
+        <ClaimLinkShareSheet
+          open={showClone}
+          onClose={() => setShowClone(false)}
+          link={cloneLink}
+          title="Clone claim"
+          caption={claim.schemaName}
+          hint="Scanning this opens the same claim for someone else to make."
+          start={{
+            title: 'Clone this claim',
+            onPress: () => {
+              setShowClone(false);
+              router.navigate(claimLinkRoute(cloneLink));
+            },
+          }}
+        />
+      ) : null}
 
       <ReportSheet
         eventId={claim.id}

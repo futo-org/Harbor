@@ -144,6 +144,8 @@ type FormProps = {
     keyFingerprint: string;
     sequence: string;
   }) => void;
+  alsoRequestFrom?: string[];
+  initialValues?: Record<string, string>;
 };
 let mockFormProps: FormProps | null = null;
 jest.mock('./ClaimCreateForm', () => ({
@@ -153,6 +155,25 @@ jest.mock('./ClaimCreateForm', () => ({
   },
 }));
 
+jest.mock('@/src/features/calendar-events/card/CalendarEventCard', () => ({
+  CalendarEventCard: () => null,
+}));
+let mockOnScanned: ((link: unknown) => void) | null = null;
+jest.mock('./ClaimCreateScan', () => ({
+  ClaimCreateScan: ({ onScanned }: { onScanned: (link: unknown) => void }) => {
+    mockOnScanned = onScanned;
+    return null;
+  },
+}));
+jest.mock('./ClaimCreateLinkEvent', () => ({
+  ClaimCreateLinkEvent: () => null,
+}));
+jest.mock('./ClaimCreateEventPicker', () => ({
+  ClaimCreateEventPicker: () => null,
+}));
+jest.mock('./ClaimCreateEventNew', () => ({
+  ClaimCreateEventNew: () => null,
+}));
 jest.mock('./ClaimCreatePlatformPicker', () => ({
   ClaimCreatePlatformPicker: () => null,
 }));
@@ -207,6 +228,15 @@ describe('ClaimCreateSheet without a verifier', () => {
     const screen = await renderSheet();
     expect(screen.getByTestId('sheet-title')).toHaveTextContent(
       'Create a claim',
+    );
+  });
+
+  it('offers attendance claims, which start by choosing the event', async () => {
+    const screen = await renderSheet();
+    await fireEvent.press(screen.getByText('Attendance'));
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent(
+      'Choose the event',
     );
   });
 
@@ -292,5 +322,86 @@ describe('ClaimCreateSheet with a verifier', () => {
 
     await fireEvent.press(screen.getByTestId('sheet-back'));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('ClaimCreateSheet for a calendar event', () => {
+  const calendarEvent = {
+    id: 'ab12',
+    identity: 'alice',
+    keyFingerprint: 'cafe',
+    sequence: '3',
+    title: 'Harbor meetup',
+    startAt: 0,
+    allDay: false,
+    hosts: ['alice', 'me'],
+  };
+
+  it('asks the hosts to verify, but not ourselves', async () => {
+    await render(
+      <ClaimCreateSheet open onClose={onClose} calendarEvent={calendarEvent} />,
+    );
+
+    expect(mockFormProps!.alsoRequestFrom).toEqual(['alice']);
+
+    await act(async () => mockFormProps!.onSubmitted(CLAIM_REF));
+
+    expect(mockToast.success).toHaveBeenCalledWith(
+      'Claim created — verification requested',
+    );
+    // No share prompt, as the hosts have been asked
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.not.stringContaining('requestVerification'),
+    );
+  });
+});
+
+describe('ClaimCreateSheet with a claim link', () => {
+  it('starts on the form with the values filled in', async () => {
+    const { CLAIM_TYPES } = jest.requireActual('../../utils/forms');
+    const claimType = CLAIM_TYPES.find(
+      (type: { name: string }) => type.name === 'Skill',
+    );
+
+    const screen = await render(
+      <ClaimCreateSheet
+        open
+        onClose={onClose}
+        link={{ claimType, values: { skill: 'Welding' } }}
+      />,
+    );
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Skill');
+    expect(mockFormProps?.initialValues).toEqual({ skill: 'Welding' });
+  });
+});
+
+describe('ClaimCreateSheet scanning a code', () => {
+  it('opens the scanned claim prefilled and asks who the code says', async () => {
+    const { CLAIM_TYPES } = jest.requireActual('../../utils/forms');
+    const claimType = CLAIM_TYPES.find(
+      (type: { name: string }) => type.name === 'Skill',
+    );
+
+    const screen = await renderSheet();
+    await fireEvent.press(screen.getByText('Scan a code'));
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Scan a code');
+
+    await act(async () =>
+      mockOnScanned?.({
+        claimType,
+        values: { skill: 'Welding' },
+        requestFrom: 'verifier',
+      }),
+    );
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Skill');
+    expect(mockFormProps?.initialValues).toEqual({ skill: 'Welding' });
+
+    await act(async () => mockFormProps?.onSubmitted(CLAIM_REF));
+
+    expect(mockToast.success).toHaveBeenCalledWith(
+      'Claim created — verification requested',
+    );
   });
 });
