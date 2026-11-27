@@ -1,6 +1,7 @@
 import { Text } from '@/src/common/components';
 import { ImageGrid } from '@/src/common/components/composites';
 import { Screen } from '@/src/common/components/layout';
+import { useHead } from '@/src/common/lib/head/useHead';
 import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { ScrollView } from '@/src/common/components/ScrollView';
@@ -11,6 +12,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
 import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
+import { useVerificationHead } from '@/src/features/verifications/head/useVerificationHead';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { ClaimVerifyActions } from './ClaimVerifyActions';
@@ -61,6 +63,8 @@ export default function ViewClaimScreen() {
     isRefreshing: verifiersRefreshing,
     refresh: refreshVerifiers,
   } = useClaimVerifiers(claim?.id, claim?.schemaName);
+
+  useHead(useVerificationHead(claim, verifiedCount, isLoading));
 
   const { hasWarnContent, warnLabels } = useLabelModeration(claim?.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);

@@ -2,6 +2,7 @@ import { IS_STORE_BUILD } from '@/src/common/util/application';
 import { publicEnv } from '@/src/common/util/env';
 
 export const APP_NAME = 'Harbor';
+export const APP_TAGLINE = 'Share to the world, not platforms.';
 
 export const WEB_MAX_CONTENT_WIDTH = 600;
 

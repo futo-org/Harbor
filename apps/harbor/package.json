@@ -15,6 +15,7 @@
     "ios:prod": "CCACHE_BINARY=$(command -v ccache) expo run:ios",
     "web": "APP_VARIANT=dev expo start --web",
     "build:web": "APP_VARIANT=dev expo export --platform web",
+    "build:web:static": "APP_VARIANT=dev HARBOR_WEB_OUTPUT=static expo export --platform web --output-dir dist-static",
     "serve:web": "PORT=8081 node server.js",
     "test": "jest",
     "test:ci": "jest --reporters=default --reporters=jest-junit",

@@ -7,7 +7,7 @@
     "dev:chrome": "APP_VARIANT=dev wxt",
     "dev:firefox": "APP_VARIANT=dev wxt -b firefox --mv3",
     "build:all": "pnpm build:app && pnpm build:chrome && pnpm build:firefox && pnpm build:safari",
-    "build:app": "pnpm --filter polycentric-app build:web",
+    "build:app": "pnpm --filter polycentric-app build:web:static",
     "build:chrome": "wxt build",
     "build:firefox": "wxt build -b firefox --mv3",
     "build:safari": "wxt build -b safari --mv3",

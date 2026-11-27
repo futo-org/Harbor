@@ -1,18 +1,13 @@
-import { APP_NAME } from '@/src/common/constants';
-import { isWeb } from '@/src/common/util/platform';
-import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { APP_DESCRIPTION } from '@/src/common/lib/head';
+import { usePathname } from 'expo-router';
+import { useHead } from '@/src/common/lib/head/useHead';
 
 /**
- * Names the browser tab when the screen gains focus, e.g. "Explore / Harbor".
- * Blur leaves it as is: resetting it would flash the plain app name before
- * the next screen sets its own, so screens without a title keep the last one.
+ * Names the browser tab, e.g. "Settings / Harbor", for a screen with nothing
+ * more to say about itself. Screens with more to describe use `useHead`.
  */
 export function usePageTitle(title: string) {
-  useFocusEffect(
-    useCallback(() => {
-      if (!isWeb) return;
-      document.title = `${title} / ${APP_NAME}`;
-    }, [title]),
-  );
+  const path = usePathname();
+
+  useHead({ title, description: APP_DESCRIPTION, path });
 }

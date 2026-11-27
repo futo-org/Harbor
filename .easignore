@@ -22,6 +22,7 @@ web-build/
 
 # The app's own web export isn't part of the native build.
 apps/harbor/dist/
+apps/harbor/dist-static/
 
 # Test / CI artifacts
 coverage/

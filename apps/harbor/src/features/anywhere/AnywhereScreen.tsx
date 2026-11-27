@@ -7,7 +7,8 @@ import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
+import { anywhereHead } from '@/src/features/anywhere/head';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { Link } from 'expo-router';
@@ -25,7 +26,7 @@ import {
  * most comments.
  */
 export default function AnywhereScreen() {
-  usePageTitle('Anywhere');
+  useHead(anywhereHead);
   const { theme } = useTheme();
   const { pages, isLoading, loadMore, refresh } = useAttributedToFeed();
   const listRef = useRef<ListRef>(null);

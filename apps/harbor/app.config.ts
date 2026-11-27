@@ -14,6 +14,9 @@ const VARIANT = process.env.APP_VARIANT ?? 'production';
 // Play App Signing uses a different certificate, so a sideloaded APK
 // can never install over them.
 const DISTRIBUTION = process.env.APP_DISTRIBUTION ?? 'apk';
+// 'server' | 'static'. See `web.output` below.
+const WEB_OUTPUT =
+  process.env.HARBOR_WEB_OUTPUT === 'static' ? 'static' : 'server';
 const IS_DEV = VARIANT === 'dev';
 const IS_STAGING = VARIANT === 'staging';
 
@@ -67,9 +70,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'default',
   scheme: SCHEME,
   web: {
-    // Prerendered at export, as in SDK 57: server.js patches the exported
-    // HTML at startup, which per-request SSR (`server`) wouldn't produce.
-    output: 'static',
+    // Rendered on request, so each URL is served with its own metadata
+    // (`generateMetadata` in the routes). The browser extension packages
+    // exported HTML, so its build asks for `static`.
+    output: WEB_OUTPUT,
   },
   userInterfaceStyle: 'automatic',
   ios: {

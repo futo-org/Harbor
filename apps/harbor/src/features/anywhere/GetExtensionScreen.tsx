@@ -6,7 +6,8 @@ import {
   ScreenHeader,
   Text,
 } from '@/src/common/components';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
+import { anywhereBrowserExtensionHead } from '@/src/features/anywhere/head';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { ScrollView, View } from 'react-native';
@@ -30,7 +31,7 @@ const STORES: { browser: string; store: string; url?: string }[] = [
 
 /** Where to get the browser extension for each browser. */
 export default function GetExtensionScreen() {
-  usePageTitle('Browser extension');
+  useHead(anywhereBrowserExtensionHead);
   const { theme } = useTheme();
   const homeRoute = useAnywhereHomeRoute();
 

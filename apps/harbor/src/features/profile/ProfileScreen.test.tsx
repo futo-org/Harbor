@@ -18,6 +18,13 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: jest.fn() }),
 }));
 
+// The document head is a web concern with its own tests.
+jest.mock('@/src/features/profile/head/useAuthor', () => ({
+  useAuthor: () => null,
+}));
+jest.mock('@/src/common/lib/head/useHead', () => ({
+  useHead: () => undefined,
+}));
 jest.mock('./hooks/useProfile', () => ({ useProfile: jest.fn() }));
 // The hook has its own tests; here it only decides routing.
 jest.mock('./hooks/useIdentityHandle', () => ({

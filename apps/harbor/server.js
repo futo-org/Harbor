@@ -1,25 +1,29 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { createServer } = require('node:http');
-const { createRequestHandler } = require('expo-server/vendor/http');
+const { createRequestHandler } = require('expo-server/adapter/http');
 const {
+  appLinks,
   buildAppleAppSiteAssociation,
   buildAssetLinks,
   buildPolycentricAliases,
 } = require('./appLinks');
 
 const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
+const SERVER_DIR = path.join(__dirname, 'dist', 'server');
+// Renders each page on request (`web.output: 'server'`)
 const handler = createRequestHandler({
-  build: path.join(__dirname, 'dist', 'server'),
+  build: SERVER_DIR,
+  environment: process.env.NODE_ENV,
 });
 const port = process.env.PORT || 8080;
 
 // Any EXPO_PUBLIC_* set on the container overrides the baked-in value.
 const runtimeEnv = {};
 for (const [key, value] of Object.entries(process.env)) {
-  if (key.startsWith('EXPO_PUBLIC_')) runtimeEnv[key] = value;
+  if (key.startsWith('EXPO_PUBLIC_') && value) runtimeEnv[key] = value;
 }
-// SSR reads the same global.
+// SSR reads the same global, and +html.tsx hands it to the client.
 globalThis.__HARBOR_ENV__ = runtimeEnv;
 
 // One web image serves every environment, so staging icons are served on its
@@ -36,27 +40,15 @@ const assetsBaseUrl = (process.env.HARBOR_STATIC_ASSETS_URL ?? '').replace(
   '',
 );
 
-// Substitute the runtime env into the +html.tsx script of every exported
-// HTML template. Matches the whole assignment, so restarts re-patch.
-const DIST_DIR = path.join(__dirname, 'dist');
-for (const entry of fs.readdirSync(DIST_DIR, {
-  recursive: true,
-  withFileTypes: true,
-})) {
-  if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
-  const file = path.join(entry.parentPath, entry.name);
-  const html = fs.readFileSync(file, 'utf8');
-  let patched = html.replace(
-    /globalThis\.__HARBOR_ENV__ = [^<]*/,
-    () => `globalThis.__HARBOR_ENV__ = ${JSON.stringify(runtimeEnv)};`,
+// Point the pages' js and css at the assets base URL. Matches root-relative
+// paths only, so restarts don't re-patch.
+if (assetsBaseUrl) {
+  const manifestFile = path.join(SERVER_DIR, '_expo', 'routes.json');
+  const manifest = fs.readFileSync(manifestFile, 'utf8');
+  fs.writeFileSync(
+    manifestFile,
+    manifest.replace(/"\/(_expo|assets)\//g, `"${assetsBaseUrl}/$1/`),
   );
-  if (assetsBaseUrl) {
-    patched = patched.replace(
-      /(src|href)="\/(_expo|assets)\//g,
-      `$1="${assetsBaseUrl}/$2/`,
-    );
-  }
-  if (patched !== html) fs.writeFileSync(file, patched);
 }
 
 const MIME_TYPES = {
@@ -146,8 +138,40 @@ function serveStatic(req, res, next) {
   });
 }
 
+// Personal or account-only screens
+const PRIVATE_PATHS = [
+  '/feed',
+  '/notifications',
+  '/profile',
+  '/claims',
+  '/verifications',
+  '/events',
+  '/search',
+  '/explore/search',
+  '/settings',
+  '/moderation',
+  '/oauth',
+  '/intent',
+  '/login',
+  '/signup',
+  '/anywhere/browser-extension/panel',
+  '/_sitemap',
+];
+
+// Search engines only get production's public screens
+function isIndexable(req) {
+  const urlPath = req.url.split('?')[0];
+  const isPrivate = PRIVATE_PATHS.some(
+    (privatePath) =>
+      urlPath === privatePath || urlPath.startsWith(`${privatePath}/`),
+  );
+
+  return req.headers.host === appLinks.production.host && !isPrivate;
+}
+
 createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
+  if (!isIndexable(req)) res.setHeader('X-Robots-Tag', 'noindex');
   serveVersion(req, res, () => {
     serveAppLinkFile(req, res, () => {
       serveStatic(req, res, () => {

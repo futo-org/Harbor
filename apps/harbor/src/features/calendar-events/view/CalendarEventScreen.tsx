@@ -3,7 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
@@ -12,6 +12,7 @@ import { CalendarEventActionBar } from './CalendarEventActionBar';
 import { CalendarEventDetails } from './CalendarEventDetails';
 import { CalendarEventMenu } from './CalendarEventMenu';
 import { useCalendarEventById } from '../hooks/useCalendarEventById';
+import { useCalendarEventHead } from '@/src/features/calendar-events/head/useCalendarEventHead';
 
 export default function CalendarEventScreen() {
   const {
@@ -30,7 +31,7 @@ export default function CalendarEventScreen() {
     /^\d+$/.test(sequence) ? BigInt(sequence) : undefined,
   );
 
-  usePageTitle(event?.title ?? 'Event');
+  useHead(useCalendarEventHead(event, isLoading));
 
   return (
     <Screen>

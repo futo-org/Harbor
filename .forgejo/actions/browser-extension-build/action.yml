@@ -19,12 +19,14 @@ runs:
       working-directory: apps/harbor
       env:
         APP_VARIANT: ${{ inputs.variant }}
+        # The extension packages exported HTML; the web app renders on request.
+        HARBOR_WEB_OUTPUT: static
       run: |
         VERSION="$(node ../../tools/expo/resolve-version.js)"
         # Up to four numbers; the run number keeps each build above the last.
         echo "extension_version=${VERSION%%-*}.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
         export APP_VERSION="$VERSION+$(echo "$GITHUB_SHA" | cut -c1-8)"
-        npx expo export --platform web
+        npx expo export --platform web --output-dir dist-static
     - name: Build the extensions
       shell: bash
       working-directory: apps/harbor-browser-extension

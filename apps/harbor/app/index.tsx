@@ -1,3 +1,4 @@
+import { homeMetadata } from '@/src/features/feed/head/metadata.server';
 import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
@@ -33,10 +34,12 @@ export default function IndexScreen() {
   if (!currentIdentity) {
     // Web lands on the explore feed
     if (isWeb) {
-      return <ExploreScreen />;
+      return <ExploreScreen isHome />;
     }
     return <OnboardingWelcomeScreen />;
   }
 
   return <DismissRedirect href={Routes.tabs.feed.index as Href} />;
 }
+
+export const generateMetadata = homeMetadata;
