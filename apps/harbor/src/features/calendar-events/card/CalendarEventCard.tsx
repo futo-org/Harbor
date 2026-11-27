@@ -100,7 +100,7 @@ export function CalendarEventCard({
         </DetailLine>
         {location ? (
           <DetailLine icon="location">
-            {linkToEvent && point ? (
+            {embedded && linkToEvent && point ? (
               <InlineLink href={mapUrl(point)} target="_blank">
                 {location}
               </InlineLink>
