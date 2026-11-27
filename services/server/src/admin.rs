@@ -1,9 +1,10 @@
 //! Operator commands.
 
+use std::cmp::min;
 use std::time::Duration;
 
 use crate::config;
-use crate::cron::{blob_index, blob_prune};
+use crate::cron::{Cron, blob_index, blob_prune, identity_prune};
 use crate::db::DbConn;
 use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
@@ -11,11 +12,13 @@ use crate::service::content::content_filestore::{
 };
 use crate::service::identity::repository::Query;
 use crate::service::identity::service as identity_service;
+use crate::service::proofs::cache::ProofCache;
 
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
        server prune-content [--yes]
        server sync-blob-index
-       server prune-blobs [--dry-run] [--grace-period-secs <secs>]";
+       server prune-blobs [--dry-run] [--grace-period-secs <secs>]
+       server prune-identities [--dry-run] [--grace-period-secs <secs>]";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
@@ -73,6 +76,8 @@ pub async fn delete_events(args: Vec<String>) {
             filestore.as_ref(),
             None,
             &identities[0],
+            identity_service::PerformedBy::AdminCli,
+            !yes, /* Dry run. */
         )
         .await
         .expect("failed to delete events"),
@@ -167,12 +172,64 @@ pub async fn blob_prune(args: Vec<String>) {
     }
 }
 
-/// No statement timeout: finding a key's identities scans every event.
-async fn connect() -> DbConn {
-    let pool = build_db_clients(true, None, None)
+pub async fn identities_prune(args: Vec<String>) {
+    let mut grace_period = config::get().blob_prune_grace;
+    let mut dry_run = false;
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        match &*arg {
+            "--dry-run" => dry_run = true,
+            "--grace-period-secs" => {
+                if let Some(arg) = args.next() {
+                    match arg.parse() {
+                        Ok(value) => grace_period = Duration::from_secs(value),
+                        Err(err) => {
+                            eprintln!(
+                                "failed to parse argument to --grace-period: {err}"
+                            );
+                            return;
+                        }
+                    }
+                } else {
+                    eprintln!("missing argument to --grace-period");
+                    return;
+                }
+            }
+            arg => {
+                eprintln!("unexpected argument '{arg}'");
+                return;
+            }
+        }
+    }
+
+    let cron = Cron::new();
+    let pool = db_pool().await;
+    let Some(filestore) = filestore().await else {
+        return;
+    };
+    identity_prune::run(
+        &cron,
+        pool,
+        filestore,
+        ProofCache::new(),
+        grace_period,
+        min(config::get().database_max_connections as usize, 50),
+        dry_run,
+    )
+    .await;
+    cron.close_and_wait().await;
+}
+
+async fn db_pool() -> sea_orm::DatabaseConnection {
+    build_db_clients(true, None, None)
         .await
         .expect("failed to connect to database")
-        .0;
+        .0
+}
+
+/// No statement timeout: finding a key's identities scans every event.
+async fn connect() -> DbConn {
+    let pool = db_pool().await;
     DbConn::from_pool(&pool)
         .await
         .expect("failed to connect to database")

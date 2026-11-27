@@ -270,6 +270,7 @@ if [ "$CI_MODE" = true ]; then
   PG_IP="$(docker inspect -f '{{(index .NetworkSettings.Networks "'harbor_default'").IPAddress}}' harbor-postgres-1 2>/dev/null)"
   export HARBOR_DATABASE_URL="postgres://postgres:testing@${PG_IP}:5432"
   export HARBOR_DATABASE_URL_RO="postgres://postgres:testing@${PG_IP}:5432?options=-c%20default_transaction_read_only=on"
+  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
 
   # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
   cargo nextest run -P ci -p integration-tests --no-fail-fast 2>&1

@@ -413,7 +413,7 @@ impl MessageHandler for NotificationWorker {
         tracing::info!(
             worker = Self::NAME,
             notifications = ?kinds_and_recipients,
-            latency_ms = start.elapsed().as_millis() as u64,
+            latency = ?start.elapsed(),
             "created notification"
         );
         Outcome::Commit
@@ -805,14 +805,7 @@ mod tests {
     }
 
     async fn worker(db: DatabaseConnection) -> NotificationWorker {
-        let kafka_producer = common_kafka::build_producer()
-            .await
-            .expect("failed to build Kafka producer");
-        NotificationWorker::new(ServiceContext::new(
-            db.clone(),
-            db,
-            kafka_producer,
-        ))
+        NotificationWorker::new(ServiceContext::new_test(db).await)
     }
 
     fn pending(to_identity: &str) -> PendingNotification {

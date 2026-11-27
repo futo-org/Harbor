@@ -1,9 +1,12 @@
+use std::time::Duration;
+
 use ::entity::{ban, content, event, identity_audit_log, moderator};
 use polycentric_common::models::collections;
+use sea_orm::sea_query::{Expr, SelectStatement};
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;
-use crate::db::{Connection, DbTx};
+use crate::db::{Connection, DbTx, interval};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
@@ -211,6 +214,66 @@ impl Query {
             .all(db)
             .await
     }
+
+    /// Returns identities that have data that needs to be pruned.
+    #[tracing::instrument(skip_all)]
+    pub async fn identities_to_be_pruned<C: Connection>(
+        db: &mut C,
+        grace_period: Duration,
+    ) -> Result<Vec<String>, DbErr> {
+        let mut query = SelectStatement::new();
+        query
+            .expr(Expr::col(
+                identity_audit_log::Column::Identity.as_column_ref(),
+            ))
+            .from(identity_audit_log::Entity)
+            // Only deleted action.
+            .and_where(
+                Expr::col(identity_audit_log::Column::Action.as_column_ref())
+                    .eq(Expr::Constant(
+                        identity_audit_log::Action::Deleted.into(),
+                    )),
+            )
+            // Grace period has passed.
+            .and_where(
+                Expr::col(
+                    identity_audit_log::Column::Timestamp.as_column_ref(),
+                )
+                .lte(Expr::current_timestamp().sub(interval(grace_period))),
+            )
+            // Data hasn't been removed later.
+            .and_where(Expr::not_exists({
+                let mut q = SelectStatement::new();
+                const DATA_REMOVED_AUDIT_LOG: &str = "data_removed_audit_log";
+                q.expr(Expr::Constant(true.into()))
+                    .from_as(identity_audit_log::Entity, DATA_REMOVED_AUDIT_LOG)
+                    .and_where(
+                        Expr::col((
+                            DATA_REMOVED_AUDIT_LOG,
+                            identity_audit_log::Column::Action,
+                        ))
+                        .eq(Expr::Constant(
+                            identity_audit_log::Action::DataRemoved.into(),
+                        )),
+                    )
+                    .and_where(
+                        Expr::col((
+                            DATA_REMOVED_AUDIT_LOG,
+                            identity_audit_log::Column::Identity,
+                        ))
+                        .eq(Expr::col(
+                            identity_audit_log::Column::Identity
+                                .as_column_ref(),
+                        )),
+                    );
+                q
+            }));
+        db.query_all(&query)
+            .await?
+            .into_iter()
+            .map(|row| row.try_get_by(0))
+            .collect()
+    }
 }
 
 pub struct Mutation;
@@ -267,12 +330,16 @@ impl Mutation {
         // Collect the events and content we're going to delete this batch.
         let res = db
             .execute_raw(Statement::from_sql_and_values(
-                DbBackend::Postgres,
-                "CREATE TEMP TABLE erase_events ON COMMIT DROP AS
-                 SELECT id
-                 FROM events
-                 WHERE events.identity = $1
-                 LIMIT $2",
+                DbBackend::Postgres, "
+                CREATE TEMP TABLE erase_events ON COMMIT DROP AS (
+                  SELECT *
+                  FROM (
+                    SELECT id FROM events WHERE events.identity = $1
+                    UNION ALL
+                    SELECT id FROM deleted_event WHERE deleted_event.identity = $1
+                  )
+                  LIMIT $2
+                )",
                 [identity.into(), limit.into()],
             ))
             .await?;
@@ -394,14 +461,29 @@ impl Mutation {
         db: &mut C,
         identity: String,
         action: identity_audit_log::Action,
-        caller_identity: Option<String>,
-        caller_public_key: Option<String>,
+        by: PerformedBy,
     ) -> Result<(), DbErr> {
-        debug_assert!(caller_identity.is_some() || caller_public_key.is_some());
+        let (by, caller_identity, caller_public_key) = match by {
+            PerformedBy::System => {
+                (identity_audit_log::PerformedBy::System, None, None)
+            }
+            PerformedBy::AdminCli => {
+                (identity_audit_log::PerformedBy::AdminCli, None, None)
+            }
+            PerformedBy::Identity {
+                identity,
+                public_key,
+            } => (
+                identity_audit_log::PerformedBy::Identity,
+                Some(identity),
+                Some(public_key),
+            ),
+        };
         let model = identity_audit_log::ActiveModel {
             id: ActiveValue::NotSet,
             identity: ActiveValue::Set(identity),
             action: ActiveValue::Set(action),
+            by: ActiveValue::Set(by),
             by_identity: ActiveValue::Set(caller_identity),
             by_public_key: ActiveValue::Set(caller_public_key),
             timestamp: ActiveValue::NotSet,
@@ -413,6 +495,16 @@ impl Mutation {
     }
 }
 
+/// See [`identity_audit_log::PerformedBy`].
+pub(crate) enum PerformedBy {
+    System,
+    AdminCli,
+    Identity {
+        identity: String,
+        public_key: String,
+    },
+}
+
 /// Deletes the events listed in the `erase_events` temp table, the cache
 /// rows and tallies derived from them, and the content only they used.
 #[tracing::instrument(skip_all)]
@@ -421,9 +513,16 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
         "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
          SELECT DISTINCT content.id
          FROM erase_events
-         INNER JOIN events ON events.id = erase_events.id
-         INNER JOIN content ON events.content_digest_type = content.digest_type
-           AND events.content_digest_bytes = content.digest_bytes",
+         LEFT JOIN events ON events.id = erase_events.id
+         LEFT JOIN deleted_event ON deleted_event.id = erase_events.id
+         INNER JOIN content ON
+           (
+               events.content_digest_type = content.digest_type
+               AND events.content_digest_bytes = content.digest_bytes
+           ) OR (
+               deleted_event.content_digest_type = content.digest_type
+               AND deleted_event.content_digest_bytes = content.digest_bytes
+           )",
     )
     .await?;
     db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
@@ -551,8 +650,12 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     .await?;
 
     // Actually delete the events.
-    let events = db
+    let mut events = db
         .execute_unprepared("DELETE FROM events USING erase_events WHERE events.id = erase_events.id")
+        .await?
+        .rows_affected();
+    events += db
+        .execute_unprepared("DELETE FROM deleted_event USING erase_events WHERE deleted_event.id = erase_events.id")
         .await?
         .rows_affected();
 
@@ -560,10 +663,20 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     // above.
     db.execute_unprepared(
         "DELETE FROM erase_content
-             USING content, events
-             WHERE content.id = erase_content.id
-               AND events.content_digest_type = content.digest_type
-               AND events.content_digest_bytes = content.digest_bytes",
+        USING content
+        WHERE content.id = erase_content.id AND (
+          EXISTS (
+            SELECT TRUE
+            FROM events
+            WHERE events.content_digest_type = content.digest_type
+              AND events.content_digest_bytes = content.digest_bytes
+          ) OR EXISTS (
+            SELECT TRUE
+            FROM deleted_event
+            WHERE deleted_event.content_digest_type = content.digest_type
+              AND deleted_event.content_digest_bytes = content.digest_bytes
+          )
+        )",
     )
     .await?;
     let (content, blobs) = delete_content_rows(db).await?;
@@ -615,9 +728,17 @@ const CACHE_EVENT_ID_COLUMNS: &[(&str, &str)] = &[
 const CACHE_EVENT_IDENTITY_COLUMNS: &[(&str, &str)] = &[
     ("notification", "from_identity"),
     ("notification", "to_identity"),
+    ("notification_read_marker", "identity"),
     ("moderator", "identity"),
     ("pairing_session", "issuer_identity"),
     ("pairing_session_claimer", "issuer_identity"),
+    ("follow", "followee"),
+    // NOTE: not including the ban or identity_audit_log tables here, we want to
+    // keep that.
+    // NOTE: for the profile, quote, reaction, reply and repost table the rows
+    // are deleted using the event id. This also true for identities in the
+    // follower column of the follow table, but not for the followee column
+    // (hence it's included above).
 ];
 
 const CONTENT_CHILD_TABLES: [&str; 20] = [
@@ -679,7 +800,7 @@ async fn delete_content_rows(
     }
     let content = db
         .execute_unprepared(
-            "DELETE FROM content c USING erase_content x WHERE c.id = x.id",
+            "DELETE FROM content WHERE id IN (SELECT id FROM erase_content)",
         )
         .await?
         .rows_affected();

@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use entity::identity_audit_log;
 use polycentric_common::models::collections;
 use sea_orm::{DbErr, RuntimeErr};
 use tonic::Status;
@@ -21,6 +22,8 @@ use crate::service::identity::repository::{
 };
 use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::{ContentDigest, PublicKey};
+
+pub(crate) use crate::service::identity::repository::PerformedBy;
 
 const ALL_COLLECTIONS: [i32; 8] = [
     collections::IDENTITY,
@@ -39,24 +42,31 @@ const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
 /// and drops its cached chain state. Used by bans and the operator command.
+///
+/// The `by_identity` and `by_public_key` fields are stored in the identity
+/// audit log. One of them must be `Some`.
 pub async fn erase_identity(
     db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
     proof_cache: Option<&ProofCache>,
     identity: &str,
+    by: PerformedBy,
+    dry_run: bool,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
+    let mut tx = db.begin().await?;
     loop {
         let started = Instant::now();
         let mut run = async || {
-            let mut tx = db.begin().await?;
             let batch = IdentityMutation::erase_events_batch(
                 &mut tx,
                 identity,
                 ERASE_BATCH,
             )
             .await?;
-            tx.commit().await?;
+            if !dry_run {
+                tx.commit_and_chain().await?;
+            }
             Ok(batch)
         };
         let batch = retry_deadlocks_inline!(run);
@@ -70,7 +80,7 @@ pub async fn erase_identity(
             events = total.events,
             content = total.content,
             blobs = total.blobs,
-            batch_ms = started.elapsed().as_millis(),
+            elapsed = ?started.elapsed(),
             "erased batch"
         );
 
@@ -79,11 +89,18 @@ pub async fn erase_identity(
         }
     }
 
+    if dry_run {
+        tx.rollback().await?;
+        return Ok(total);
+    } else {
+        tx.commit().await?;
+    }
+
     let mut run = async || {
-        let mut txn = db.begin().await?;
-        IdentityMutation::erase_derived(&mut txn, &[identity.to_string()])
+        let mut tx = db.begin().await?;
+        IdentityMutation::erase_derived(&mut tx, &[identity.to_string()])
             .await?;
-        txn.commit().await
+        tx.commit().await
     };
     retry_deadlocks_inline!(run);
 
@@ -93,6 +110,17 @@ pub async fn erase_identity(
             cache.invalidate_canonical(identity, collection).await;
         }
     }
+
+    if total.events + total.content + total.blobs != 0 {
+        IdentityMutation::audit_action(
+            db,
+            identity.to_owned(),
+            identity_audit_log::Action::DataRemoved,
+            by,
+        )
+        .await?;
+    }
+
     Ok(total)
 }
 

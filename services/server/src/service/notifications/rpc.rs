@@ -107,10 +107,7 @@ mod tests {
     }
 
     async fn ctx(db: sea_orm::DatabaseConnection) -> Arc<ServiceContext> {
-        let kafka_producer = common_kafka::build_producer()
-            .await
-            .expect("failed to build Kafka producer");
-        ServiceContext::new(db.clone(), db, kafka_producer)
+        ServiceContext::new_test(db).await
     }
 
     fn authed<T>(message: T, identity: &str) -> Request<T> {

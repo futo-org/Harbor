@@ -4,8 +4,7 @@
 use ::entity::identity_audit_log;
 use tonic::Status;
 
-use crate::service::auth::AuthenticatedIdentity;
-use crate::service::context::RequestContext;
+use crate::service::context::{AuthenticatedIdentity, RequestContext};
 use crate::service::identity::repository;
 use crate::service::proto::{DeleteIdentityRequest, DeleteIdentityResponse};
 
@@ -31,8 +30,10 @@ pub async fn handle(
         &mut tx,
         ctx.auth.identity.clone(),
         identity_audit_log::Action::Deleted,
-        Some(ctx.auth.identity),
-        Some(ctx.auth.public_key.to_string()),
+        repository::PerformedBy::Identity {
+            identity: ctx.auth.identity,
+            public_key: ctx.auth.public_key.to_string(),
+        },
     )
     .await
     .map_err(|error| {

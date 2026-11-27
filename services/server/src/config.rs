@@ -66,6 +66,8 @@ pub struct Config {
     ///
     /// Defaults to true.
     pub blob_prune_dry_run: bool,
+    /// Grace duration for when a deleted identity's data is not yet deleted.
+    pub identity_prune_grace: Duration,
     /// The commit this server was built from (`HARBOR_COMMIT`), set by the
     /// chart. Served on `/version`. `None` outside the cluster.
     pub commit: Option<String>,
@@ -154,6 +156,12 @@ pub fn init() -> &'static Config {
                 .ok()
                 .and_then(|s| s.trim().parse().ok())
                 .unwrap_or(false),
+            identity_prune_grace: Duration::from_hours(
+                std::env::var("HARBOR_DELETED_IDENTITY_PRUNE_GRACE_HOURS")
+                    .ok()
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(24), // 1 day.
+            ),
             commit: std::env::var("HARBOR_COMMIT")
                 .ok()
                 .map(|s| s.trim().to_string())

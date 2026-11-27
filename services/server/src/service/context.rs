@@ -8,10 +8,10 @@ use sea_orm::DatabaseConnection;
 use tonic::Status;
 
 use crate::db::DbConn;
-use crate::service::auth::{
-    AuthenticatedIdentity, authenticated, authenticated_identity,
-};
+use crate::service::auth::{authenticated, authenticated_identity};
 use crate::service::proofs::cache::ProofCache;
+
+pub(crate) use crate::service::auth::AuthenticatedIdentity;
 
 pub struct ServiceContext {
     /// Read/write database connection pool.
@@ -26,14 +26,26 @@ impl ServiceContext {
     pub fn new(
         db: DatabaseConnection,
         ro_db: DatabaseConnection,
+        proof_cache: Arc<ProofCache>,
         kafka_producer: FutureProducer,
-    ) -> Arc<Self> {
-        Arc::new(Self {
+    ) -> Arc<ServiceContext> {
+        Arc::new(ServiceContext {
             db,
             ro_db,
-            proof_cache: ProofCache::new(),
+            proof_cache,
             kafka_producer,
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn new_test(
+        db: DatabaseConnection,
+    ) -> Arc<ServiceContext> {
+        let kafka_producer = common_kafka::build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        let proof_cache = ProofCache::new();
+        ServiceContext::new(db.clone(), db, proof_cache, kafka_producer)
     }
 
     /// Create a public request context with read-only database access.
@@ -160,6 +172,19 @@ pub(crate) type AuthContext = RequestContext<Identity>;
 /// Authenticated with an identity.
 #[derive(Debug)]
 pub(crate) struct Identity(String);
+
+impl Identity {
+    #[cfg(test)]
+    pub(crate) fn with_public_key(
+        self,
+        public_key: polycentric_common::models::protos_v2::PublicKey,
+    ) -> AuthenticatedIdentity {
+        AuthenticatedIdentity {
+            identity: self.0,
+            public_key,
+        }
+    }
+}
 
 impl std::ops::Deref for Identity {
     type Target = str;
