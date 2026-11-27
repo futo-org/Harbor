@@ -43,6 +43,7 @@ jobs:
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: server server-migration
+          release: true
 
   deploy:
     name: Deploy

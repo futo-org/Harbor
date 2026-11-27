@@ -194,6 +194,7 @@ jobs:
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: server server-migration
+          release: true
 
   server-image:
     name: Build server image

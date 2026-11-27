@@ -7,6 +7,9 @@ inputs:
   artifact:
     description: Artifact name
     default: rust-service-binaries
+  release:
+    desscription: Build with the --release flag
+    default: true
 runs:
   using: composite
   steps:
@@ -22,7 +25,7 @@ runs:
         args=()
         for package in $PACKAGES; do args+=(--package "$package"); done
         install -d stage/out
-        cargo build --release --jobs "$(nproc)" --timings "${args[@]}" --message-format=json-render-diagnostics |
+        cargo build ${{ inputs.release ? '--release' : '' }} --jobs "$(nproc)" --timings "${args[@]}" --message-format=json-render-diagnostics |
           node -e 'require("readline").createInterface({ input: process.stdin }).on("line", (line) => {
             const message = JSON.parse(line);
             if (message.reason === "compiler-artifact" && message.executable) console.log(message.executable);

@@ -43,6 +43,7 @@ jobs:
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: push-notifications-service push-notifications-migration
+          release: true
 
   deploy:
     name: Deploy

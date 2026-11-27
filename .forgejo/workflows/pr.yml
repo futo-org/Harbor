@@ -674,6 +674,7 @@ jobs:
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: ${{ steps.packages.outputs.packages }}
+          release: false
 
   service-images:
     name: ${{ matrix.label }}

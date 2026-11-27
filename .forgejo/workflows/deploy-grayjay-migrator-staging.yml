@@ -44,6 +44,7 @@ jobs:
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: grayjay-migrator grayjay-migrator-migration
+          release: true
 
   deploy:
     name: Deploy
