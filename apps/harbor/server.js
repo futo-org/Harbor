@@ -26,10 +26,6 @@ for (const [key, value] of Object.entries(process.env)) {
 // SSR reads the same global, and +html.tsx hands it to the client.
 globalThis.__HARBOR_ENV__ = runtimeEnv;
 
-// Personal or account-only screens, kept out of search results
-const PRIVATE_PATH =
-  /^\/(feed|notifications|profile|claims|verifications|events|search|explore\/search|settings|moderation|oauth|intent|login\/.+|signup\/.+|anywhere\/browser-extension\/panel|_sitemap)(\/|$)/;
-
 // One web image serves every environment, so staging icons are served on its
 // host, under the usual URLs
 const STAGING_ICON_FILE_BY_URL_PATH = {
@@ -142,15 +138,40 @@ function serveStatic(req, res, next) {
   });
 }
 
+// Personal or account-only screens
+const PRIVATE_PATHS = [
+  '/feed',
+  '/notifications',
+  '/profile',
+  '/claims',
+  '/verifications',
+  '/events',
+  '/search',
+  '/explore/search',
+  '/settings',
+  '/moderation',
+  '/oauth',
+  '/intent',
+  '/login',
+  '/signup',
+  '/anywhere/browser-extension/panel',
+  '/_sitemap',
+];
+
+// Search engines only get production's public screens
+function isIndexable(req) {
+  const urlPath = req.url.split('?')[0];
+  const isPrivate = PRIVATE_PATHS.some(
+    (privatePath) =>
+      urlPath === privatePath || urlPath.startsWith(`${privatePath}/`),
+  );
+
+  return req.headers.host === appLinks.production.host && !isPrivate;
+}
+
 createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
-  // Search engines only get to index production's public screens
-  if (
-    req.headers.host === appLinks.staging.host ||
-    PRIVATE_PATH.test(req.url.split('?')[0])
-  ) {
-    res.setHeader('X-Robots-Tag', 'noindex');
-  }
+  if (!isIndexable(req)) res.setHeader('X-Robots-Tag', 'noindex');
   serveVersion(req, res, () => {
     serveAppLinkFile(req, res, () => {
       serveStatic(req, res, () => {
