@@ -18,7 +18,7 @@ pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --publi
        server prune-content [--yes]
        server sync-blob-index
        server prune-blobs [--dry-run] [--grace-period-secs <secs>]
-       server prune-identities [--grace-period-secs <secs>]";
+       server prune-identities [--dry-run] [--grace-period-secs <secs>]";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
@@ -77,6 +77,7 @@ pub async fn delete_events(args: Vec<String>) {
             None,
             &identities[0],
             identity_service::PerformedBy::AdminCli,
+            !yes, /* Dry run. */
         )
         .await
         .expect("failed to delete events"),
@@ -173,9 +174,11 @@ pub async fn blob_prune(args: Vec<String>) {
 
 pub async fn identities_prune(args: Vec<String>) {
     let mut grace_period = config::get().blob_prune_grace;
+    let mut dry_run = false;
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match &*arg {
+            "--dry-run" => dry_run = true,
             "--grace-period-secs" => {
                 if let Some(arg) = args.next() {
                     match arg.parse() {
@@ -211,6 +214,7 @@ pub async fn identities_prune(args: Vec<String>) {
         ProofCache::new(),
         grace_period,
         min(config::get().database_max_connections as usize, 50),
+        dry_run,
     )
     .await;
     cron.close_and_wait().await;

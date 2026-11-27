@@ -51,19 +51,22 @@ pub async fn erase_identity(
     proof_cache: Option<&ProofCache>,
     identity: &str,
     by: PerformedBy,
+    dry_run: bool,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
+    let mut tx = db.begin().await?;
     loop {
         let started = Instant::now();
         let mut run = async || {
-            let mut tx = db.begin().await?;
             let batch = IdentityMutation::erase_events_batch(
                 &mut tx,
                 identity,
                 ERASE_BATCH,
             )
             .await?;
-            tx.commit().await?;
+            if !dry_run {
+                tx.commit_and_chain().await?;
+            }
             Ok(batch)
         };
         let batch = retry_deadlocks_inline!(run);
@@ -86,11 +89,18 @@ pub async fn erase_identity(
         }
     }
 
+    if dry_run {
+        tx.rollback().await?;
+        return Ok(total);
+    } else {
+        tx.commit().await?;
+    }
+
     let mut run = async || {
-        let mut txn = db.begin().await?;
-        IdentityMutation::erase_derived(&mut txn, &[identity.to_string()])
+        let mut tx = db.begin().await?;
+        IdentityMutation::erase_derived(&mut tx, &[identity.to_string()])
             .await?;
-        txn.commit().await
+        tx.commit().await
     };
     retry_deadlocks_inline!(run);
 

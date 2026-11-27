@@ -48,6 +48,7 @@ pub async fn handle(
                 identity: moderator.identity.clone(),
                 public_key: moderator.public_key.to_string(),
             },
+            false, /* Dry run. */
         )
         .await
         .map_err(|e| {

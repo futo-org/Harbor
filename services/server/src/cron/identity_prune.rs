@@ -43,6 +43,7 @@ pub(crate) fn start(
                 proof_cache,
                 grace_period,
                 MAX_CONCURRENCY,
+                true, /* Dry run. */
             )
             .await;
             ControlFlow::Continue(DEFAULT_TIME_BETWEEN_CHECKS)
@@ -57,6 +58,7 @@ pub(crate) async fn run(
     proof_cache: Arc<ProofCache>,
     grace_period: Duration,
     max_concurrency: usize,
+    dry_run: bool,
 ) {
     let identities =
         repository::Query::identities_to_be_pruned(&mut db, grace_period)
@@ -71,6 +73,7 @@ pub(crate) async fn run(
             filestore.clone(),
             proof_cache.clone(),
             identity,
+            dry_run,
         ));
     }
 }
@@ -81,6 +84,7 @@ async fn prune_identity(
     filestore: ContentFilestore,
     proof_cache: Arc<ProofCache>,
     identity: String,
+    dry_run: bool,
 ) {
     let start = Instant::now();
     // Get a permit before we start to limit the amount of database connections
@@ -123,6 +127,7 @@ async fn prune_identity(
         Some(&*proof_cache),
         &identity,
         PerformedBy::System,
+        dry_run,
     )
     .await;
     let erased = match result {

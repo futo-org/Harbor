@@ -387,14 +387,14 @@ Any blobs that are uploaded in the last `grace-period-secs` seconds are ignored.
 ### Prune Identities
 
 ```
-prune-identities [--grace-period-secs <secs>]
+prune-identities [--dry-run] [--grace-period-secs <secs>]
 ```
 
 Deletes all data (events, contents, blobs) from identities that have deleted
 themselves.
 
+If `--dry-run` is passed the identities's data is not deleted, but information
+is printed as if the data were deleted.
+
 Any identities that were deleted in the last `grace-period-secs` seconds are
 ignored.
-
-__NOTE__: this command does not have a dry run option. It always deletes
-identities.
