@@ -13,8 +13,7 @@ const url = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/r
 const notes = readFileSync(process.argv[2] ?? 'release_notes.md', 'utf8');
 
 await postToZulip(
-  // #harbor-alerts
-  123,
-  'harbor-releases',
+  'harbor',
+  'releases',
   `:rocket: **[Harbor ${tag}](${url}) released**\n\n${notes.slice(0, 9000)}`,
 );
