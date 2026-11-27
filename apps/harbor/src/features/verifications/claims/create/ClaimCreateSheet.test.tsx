@@ -145,6 +145,7 @@ type FormProps = {
     sequence: string;
   }) => void;
   alsoRequestFrom?: string[];
+  initialValues?: Record<string, string>;
 };
 let mockFormProps: FormProps | null = null;
 jest.mock('./ClaimCreateForm', () => ({
@@ -156,6 +157,16 @@ jest.mock('./ClaimCreateForm', () => ({
 
 jest.mock('@/src/features/calendar-events/card/CalendarEventCard', () => ({
   CalendarEventCard: () => null,
+}));
+let mockOnScanned: ((link: unknown) => void) | null = null;
+jest.mock('./ClaimCreateScan', () => ({
+  ClaimCreateScan: ({ onScanned }: { onScanned: (link: unknown) => void }) => {
+    mockOnScanned = onScanned;
+    return null;
+  },
+}));
+jest.mock('./ClaimCreateLinkEvent', () => ({
+  ClaimCreateLinkEvent: () => null,
 }));
 jest.mock('./ClaimCreateEventPicker', () => ({
   ClaimCreateEventPicker: () => null,
@@ -341,6 +352,56 @@ describe('ClaimCreateSheet for a calendar event', () => {
     // No share prompt, as the hosts have been asked
     expect(mockNavigate).toHaveBeenCalledWith(
       expect.not.stringContaining('requestVerification'),
+    );
+  });
+});
+
+describe('ClaimCreateSheet with a claim link', () => {
+  it('starts on the form with the values filled in', async () => {
+    const { CLAIM_TYPES } = jest.requireActual('../../utils/forms');
+    const claimType = CLAIM_TYPES.find(
+      (type: { name: string }) => type.name === 'Skill',
+    );
+
+    const screen = await render(
+      <ClaimCreateSheet
+        open
+        onClose={onClose}
+        link={{ claimType, values: { skill: 'Welding' } }}
+      />,
+    );
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Skill');
+    expect(mockFormProps?.initialValues).toEqual({ skill: 'Welding' });
+  });
+});
+
+describe('ClaimCreateSheet scanning a code', () => {
+  it('opens the scanned claim prefilled and asks who the code says', async () => {
+    const { CLAIM_TYPES } = jest.requireActual('../../utils/forms');
+    const claimType = CLAIM_TYPES.find(
+      (type: { name: string }) => type.name === 'Skill',
+    );
+
+    const screen = await renderSheet();
+    await fireEvent.press(screen.getByText('Scan a code'));
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Scan a code');
+
+    await act(async () =>
+      mockOnScanned?.({
+        claimType,
+        values: { skill: 'Welding' },
+        requestFrom: 'verifier',
+      }),
+    );
+
+    expect(screen.getByTestId('sheet-title')).toHaveTextContent('Skill');
+    expect(mockFormProps?.initialValues).toEqual({ skill: 'Welding' });
+
+    await act(async () => mockFormProps?.onSubmitted(CLAIM_REF));
+
+    expect(mockToast.success).toHaveBeenCalledWith(
+      'Claim created — verification requested',
     );
   });
 });
