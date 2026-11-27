@@ -650,7 +650,7 @@ CREATE TABLE public.identity_audit_log (
     by_identity text,
     by_public_key text,
     "timestamp" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT action_performed_by CHECK (((by_identity IS NOT NULL) OR (by_public_key IS NOT NULL)))
+    by smallint NOT NULL
 );
 
 

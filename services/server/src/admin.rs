@@ -76,9 +76,7 @@ pub async fn delete_events(args: Vec<String>) {
             filestore.as_ref(),
             None,
             &identities[0],
-            // Don't have any credentials for the admin.
-            Some("admin (cli)".to_owned()),
-            None,
+            identity_service::PerformedBy::AdminCli,
         )
         .await
         .expect("failed to delete events"),

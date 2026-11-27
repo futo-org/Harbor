@@ -30,8 +30,10 @@ pub async fn handle(
         &mut tx,
         ctx.auth.identity.clone(),
         identity_audit_log::Action::Deleted,
-        Some(ctx.auth.identity),
-        Some(ctx.auth.public_key.to_string()),
+        repository::PerformedBy::Identity {
+            identity: ctx.auth.identity,
+            public_key: ctx.auth.public_key.to_string(),
+        },
     )
     .await
     .map_err(|error| {

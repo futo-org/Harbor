@@ -23,6 +23,8 @@ use crate::service::identity::repository::{
 use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::{ContentDigest, PublicKey};
 
+pub(crate) use crate::service::identity::repository::PerformedBy;
+
 const ALL_COLLECTIONS: [i32; 8] = [
     collections::IDENTITY,
     collections::FEED,
@@ -48,8 +50,7 @@ pub async fn erase_identity(
     filestore: Option<&ContentFilestore>,
     proof_cache: Option<&ProofCache>,
     identity: &str,
-    by_identity: Option<String>,
-    by_public_key: Option<String>,
+    by: PerformedBy,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
     loop {
@@ -105,8 +106,7 @@ pub async fn erase_identity(
             db,
             identity.to_owned(),
             identity_audit_log::Action::DataRemoved,
-            by_identity,
-            by_public_key,
+            by,
         )
         .await?;
     }

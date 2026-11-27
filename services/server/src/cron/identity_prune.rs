@@ -13,7 +13,7 @@ use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
 use crate::db::DbConn;
 use crate::service::identity::repository;
-use crate::service::identity::service::erase_identity;
+use crate::service::identity::service::{PerformedBy, erase_identity};
 use crate::service::proofs::cache::ProofCache;
 
 /// Default duration between two checks if any identities need pruning.
@@ -122,9 +122,7 @@ async fn prune_identity(
         Some(&filestore),
         Some(&*proof_cache),
         &identity,
-        // Don't have any credentials.
-        Some("system".to_owned()),
-        None,
+        PerformedBy::System,
     )
     .await;
     let erased = match result {

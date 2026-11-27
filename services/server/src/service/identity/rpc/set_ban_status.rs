@@ -8,7 +8,7 @@ use tonic::Status;
 use crate::service::context::{AuthenticatedIdentity, RequestContext};
 use crate::service::identity::repository;
 use crate::service::identity::rpc::common::require_moderator;
-use crate::service::identity::service::erase_identity;
+use crate::service::identity::service::{PerformedBy, erase_identity};
 use crate::service::moderation::repository as moderation_repo;
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 
@@ -44,8 +44,10 @@ pub async fn handle(
             None,
             Some(&ctx.proof_cache),
             &req.target_identity,
-            Some(moderator.identity.clone()),
-            Some(moderator.public_key.to_string()),
+            PerformedBy::Identity {
+                identity: moderator.identity.clone(),
+                public_key: moderator.public_key.to_string(),
+            },
         )
         .await
         .map_err(|e| {

@@ -461,14 +461,29 @@ impl Mutation {
         db: &mut C,
         identity: String,
         action: identity_audit_log::Action,
-        caller_identity: Option<String>,
-        caller_public_key: Option<String>,
+        by: PerformedBy,
     ) -> Result<(), DbErr> {
-        debug_assert!(caller_identity.is_some() || caller_public_key.is_some());
+        let (by, caller_identity, caller_public_key) = match by {
+            PerformedBy::System => {
+                (identity_audit_log::PerformedBy::System, None, None)
+            }
+            PerformedBy::AdminCli => {
+                (identity_audit_log::PerformedBy::AdminCli, None, None)
+            }
+            PerformedBy::Identity {
+                identity,
+                public_key,
+            } => (
+                identity_audit_log::PerformedBy::Identity,
+                Some(identity),
+                Some(public_key),
+            ),
+        };
         let model = identity_audit_log::ActiveModel {
             id: ActiveValue::NotSet,
             identity: ActiveValue::Set(identity),
             action: ActiveValue::Set(action),
+            by: ActiveValue::Set(by),
             by_identity: ActiveValue::Set(caller_identity),
             by_public_key: ActiveValue::Set(caller_public_key),
             timestamp: ActiveValue::NotSet,
@@ -478,6 +493,16 @@ impl Mutation {
             .await?;
         Ok(())
     }
+}
+
+/// See [`identity_audit_log::PerformedBy`].
+pub(crate) enum PerformedBy {
+    System,
+    AdminCli,
+    Identity {
+        identity: String,
+        public_key: String,
+    },
 }
 
 /// Deletes the events listed in the `erase_events` temp table, the cache
