@@ -413,7 +413,9 @@ pub(crate) mod tests {
 
     #[tokio::test]
     async fn claim_bundles_view_ships_label_hints() {
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([no_rows()])
+            .into_connection();
         let mut ctx = ctx(db)
             .await
             .public_rw(&tonic::Request::new(()))
