@@ -41,6 +41,10 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
+# server.js renders pages with the server the bundle was built for, unless
+# the container sets another
+ARG EXPO_PUBLIC_HARBOR_SEED_SERVERS
+ENV EXPO_PUBLIC_HARBOR_SEED_SERVERS=${EXPO_PUBLIC_HARBOR_SEED_SERVERS}
 
 COPY --from=build /deploy .
 

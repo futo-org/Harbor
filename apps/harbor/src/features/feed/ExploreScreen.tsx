@@ -45,15 +45,20 @@ function ExplorePage({
   return <FeedPage feed={feed} active={active} />;
 }
 
+type ExploreScreenProps = {
+  tab?: ExploreTab;
+  /** Shown as the home page, at `/` */
+  isHome?: boolean;
+};
+
 export default function ExploreScreen({
   tab: routeTab = 'posts',
-}: {
-  tab?: ExploreTab;
-}) {
+  isHome = false,
+}: ExploreScreenProps) {
   const showComposeFab = !isWeb;
   const { theme } = useTheme();
 
-  usePageTitle(routeTab === 'people' ? 'People' : 'Explore');
+  usePageTitle(isHome ? null : routeTab === 'people' ? 'People' : 'Explore');
 
   const ready = useEagerLoad();
   const { tab, onTabPress } = useExploreTab(routeTab);

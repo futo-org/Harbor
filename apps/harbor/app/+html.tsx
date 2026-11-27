@@ -6,7 +6,7 @@ import {
 import { TWEMOJI_WEB_FONT_FILE } from '@/src/common/assets/twemojiFont';
 import { APP_NAME } from '@/src/common/constants';
 import { useServerDocumentContext } from 'expo-router/html';
-import type { PropsWithChildren } from 'react';
+import { Children, type PropsWithChildren, isValidElement } from 'react';
 
 const ROOT_STYLE =
   'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
@@ -27,9 +27,22 @@ const FONT_STYLE = `
 // Switches to dev icons on local builds. Deployed apps use icons defined by server.js
 const ICON_SUFFIX = process.env.APP_VARIANT === 'dev' ? '-dev' : '';
 
+// Any EXPO_PUBLIC_* set on the container, collected by server.js
+function runtimeEnvScript(): string {
+  const { __HARBOR_ENV__: runtimeEnv = {} } = globalThis as {
+    __HARBOR_ENV__?: Record<string, string>;
+  };
+  // `<` escaped so a value can't close the script element
+  const json = JSON.stringify(runtimeEnv).replace(/</g, '\\u003c');
+  return `globalThis.__HARBOR_ENV__ = ${json};`;
+}
+
 export default function Root({ children }: PropsWithChildren) {
   const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } =
     useServerDocumentContext();
+  const hasMetadataTitle = Children.toArray(headNodes).some(
+    (node) => isValidElement(node) && node.type === 'title',
+  );
 
   return (
     <html lang="en" {...htmlAttributes}>
@@ -39,7 +52,8 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
-        <title>{APP_NAME}</title>
+        {/* Routes with `generateMetadata` bring their own */}
+        {hasMetadataTitle ? null : <title>{APP_NAME}</title>}
         <link
           rel="icon"
           href={`/favicon${ICON_SUFFIX}.ico`}
@@ -49,12 +63,9 @@ export default function Root({ children }: PropsWithChildren) {
           rel="apple-touch-icon"
           href={`/apple-touch-icon${ICON_SUFFIX}.png`}
         />
-        {/* Placeholder replaced with runtime env by server.js at startup. */}
         <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input
-          dangerouslySetInnerHTML={{
-            __html: 'globalThis.__HARBOR_ENV__ = "__RUNTIME_ENV__";',
-          }}
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: operator-set env, escaped
+          dangerouslySetInnerHTML={{ __html: runtimeEnvScript() }}
         />
         <style
           id="polycentric-root-reset"

@@ -67,9 +67,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'default',
   scheme: SCHEME,
   web: {
-    // Prerendered at export, as in SDK 57: server.js patches the exported
-    // HTML at startup, which per-request SSR (`server`) wouldn't produce.
-    output: 'static',
+    // Rendered on request, so each URL is served with its own metadata
+    // (`generateMetadata` in the routes)
+    output: 'server',
   },
   userInterfaceStyle: 'automatic',
   ios: {
