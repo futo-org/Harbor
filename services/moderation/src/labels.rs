@@ -69,6 +69,7 @@ pub fn label_from_report_category(category: i32) -> Option<ModerationLabel> {
     match ReportCategory::try_from(category).ok()? {
         ReportCategory::Hate => Some(ModerationLabel::Hate),
         ReportCategory::SelfHarm => Some(ModerationLabel::SelfHarm),
+        ReportCategory::SexuallySuggestive => Some(ModerationLabel::SexuallySuggestive),
         ReportCategory::SexuallyExplicit => Some(ModerationLabel::SexuallyExplicit),
         ReportCategory::Violence => Some(ModerationLabel::Violence),
         ReportCategory::Unspecified
@@ -193,6 +194,10 @@ mod tests {
             (ReportCategory::Hate, ModerationLabel::Hate),
             (ReportCategory::SelfHarm, ModerationLabel::SelfHarm),
             (
+                ReportCategory::SexuallySuggestive,
+                ModerationLabel::SexuallySuggestive,
+            ),
+            (
                 ReportCategory::SexuallyExplicit,
                 ModerationLabel::SexuallyExplicit,
             ),
@@ -237,9 +242,14 @@ mod tests {
     }
 
     #[test]
-    fn sexually_suggestive_is_not_reportable() {
+    fn every_label_is_reportable() {
         let reportable: Vec<ModerationLabel> =
             (0..64).filter_map(label_from_report_category).collect();
-        assert!(!reportable.contains(&ModerationLabel::SexuallySuggestive));
+        for label in ModerationLabel::ALL {
+            assert!(
+                reportable.contains(&label),
+                "{label:?} has no report category"
+            );
+        }
     }
 }

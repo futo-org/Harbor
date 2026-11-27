@@ -68,6 +68,7 @@ Report categories map to labels as follows; every other category is ignored.
 |---|---|
 | `REPORT_CATEGORY_HATE` | `hate` |
 | `REPORT_CATEGORY_SELF_HARM` | `self-harm` |
+| `REPORT_CATEGORY_SEXUALLY_SUGGESTIVE` | `sexually-suggestive` |
 | `REPORT_CATEGORY_SEXUALLY_EXPLICIT` | `sexually-explicit` |
 | `REPORT_CATEGORY_VIOLENCE` | `violence` |
 
