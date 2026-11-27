@@ -1,12 +1,9 @@
-import { cached } from '@/src/common/lib/page-metadata/cached';
-import {
-  type Page,
-  toMetadata,
-  unavailablePage,
-} from '@/src/common/lib/page-metadata/page';
-import { routeParam } from '@/src/common/lib/page-metadata/route-param';
+import { cached } from '@/src/common/lib/head/cached.server';
+import { type Head, toMetadata, unavailableHead } from '@/src/common/lib/head';
+import { routeParam } from '@/src/common/lib/head/route-param.server';
 import type { GenerateMetadataFunction } from 'expo-router/server';
-import { type Author, loadAuthor } from './load-author';
+import type { Author } from './index';
+import { loadAuthor } from './load-author.server';
 
 /** For a post, claim or calendar event: content at /[identityId]/…/[keyFingerprint]/[sequence] */
 export function createAuthoredMetadata(
@@ -16,13 +13,13 @@ export function createAuthoredMetadata(
     keyFingerprint: string,
     sequence: string,
   ) => string,
-  loadPage: (
+  loadHead: (
     author: Author,
     path: string,
     keyFingerprint: string,
     sequence: bigint,
     signal: AbortSignal,
-  ) => Promise<Page | null>,
+  ) => Promise<Head | null>,
 ): GenerateMetadataFunction {
   return async (_request, params) => {
     const identityId = routeParam(params, 'identityId');
@@ -30,13 +27,13 @@ export function createAuthoredMetadata(
     const sequence = routeParam(params, 'sequence');
     const path = toPath(identityId, keyFingerprint, sequence);
 
-    const page = await cached(path, async (signal) => {
+    const head = await cached(path, async (signal) => {
       if (!/^\d{1,19}$/.test(sequence)) return null;
 
       const author = await loadAuthor(identityId, signal);
       if (!author || author.sensitive) return null;
 
-      return loadPage(
+      return loadHead(
         author,
         toPath(author.identity, keyFingerprint, sequence),
         keyFingerprint,
@@ -45,6 +42,6 @@ export function createAuthoredMetadata(
       );
     });
 
-    return toMetadata(page ?? unavailablePage(unavailableTitle, path));
+    return toMetadata(head ?? unavailableHead(unavailableTitle, path));
   };
 }

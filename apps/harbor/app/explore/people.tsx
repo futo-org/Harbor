@@ -1,4 +1,4 @@
-import { explorePeopleMetadata } from '@/src/features/feed/metadata';
+import { explorePeopleMetadata } from '@/src/features/feed/head/metadata.server';
 import ExploreScreen from '@/src/features/feed/ExploreScreen';
 
 export default function ExplorePeopleRoute() {

@@ -1,9 +1,5 @@
-import { toMetadata } from '@/src/common/lib/page-metadata/page';
-import type { Author } from './lib/load-author';
-import { profilePage } from './metadata';
-
-// Reads from the server, through the SDK
-jest.mock('./lib/load-author', () => ({ loadAuthor: jest.fn() }));
+import { toMetadata } from '@/src/common/lib/head';
+import { type Author, profileHead } from './index';
 
 const author: Author = {
   identity: 'a'.repeat(64),
@@ -22,9 +18,9 @@ const author: Author = {
   sensitive: false,
 };
 
-describe('profilePage', () => {
+describe('profileHead', () => {
   it('describes a profile by its bio and follow counts', () => {
-    const metadata = toMetadata(profilePage(author, {}));
+    const metadata = toMetadata(profileHead(author, {}));
 
     expect(metadata.title).toBe('Ada (ada.example) / Harbor');
     expect(metadata.description).toBe(
@@ -38,7 +34,7 @@ describe('profilePage', () => {
   });
 
   it('points a sub-screen at the profile', () => {
-    const page = profilePage(author, { label: 'Followers', noindex: true });
+    const page = profileHead(author, { label: 'Followers', noindex: true });
 
     expect(page.title).toBe('Followers - Ada (ada.example)');
     expect(page.path).toBe('/ada.example');
@@ -46,7 +42,7 @@ describe('profilePage', () => {
   });
 
   it('shows nothing of a profile with a moderation label', () => {
-    const page = profilePage({ ...author, sensitive: true }, {});
+    const page = profileHead({ ...author, sensitive: true }, {});
 
     expect(page.image).toBeNull();
     expect(page.description).toBe('Ada is on Harbor. 1 follower, 3 following.');

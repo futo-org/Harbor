@@ -1,4 +1,4 @@
-import { profileVerificationVerifiesMetadata } from '@/src/features/profile/metadata';
+import { profileVerificationVerifiesMetadata } from '@/src/features/profile/head/metadata.server';
 import ProfileScreen from '@/src/features/profile/ProfileScreen';
 
 // The profile opened on its Verifies tab; `/[identityId]` opens on Posts.

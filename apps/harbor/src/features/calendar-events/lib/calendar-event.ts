@@ -28,6 +28,8 @@ export type CalendarEventData = {
   startAt: number;
   endAt?: number;
   allDay: boolean;
+  /** IANA timezone of the venue */
+  timezone?: string;
   location?: v2.CalendarEventLocation;
   image?: v2.ImageSet;
   /** Named hosts. Empty if there's no host */
@@ -63,6 +65,7 @@ export function decodeCalendarEventBundle(
     startAt: Number(content.startAt),
     endAt: content.endAt === undefined ? undefined : Number(content.endAt),
     allDay: content.allDay,
+    timezone: content.timezone,
     location: content.location,
     image: content.image,
     // Older builds don't have hosts

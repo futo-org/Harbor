@@ -11,7 +11,7 @@ const MAX_DOCUMENT_LENGTH = 1_000_000;
  * to public addresses (a network policy), so this doesn't check where the
  * domain points.
  */
-export async function resolveAliasOnServer(
+export async function resolveAlias(
   alias: string,
   signal: AbortSignal,
 ): Promise<string | null> {

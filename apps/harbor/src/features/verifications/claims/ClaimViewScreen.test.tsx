@@ -75,6 +75,14 @@ jest.mock('@/src/common/components/ScrollView', () => {
   };
 });
 
+// The document head is a web concern with its own tests.
+jest.mock('@/src/features/verifications/head/useVerificationHead', () => ({
+  useVerificationHead: () => null,
+}));
+jest.mock('@/src/common/lib/head/useHead', () => ({
+  useHead: () => undefined,
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));

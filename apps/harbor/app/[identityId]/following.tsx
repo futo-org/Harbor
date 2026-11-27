@@ -1,4 +1,4 @@
-import { profileFollowingMetadata } from '@/src/features/profile/metadata';
+import { profileFollowingMetadata } from '@/src/features/profile/head/metadata.server';
 import FollowListScreen from '@/src/features/follow/FollowListScreen';
 
 export default function FollowingRoute() {

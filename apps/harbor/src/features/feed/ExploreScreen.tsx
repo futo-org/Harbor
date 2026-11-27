@@ -7,7 +7,7 @@ import { TabFilterSheet } from '@/src/common/components/tabs';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
@@ -29,6 +29,11 @@ import {
   useFeedSettingsStore,
 } from './hooks/useFeedSettingsStore';
 import { useExploreTab } from './hooks/useExploreTab';
+import {
+  exploreHead,
+  explorePeopleHead,
+  homeHead,
+} from '@/src/features/feed/head';
 
 function ExplorePage({
   sort,
@@ -58,7 +63,9 @@ export default function ExploreScreen({
   const showComposeFab = !isWeb;
   const { theme } = useTheme();
 
-  usePageTitle(isHome ? null : routeTab === 'people' ? 'People' : 'Explore');
+  useHead(
+    isHome ? homeHead : routeTab === 'people' ? explorePeopleHead : exploreHead,
+  );
 
   const ready = useEagerLoad();
   const { tab, onTabPress } = useExploreTab(routeTab);

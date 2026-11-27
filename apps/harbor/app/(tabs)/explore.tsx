@@ -1,4 +1,4 @@
-import { exploreMetadata } from '@/src/features/feed/metadata';
+import { exploreMetadata } from '@/src/features/feed/head/metadata.server';
 import ExploreScreen from '@/src/features/feed/ExploreScreen';
 
 export default function FeedIndexRoute() {

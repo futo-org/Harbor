@@ -1,7 +1,9 @@
 import { Screen } from '@/src/common/components/layout';
 import { openCompose } from '@/src/common/constants';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { useHead } from '@/src/common/lib/head/useHead';
+import { usePathname } from 'expo-router';
+import { anywhereUrlHead } from '@/src/features/anywhere/head';
 import { isWeb } from '@/src/common/util/platform';
 import { ComposerInput, ComposeSheet } from '@/src/features/composer';
 import FeedList from '@/src/features/feed/FeedList';
@@ -25,8 +27,17 @@ export default function AnywhereUrlScreen() {
     feed.isLoading ? undefined : feed.items.length,
   );
   const [composing, setComposing] = useState<{ attachImage?: boolean }>();
-  const title = link?.title ? `Comments on ${link.title}` : 'Comments';
-  usePageTitle(title);
+  const path = usePathname();
+
+  useHead(
+    url
+      ? anywhereUrlHead({
+          path,
+          target: url.replace(/^https?:\/\//, ''),
+          linkTitle: link?.title,
+        })
+      : null,
+  );
 
   return (
     <Screen>

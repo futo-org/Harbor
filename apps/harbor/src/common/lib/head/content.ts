@@ -17,7 +17,7 @@ export const MODERATION_LABELS: ModerationLabel[] = [
   'violence',
 ];
 
-export type PageImage = {
+export type HeadImage = {
   url: string;
   width: number;
   height: number;
@@ -25,9 +25,9 @@ export type PageImage = {
 };
 
 /** The largest variant of an image, by its public blob URL */
-export function toPageImage(
+export function toHeadImage(
   imageSet: v2.ImageSet | undefined,
-): PageImage | null {
+): HeadImage | null {
   const variants = (imageSet?.images ?? []).filter(
     (image) => image.blob?.digest,
   );
@@ -63,6 +63,13 @@ export function findByKey<K extends ContentKind>(
   return null;
 }
 
+/** Whether any of the label values marks content for a warning */
+export function hasModerationLabelValue(labelValues: string[]): boolean {
+  return labelValues.some((label) =>
+    (MODERATION_LABELS as string[]).includes(label),
+  );
+}
+
 /** Labels events arrive as hints next to the content they label */
 export function hasModerationLabel(
   eventHints: v2.EventHint[],
@@ -73,7 +80,6 @@ export function hasModerationLabel(
       ? (decodeBundle(hint.eventBundle, 'labels')?.content.labelValues ?? [])
       : [],
   );
-  return [...hinted, ...ownLabels].some((label) =>
-    (MODERATION_LABELS as string[]).includes(label),
-  );
+
+  return hasModerationLabelValue([...hinted, ...ownLabels]);
 }

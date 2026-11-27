@@ -1,4 +1,4 @@
-import { homeMetadata } from '@/src/features/feed/metadata';
+import { homeMetadata } from '@/src/features/feed/head/metadata.server';
 import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';

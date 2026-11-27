@@ -1,4 +1,4 @@
-import { toMetadata, unavailablePage } from './page';
+import { toMetadata, unavailableHead } from './index';
 
 describe('toMetadata', () => {
   it('titles the home page with the tagline', () => {
@@ -10,7 +10,7 @@ describe('toMetadata', () => {
   });
 
   it('keeps unavailable content out of search results', () => {
-    const metadata = toMetadata(unavailablePage('Post', '/x/post/y/1'));
+    const metadata = toMetadata(unavailableHead('Post', '/x/post/y/1'));
 
     expect(metadata.title).toBe('Post / Harbor');
     expect(metadata.robots).toEqual({ index: false, follow: true });
