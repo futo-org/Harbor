@@ -7,7 +7,7 @@ import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import type { types, v2 } from '@polycentric/react-native';
+import type { types, v2 } from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
@@ -21,7 +21,8 @@ type ComposeSheetProps = {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
-  quote?: PostData | null;
+  /** Event to quote. A post, or eg a calendar event */
+  quote?: v2.EventKey;
   /** The page the post is about, if any. */
   attributedTo?: v2.Link;
   /** Open the image picker as soon as the composer mounts. */
@@ -78,7 +79,7 @@ export function ComposeSheet({
     <ComposerFields
       isReply={composer.isReply}
       replyTo={composer.replyTo}
-      quote={composer.quote}
+      quote={quote}
       error={composer.error}
       currentIdentityKey={composer.currentIdentityKey}
       placeholder={composer.placeholder}

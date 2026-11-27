@@ -27,6 +27,9 @@
 //!  * [`content_verification_claim`]
 //!  * [`content_verification_verify`]
 //!  * [`content_verification_target`]
+//!  * [`content_calendar_event`]
+//!  * [`content_calendar_event_host`]
+//!  * [`content_calendar_event_rsvp`]
 //!  * [`content_blob`]
 //!  * [`content_image`]
 //!
@@ -52,6 +55,7 @@
 //!  * [`quote`] contains the posts that are quoted by another post.
 //!  * [`reply`] contains the posts that are replied by another post.
 //!  * [`profile`] contains the latest profile information for an identity.
+//!  * [`calendar_event_rsvp`] contains the current RSVPs to calendar events.
 //!
 //! The cache tables represent the current state, meaning that a delete event
 //! will remove it from the cache table, but the original event remains in the
@@ -62,10 +66,14 @@ pub mod attributed_to_reaction_summary;
 pub mod ban;
 pub mod blob_index;
 pub mod block;
+pub mod calendar_event_rsvp;
 pub mod content;
 pub mod content_attributed_to_reaction;
 pub mod content_blob;
 pub mod content_block;
+pub mod content_calendar_event;
+pub mod content_calendar_event_host;
+pub mod content_calendar_event_rsvp;
 pub mod content_delete;
 pub mod content_follow;
 pub mod content_identity;

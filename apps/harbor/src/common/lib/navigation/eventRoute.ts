@@ -1,6 +1,6 @@
 import { Routes } from '@/src/common/constants';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { COLLECTION, type v2 } from '@polycentric/react-native';
+import { COLLECTION, type v2 } from '@polycentric/react-native-sdk';
 import type { Href } from 'expo-router';
 
 /** The parts of an event key that locate an event, for routing. */
@@ -23,6 +23,17 @@ export function eventRoute(key: EventLocation): Href | null {
       const fingerprint = getKeyFingerprint(key.signedBy);
       return fingerprint
         ? Routes.tabs.post(key.identity, fingerprint, String(key.sequence))
+        : null;
+    }
+    // RSVPs share this collection, so their keys end up here too
+    case COLLECTION.CALENDAR: {
+      const fingerprint = getKeyFingerprint(key.signedBy);
+      return fingerprint
+        ? Routes.tabs.calendarEvent(
+            key.identity,
+            fingerprint,
+            String(key.sequence),
+          )
         : null;
     }
     case COLLECTION.PROFILE:

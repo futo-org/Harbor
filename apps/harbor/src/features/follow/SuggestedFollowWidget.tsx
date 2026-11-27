@@ -7,7 +7,7 @@ import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 
 const SUGGESTIONS_LIMIT = 5;
 

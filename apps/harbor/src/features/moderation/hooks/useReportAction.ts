@@ -1,5 +1,5 @@
 import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
+import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 
 export default function useReportAction() {

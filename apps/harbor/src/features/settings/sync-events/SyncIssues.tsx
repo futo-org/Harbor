@@ -26,7 +26,7 @@ import {
 import { EventSummary } from '@/src/features/notifications/EventSummary';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
 import { Username } from '@/src/features/profile/Username';
-import { COLLECTION, FetchMode } from '@polycentric/react-native';
+import { COLLECTION, FetchMode } from '@polycentric/react-native-sdk';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';

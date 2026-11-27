@@ -1,9 +1,9 @@
 // Shown on docs/content/developer/examples.md under "Reading".
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-sdk';
 // #region profile
-import { v2 } from '@polycentric/js-core';
-import { Query } from '@polycentric/rs-core-wasm';
+import { v2 } from '@polycentric/js-sdk';
+import { Query } from '@polycentric/js-wasm';
 
 // #endregion profile
 

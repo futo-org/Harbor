@@ -551,6 +551,9 @@ fn validate_content(
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
         }
+        ContentBody::CalendarEvent(_) | ContentBody::CalendarEventRsvp(_) => {
+            check_collection(collection, collections::CALENDAR);
+        }
     }
 }
 

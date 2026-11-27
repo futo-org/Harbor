@@ -14,6 +14,7 @@ async fn list_verification_claims_none() {
     let response = verifications
         .list_verification_claims(ListVerificationClaimsRequest {
             claimed_by_identity: client.identity().to_owned(),
+            omit_labels: Vec::new(),
         })
         .await
         .unwrap()
@@ -35,6 +36,7 @@ async fn list_verification_claims_one() {
     let response = verifications
         .list_verification_claims(ListVerificationClaimsRequest {
             claimed_by_identity: client.identity().to_owned(),
+            omit_labels: Vec::new(),
         })
         .await
         .unwrap()
@@ -65,6 +67,101 @@ async fn list_verification_claims_one() {
             ExpectHint::Identity(client.identity().to_owned()),
         ],
     );
+}
+
+#[tokio::test]
+async fn get_verification_claim_with_label() {
+    let mut verifications = verifications_service().await;
+    let (mut moderator, _guard) = TestClient::trusted_moderator().await;
+
+    let mut client = TestClient::new().await;
+    client.github_verification_claim("Alice", current_timestamp());
+    let claim_key = client.get_last_event_key();
+    client.submit_events().await;
+    moderator.label_key(
+        claim_key.clone(),
+        vec!["violence".to_owned()],
+        current_timestamp(),
+    );
+    moderator.submit_events().await;
+
+    let response = verifications
+        .get_verification_claim(GetVerificationClaimRequest {
+            identity: claim_key.identity.clone(),
+            sequence: claim_key.sequence,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+
+    expect_events(
+        &response.candidates,
+        &[ExpectEvent {
+            key: claim_key.clone(),
+            kind: ExpectEventKind::VerificationClaim {
+                schema: github_verification_schema(),
+                fields: HashMap::from([("login", "Alice")]),
+            },
+        }],
+    );
+    expect_hints(
+        &response.event_hints,
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            ExpectHint::Labels {
+                post: claim_key,
+                values: vec!["violence".to_owned()],
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn get_verification_claim_deleted() {
+    let mut verifications = verifications_service().await;
+
+    let mut client = TestClient::new().await;
+    client.github_verification_claim("Alice", current_timestamp());
+    let claim_key = client.get_last_event_key();
+    client.delete_key(claim_key.clone(), current_timestamp() + 1);
+    client.submit_events().await;
+
+    let response = verifications
+        .get_verification_claim(GetVerificationClaimRequest {
+            identity: claim_key.identity,
+            sequence: claim_key.sequence,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+
+    expect_events(&response.candidates, &[]);
+}
+
+#[tokio::test]
+async fn get_verification_claim_skips_other_verification_events() {
+    let mut verifications = verifications_service().await;
+
+    let mut client = TestClient::new().await;
+    client.github_verification_claim("Alice", current_timestamp());
+    let claim_key = client.get_last_event_key();
+    // The Delete goes into the verifications collection, at the next
+    // sequence.
+    client.delete_key(claim_key, current_timestamp() + 1);
+    let delete_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let response = verifications
+        .get_verification_claim(GetVerificationClaimRequest {
+            identity: delete_key.identity,
+            sequence: delete_key.sequence,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+
+    expect_events(&response.candidates, &[]);
 }
 
 #[tokio::test]

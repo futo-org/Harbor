@@ -1,6 +1,7 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/calendar.proto";
 import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/identity.proto";
@@ -25,6 +26,9 @@ message Content {
     VerificationClaim verification_claim = 12;
     VerificationVerify verification_verify = 13;
     VerificationTarget verification_target = 14;
+    // Calendar events (see calendar.proto)
+    CalendarEvent calendar_event = 16;
+    CalendarEventRsvp calendar_event_rsvp = 17;
   }
 }
 
@@ -126,8 +130,7 @@ message ProfileUpdate {
 enum ReportCategory {
   // Report categories that have been retired are kept reserved
   reserved 2, 4, 5;
-  reserved "REPORT_CATEGORY_ABUSE", "REPORT_CATEGORY_TERRORISM",
-           "REPORT_CATEGORY_ILLEGAL";
+  reserved "REPORT_CATEGORY_ABUSE", "REPORT_CATEGORY_TERRORISM", "REPORT_CATEGORY_ILLEGAL";
 
   REPORT_CATEGORY_UNSPECIFIED = 0;
   REPORT_CATEGORY_SPAM = 1;

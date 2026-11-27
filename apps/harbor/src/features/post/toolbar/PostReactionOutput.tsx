@@ -8,7 +8,7 @@ import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';
 import { ReactionSummaryCard } from '@/src/features/reaction/ReactionSummaryCard';
 import usePostReactions from '@/src/features/reaction/usePostReactions';
 import { previewOtherReactions } from '@/src/features/reaction/util';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import useReactions from '../../reaction/useReactions';

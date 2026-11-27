@@ -1,4 +1,4 @@
-import { COLLECTION, type PolycentricClient, v2 } from '@polycentric/js-core';
+import { COLLECTION, type PolycentricClient, v2 } from '@polycentric/js-sdk';
 import type { ClaimField } from './models.js';
 import { Result } from './result.js';
 

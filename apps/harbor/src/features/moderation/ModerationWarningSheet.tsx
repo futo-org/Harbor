@@ -27,7 +27,7 @@ export function ModerationWarningSheet() {
   const onClose = useModerationWarningStore((s) => s.close);
   const labels = request?.labels ?? [];
   const identity = request?.identity ?? null;
-  const subject = request?.subject ?? 'post';
+  const subject = request?.subject ?? 'content';
   const labeler = useLabeler(labels, identity);
   const [always, setAlways] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -102,7 +102,7 @@ export function ModerationWarningSheet() {
               <Text variant="small" color="muted">
                 {!labeler.isSubject
                   ? `Applied by ${labeler.name}`
-                  : subject === 'post'
+                  : subject === 'content'
                     ? 'Applied by the author'
                     : 'Applied by the identity itself'}
               </Text>

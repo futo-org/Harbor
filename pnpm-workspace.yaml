@@ -1,8 +1,8 @@
 packages:
   - apps/*
-  - packages/*
-  - packages/js-browser/examples/*
-  - packages/js-node/examples/*
+  - packages/js/*
+  - packages/js/drivers/*
+  - packages/js/node-sdk/examples/*
   - services/scraper
   - services/verifier-bot
   - tools/*
@@ -16,13 +16,13 @@ catalog:
   puppeteer: ^25.1.0
   "@types/jest": ^30.0.0
   "@types/node": ^26.6.6
-  "@ubjs/core": 0.31.0-7
-  "@ubjs/wasm": 0.31.0-7
+  "@ubjs/core": 0.31.0-8
+  "@ubjs/wasm": 0.31.0-8
   jest: ^30.5.2
   jest-junit: ^17.0.0
   prom-client: ^15.1.3
   typescript: ^5.9.3
-  uniffi-bindgen-react-native: 0.31.0-7
+  uniffi-bindgen-react-native: 0.31.0-8
 
 linkWorkspacePackages: true
 
@@ -31,6 +31,9 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - maestro-runner
   - "@devicelab/*"
+  - uniffi-bindgen-react-native@0.31.0-8
+  - "@ubjs/core@0.31.0-8"
+  - "@ubjs/wasm@0.31.0-8"
 
 allowBuilds:
   "@browserless/goto": false
@@ -56,5 +59,6 @@ overrides:
 patchedDependencies:
   "@bsky.app/react-native-uitextview@2.7.1": patches/@bsky.app__react-native-uitextview@2.7.1.patch
   "@rn-primitives/hooks@1.5.2": patches/@rn-primitives__hooks@1.5.2.patch
+  expo-image-manipulator@58.0.16: patches/expo-image-manipulator@58.0.16.patch
   react-native-safe-area-context@5.10.1: patches/react-native-safe-area-context@5.10.1.patch
-  uniffi-bindgen-react-native@0.31.0-7: patches/uniffi-bindgen-react-native@0.31.0-7.patch
+  react-remove-scroll@2.7.2: patches/react-remove-scroll@2.7.2.patch

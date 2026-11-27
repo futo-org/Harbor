@@ -3,7 +3,7 @@ import Icon from '@/src/common/components/Icon';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Atoms } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { View } from 'react-native';
 import { REPORT_OPTIONS } from '../hooks/useReportOptions';
 import type { ServerReport } from '../hooks/useReports';

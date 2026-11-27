@@ -5,7 +5,7 @@ import {
   v2,
   KeyType,
   IdentityManager,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { ed25519 } from '@noble/curves/ed25519.js';
 
 /**

@@ -17,9 +17,9 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...(args as [])),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
+jest.mock('@polycentric/react-native-sdk', () => ({
   Query: { IsModerator: class IsModerator {} },
-  // Mirrors the real wire helper (covered by its own test in js-core):
+  // Mirrors the real wire helper (covered by its own test in js-sdk):
   // the fan-out response is a JSON `serverUrl -> bool` map.
   decodeStatusByServer: (data: ArrayBuffer) =>
     new Map<string, boolean>(

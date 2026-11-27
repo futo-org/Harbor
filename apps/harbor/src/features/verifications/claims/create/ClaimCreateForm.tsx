@@ -11,7 +11,14 @@ import {
 } from '@/src/common/lib/images/useImageAttachments';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { View } from 'react-native';
 import type { ClaimType, FormField } from '../../utils/forms';
 import useCreateClaim, { type ClaimRef } from '../../hooks/useCreateClaim';
@@ -36,15 +43,27 @@ export type ClaimFormState = {
 // on the claim type) to reset between types.
 export function ClaimCreateForm({
   claimType,
+  initialValues,
+  header,
+  alsoRequestFrom,
   onSubmitted,
   onFormState,
 }: {
   claimType: ClaimType;
+  // Values for the claim type's hidden fields.
+  initialValues?: Record<string, string>;
+  // Shown above the inputs, e.g. what the claim is about.
+  header?: ReactNode;
+  // Identities to request verification from once the claim is created.
+  alsoRequestFrom?: string[];
   onSubmitted: (ref: ClaimRef) => void;
   onFormState: (state: ClaimFormState | null) => void;
 }) {
   const { submit, isPending } = useCreateClaim();
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(
+    initialValues ?? {},
+  );
+  const inputs = claimType.fields.filter((field) => !field.hidden);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,6 +120,7 @@ export function ClaimCreateForm({
         schema: formToSchema(claimType),
         values,
         images,
+        alsoRequestFrom,
       });
       onSubmitted(ref);
     } catch (e) {
@@ -140,7 +160,9 @@ export function ClaimCreateForm({
 
   return (
     <View style={Atoms.gap_md}>
-      {claimType.fields.map((field, i) => (
+      {header}
+
+      {inputs.map((field, i) => (
         <FieldInput
           key={field.key}
           field={field}

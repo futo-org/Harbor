@@ -316,3 +316,85 @@ browser clients can connect once TLS is in place.
 
 Set `HARBOR_CDN_URL` to the public HTTPS URL of the server so clients fetch
 blobs over the proxy.
+
+## Server Admin CLI
+
+For the server there exists an admin CLI to perform various maintenance actions
+and manually run jobs that are normally run as cron jobs. Most users don't need
+to use this CLI.
+
+The admin cli binary is the same one that runs the server and workers. It can be
+run from the root of the repository using one of the following commands.
+
+```bash
+# Building & running
+cargo run -p server [args...]
+
+# Or, build first
+cargo build -p server
+# Run later
+./target/debug/server --help [args...]
+```
+
+It uses the same configuration and environment variables as the server, as
+described above.
+
+### Deleting events
+
+```
+delete-events (--identity <hex> | --public-key <hex>) [--yes]
+```
+
+Delete all events of a specific identity or public key. By default the command
+only prints information (dry run), if the `--yes` flag is passed the events are
+actually deleted.
+
+### Sync Blob Index
+
+```
+sync-blob-index
+```
+
+Synchronise the blob index, which is the local index of all the blobs stored in
+the object store. This should always be kept in sync by the server, but if it
+gets out of sync this command can fix that.
+
+This is a one way sync from object store to the server's index. See the pruning
+of blobs below to delete blobs from the object store that are no longer used.
+
+### Prune Content
+
+```
+prune-content [--yes]
+```
+
+Deletes all content (from the `content_*` tables) that is not referenced by any
+event.
+
+### Prune Blobs
+
+```
+prune-blobs [--dry-run] [--grace-period-secs <secs>]
+```
+
+Deletes all blobs from the object store that are not referenced by any event.
+
+If `--dry-run` is passed the blobs are not deleted, but information is printed
+as if the blobs were deleted.
+
+Any blobs that are uploaded in the last `grace-period-secs` seconds are ignored.
+
+### Prune Identities
+
+```
+prune-identities [--grace-period-secs <secs>]
+```
+
+Deletes all data (events, contents, blobs) from identities that have deleted
+themselves.
+
+Any identities that were deleted in the last `grace-period-secs` seconds are
+ignored.
+
+__NOTE__: this command does not have a dry run option. It always deletes
+identities.

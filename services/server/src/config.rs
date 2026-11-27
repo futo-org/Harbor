@@ -153,7 +153,7 @@ pub fn init() -> &'static Config {
             blob_prune_dry_run: std::env::var("HARBOR_BLOB_PRUNE_DRY_RUN")
                 .ok()
                 .and_then(|s| s.trim().parse().ok())
-                .unwrap_or(true),
+                .unwrap_or(false),
             commit: std::env::var("HARBOR_COMMIT")
                 .ok()
                 .map(|s| s.trim().to_string())

@@ -1,5 +1,5 @@
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { useEffect } from 'react';
 import { normalizeAlias } from '../alias/helpers';
 import { useAliasResolutionStore } from '../alias/useAliasResolutionStore';

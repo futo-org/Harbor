@@ -3,7 +3,7 @@ import { ImageViewerScreen } from '@/src/common/components/ImageViewer';
 import { Routes } from '@/src/common/constants/routes';
 import { identiconUrl } from '@/src/common/lib/polycentric-hooks';
 import { openWithReturn } from '@/src/common/lib/navigation/openWithReturn';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native-sdk';
 import { isIdentityKey } from '@/src/common/util/isIdentityKey';
 import { useProfile } from './hooks/useProfile';
 

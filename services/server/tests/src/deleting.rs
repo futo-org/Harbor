@@ -2,6 +2,7 @@
 
 use std::slice;
 
+use crate::calendar::{counts, get_event, list_attendees};
 use crate::event_sync::{ExpectError, expect_errors};
 use crate::feeds::{
     following_feed, identity_feed, post_thread, recommended_feed, test_get_post,
@@ -595,6 +596,36 @@ async fn pairing_sessions_are_not_listed_for_deleted_identity() {
         .await
         .unwrap_err();
     assert_eq!(status.code(), tonic::Code::NotFound);
+}
+
+#[tokio::test]
+async fn calendar_events_exclude_deleted_identities() {
+    let mut host = TestClient::new().await;
+    host.calendar_event_titled("Meetup", 24, current_timestamp());
+    let event_key = host.get_last_event_key();
+    host.submit_events().await;
+
+    let mut attendee = TestClient::new().await;
+    attendee.rsvp(
+        event_key.clone(),
+        CalendarEventRsvpStatus::Going,
+        current_timestamp(),
+    );
+    attendee.submit_events().await;
+
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (1, 0, 0));
+
+    // A deleted attendee no longer counts
+    attendee.delete_self().await;
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (0, 0, 0));
+    assert_eq!(list_attendees(&event_key, None).await, Vec::<String>::new());
+
+    // A deleted host takes their events with them
+    host.delete_self().await;
+    let error = get_event(&event_key).await.unwrap_err();
+    assert_eq!(error.code(), tonic::Code::NotFound);
 }
 
 async fn no_events(client: &mut TestClient) {

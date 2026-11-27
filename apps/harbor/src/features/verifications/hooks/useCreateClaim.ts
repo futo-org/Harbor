@@ -7,7 +7,7 @@ import {
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native-sdk';
 import { useState } from 'react';
 import { useClaimCreateOptions } from '../claims/create/ClaimCreateContext';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
@@ -36,10 +36,13 @@ export default function useCreateClaim() {
       schema,
       values,
       images = [],
+      alsoRequestFrom = [],
     }: {
       schema: v2.VerificationSchema;
       values: Record<string, string>;
       images?: v2.ImageSet[];
+      // More identities to request verification from, e.g. an event's hosts.
+      alsoRequestFrom?: string[];
     }): Promise<ClaimRef> => {
       if (isPending) {
         throw 'Already pending';
@@ -78,8 +81,15 @@ export default function useCreateClaim() {
         }
 
         // The same sync below delivers both events.
-        if (requestFrom) {
-          await publishVerificationTarget(client, eventKey, [requestFrom]);
+        const targets = [
+          ...new Set([
+            ...(requestFrom ? [requestFrom] : []),
+            ...alsoRequestFrom,
+          ]),
+        ];
+
+        if (targets.length > 0) {
+          await publishVerificationTarget(client, eventKey, targets);
         }
 
         // Delivery to servers is best-effort — the claim is already saved

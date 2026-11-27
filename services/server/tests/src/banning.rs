@@ -6,6 +6,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::blobs::{get_blob, random_image, test_blob_upload};
+use crate::calendar::{counts, get_event, list_attendees};
 use crate::search_users::expect_searched_users;
 use crate::*;
 
@@ -298,6 +299,36 @@ async fn banning_removes_reactions() {
             .reaction_count,
         Some(0)
     );
+}
+
+#[tokio::test]
+async fn banning_removes_calendar_events_and_rsvps() {
+    let mut host = TestClient::new().await;
+    host.calendar_event_titled("Meetup", 24, current_timestamp());
+    let event_key = host.get_last_event_key();
+    host.submit_events().await;
+
+    let mut attendee = TestClient::new().await;
+    attendee.rsvp(
+        event_key.clone(),
+        CalendarEventRsvpStatus::Going,
+        current_timestamp(),
+    );
+    attendee.submit_events().await;
+
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (1, 0, 0));
+
+    // A banned attendee no longer counts
+    set_ban_status(attendee.identity(), true).await;
+    let event = get_event(&event_key).await.unwrap();
+    assert_eq!(counts(&event), (0, 0, 0));
+    assert_eq!(list_attendees(&event_key, None).await, Vec::<String>::new());
+
+    // A banned host takes their events with them
+    set_ban_status(host.identity(), true).await;
+    let error = get_event(&event_key).await.unwrap_err();
+    assert_eq!(error.code(), tonic::Code::NotFound);
 }
 
 // TODO: add more tests:

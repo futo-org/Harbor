@@ -6,7 +6,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
 import { IdentityHandle } from './IdentityHandle';
 import { Username } from './Username';
-import type { FetchMode } from '@polycentric/react-native';
+import type { FetchMode } from '@polycentric/react-native-sdk';
 import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 

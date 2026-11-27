@@ -1210,7 +1210,7 @@ fn attributed_posts() -> SelectStatement {
 }
 
 /// Subquery of the deletes of the outer query's event by its own identity.
-fn deletes_by_author() -> SelectStatement {
+pub(crate) fn deletes_by_author() -> SelectStatement {
     let delete_content = Alias::new("delete_content");
     let delete_event = Alias::new("delete_event");
 

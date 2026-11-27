@@ -9,6 +9,7 @@ use crate::service::proto::verifications_service_server::{
     VerificationsService, VerificationsServiceServer,
 };
 use crate::service::proto::{
+    GetVerificationClaimRequest, GetVerificationClaimResponse,
     ListTargetedVerificationClaimsRequest,
     ListTargetedVerificationClaimsResponse, ListVerificationClaimsRequest,
     ListVerificationClaimsResponse, ListVerificationTargetsRequest,
@@ -18,6 +19,7 @@ use crate::service::proto::{
 };
 
 pub mod common;
+pub mod get_verification_claim;
 pub mod list_targeted_verification_claims;
 pub mod list_verification_claims;
 pub mod list_verification_targets;
@@ -37,6 +39,16 @@ impl VerificationsService for VerificationsServiceImpl {
         let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_verification_claims::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_verification_claim(
+        &self,
+        request: Request<GetVerificationClaimRequest>,
+    ) -> Result<Response<GetVerificationClaimResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
+        Ok(Response::new(
+            get_verification_claim::handle(ctx, request.into_inner()).await?,
         ))
     }
 

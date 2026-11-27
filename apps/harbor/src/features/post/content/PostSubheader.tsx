@@ -11,7 +11,7 @@ import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import { urlHost } from '@/src/common/util/anywhere-url';
 import { isBrowserExtension } from '@/src/common/util/platform';
 import { Username } from '@/src/features/profile/Username';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { type ExternalPathString, Link } from 'expo-router';
 import { createContext, useContext, useMemo } from 'react';
 import { View } from 'react-native';

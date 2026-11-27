@@ -1,7 +1,7 @@
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { parseTextLinks } from '@/src/common/util/parseTextLinks';
-import { v2 } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native-sdk';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export type UseLinkPreviewResult = {

@@ -10,8 +10,11 @@ on:
       - package.json
       - tools/**
       - patches/**
-      - packages/js-*/**
-      - packages/rs-core-wasm/**
+      - packages/js/js-sdk/**
+      - packages/js/node-sdk/**
+      - packages/js/drivers/js-datastore-*/**
+      - packages/js/drivers/js-filestore-*/**
+      - packages/js/drivers/js-wasm/**
       - services/verifier-bot/**
       - deploy/charts/harbor-verifier-bot/**
       - .forgejo/workflows/deploy-verifier-bot-staging.yml

@@ -16,7 +16,7 @@ import {
   QueryStatus,
   v2,
   type EventKey,
-} from '@polycentric/react-native';
+} from '@polycentric/react-native-sdk';
 import { useMemo } from 'react';
 import useReactions from './useReactions';
 

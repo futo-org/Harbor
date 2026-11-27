@@ -3,9 +3,9 @@ import { create } from 'zustand';
 
 export type ModerationWarningRequest = {
   labels: PostLabel[];
-  /** The labelled identity, or the post's author, for self-applied labels. */
+  /** The labelled identity, or the content's author, for self-applied labels. */
   identity: string | null;
-  subject: 'profile' | 'post';
+  subject: 'profile' | 'content';
   onConfirm: () => void;
 };
 

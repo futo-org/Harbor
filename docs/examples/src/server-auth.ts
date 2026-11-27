@@ -1,8 +1,8 @@
 // Shown on docs/content/protocol/server-auth.md under "Client side".
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-sdk';
 // #region create-jwt
-import { createServerJwt } from '@polycentric/js-core';
+import { createServerJwt } from '@polycentric/js-sdk';
 
 // #endregion create-jwt
 

@@ -19,7 +19,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
-const COLLECTION_MAX: i32 = collections::VERIFICATIONS;
+const COLLECTION_MAX: i32 = collections::CALENDAR;
 
 #[derive(Debug)]
 pub struct Client {
@@ -342,6 +342,8 @@ impl Client {
             ContentBody::VerificationClaim(_)
             | ContentBody::VerificationVerify(_)
             | ContentBody::VerificationTarget(_) => collections::VERIFICATIONS,
+            ContentBody::CalendarEvent(_)
+            | ContentBody::CalendarEventRsvp(_) => collections::CALENDAR,
         };
         let content = Content {
             content_body: Some(body),
