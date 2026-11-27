@@ -48,7 +48,7 @@ fill it in.
 | `HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS`             | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links).                |
 | `HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN`         | Public base domain of this bot, used to build OAuth callback URLs.                                               |
 | `HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH`     | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick).                                 |
-| `HARBOR_VERIFIER_BOT_PROFILE_NAME`                  | Display name published for the bot's identity on first run.                                                      |
+| `HARBOR_VERIFIER_BOT_PROFILE_NAME`                  | Display name published for the bot's identity (default `Harbor Verifier Bot`).                                   |
 | `HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION`           | Profile description published alongside the name.                                                                |
 | `HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS` | How often every platform's health check runs (default `900`). `0` disables the loop.                             |
 
