@@ -113,6 +113,7 @@ export function ClaimCreateSheet({
 
   const [form, setForm] = useState<ClaimFormState | null>(null);
   const [eventForm, setEventForm] = useState<EventFormState | null>(null);
+  const [stayTall, setStayTall] = useState(false);
 
   const { identityKey } = useCurrentIdentity();
   const existingClaims = useClaimsList(
@@ -130,6 +131,7 @@ export function ClaimCreateSheet({
   const close = () => {
     onClose();
     setStack([initialStep]);
+    setStayTall(false);
   };
 
   const onSelectClaimType = (claimType: ClaimType) => {
@@ -219,17 +221,20 @@ export function ClaimCreateSheet({
           }
         : null;
 
-  // Images, the event list and the event form don't fit at half height
+  // Images, the event list and the event form need the full height
   const isTall =
     !!form?.hasAttachments ||
     step.kind === 'event' ||
     step.kind === 'event-new';
 
+  // Once tall it stays tall, so the sheet doesn't resize between steps
+  if (isTall && !stayTall) setStayTall(true);
+
   return (
     <Sheet
       open={open}
       onClose={close}
-      detents={isTall ? [1] : [0.5]}
+      detents={isTall || stayTall ? [1] : [0.75]}
       header={
         <Sheet.Header
           title={stepTitle(step)}

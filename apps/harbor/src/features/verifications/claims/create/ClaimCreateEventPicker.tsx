@@ -122,7 +122,7 @@ function EventRow({ icon, title, detail, testID, onPress }: EventRowProps) {
         <Text
           variant="small"
           color="secondary"
-          numberOfLines={1}
+          fontWeight="regular"
           selectable={false}
         >
           {detail}
